@@ -1,45 +1,116 @@
-@test super(BasicKalmanFilter) == LinearKalmanFilter
+function ppath(p)
+  if LOAD_PATH[end] != p
+    push!(LOAD_PATH,p)
+  else
+    println(p," already in LOAD_PATH.")
 
-s = State([1.,0],[0.5 0; 0 1e-10])
-
-@test typeof(s) == State{Float64}
-@test s.x == [1,0]
-@test s.p == [0.5 0; 0 1e-10]
-
-o = convert(Observation,2.0)
-
-@test typeof(o) == Observation{Float64}
-@test o.y == [2]
-
-x0 = State([1.,0],[0.5 0; 0 1e-10])
-a = [1 0.01; 0.01*(-1) 1]
-g = [0 0; 0 1]
-q = [1e-10 0; 0 1e-10]
-f = LinearModel(a,g,q)
-h = [1 0]
-r = [0.5]'
-z = LinearObservationModel(h,r)
-
-dt = 0.01
-t = [0:dt:10]
-x = zeros(length(t))
-m = cos(t)
-
-kf0 = BasicKalmanFilter(x0,f,z)
-kf = kf0
-x[1] = kf.x.x[1]
-
-y = map(t->Observation(m[t]+kf.z.r[1]*randn(1)),1:length(t))
-
-kf1 = predictupdate(kf,y[1])
-predictupdate!(kf,y[1])
-@test kf1.x == kf.x
-
-for i in 2:length(t)-1
-    kf2 = predict(kf)
-    kf = update(kf2,y[i])
-    x[i+1] = kf.x.x[1]
+  end
 end
 
-@test predictupdate(kf0,y[1]).x == update(predict(kf0),y[1]).x
+ppath("/Users/chema/mydev/Kalman.jl/src")
+ppath("/Users/chema/mydev/")
+ppath("/Users/chema/mydev/Gadfly.jl/src")
 
+macro load(pkg)
+  quote
+    if isdefined(Symbol($(string(pkg))))
+      #try
+      #  reload(ucfirst(string(pkg)))
+      #catch
+        reload($(string(pkg)))
+      #end
+    else
+      import $pkg
+    end
+  end
+end
+
+@load bkf
+@load Gadfly
+
+x0 = bkf.State([1.,1],[1. -.99; -.99 1])
+a = [1. .5; -.5 1]
+a = a / det(a)
+g = [0.05 0; 0 .01]
+q = eye(2)
+f = bkf.LinearModel(a,g,q)
+h = eye(2)
+g = [0.15 0; 0 .01]
+z = bkf.LinearObservationModel(h,r)
+kf0 = bkf.BasicKalmanFilter(x0,f,z)
+
+pf = bkf.toParticleSet(kf0,1000)
+pf1 = bkf.toParticleSet(kf0,1)
+
+dt = .1
+t = collect(0:dt:1)
+
+truth = Vector{bkf.ParticleSet}(0)#length(t))
+observations = Vector{bkf.Observation}(0)#length(t))
+kfs = Vector{bkf.BasicKalmanFilter}(0)#length(t))
+pfs = Vector{bkf.ParticleStep}(0)#length(t))
+m = [cos(tt) for tt in t]
+
+kf = kf0
+push!(kfs, kf)
+ps = bkf.ParticleStep(pf)
+push!(pfs, ps)
+pf
+
+push!(truth, pf1)
+push!(observations, bkf.Observation(pf1,1))
+
+
+
+
+
+
+
+
+
+kf1 = bkf.predictupdate(kf,observations[1])
+bkf.predictupdate!(kf,observations[1])
+#@test kf1.x == kf.x
+
+for i in 2:length(t)-1
+    push!(truth, bkf.ap(truth[i-1]))
+    push!(observations, bkf.Observation(truth[i],1))
+    kf2 = bkf.predict(kf)
+    kf = bkf.update(kf2,observations[i])
+    push!(kfs, kf)
+    ps = bkf.ParticleStep(ps,observations[i])
+    push!(pfs, ps)
+end
+
+using DataFrames
+
+nshow = 30
+df1 = DataFrame(id=[x for x in pfs[end].r.s], time=length(t),
+          x=vec(pfs[end].p.particles[1,:]), y=vec(pfs[end].p.particles[2,:]))
+#using Gadfly
+df2 = DataFrame(id=[x for x in pfs[end].r.s], time=length(t)- 1,
+          x=vec(pfs[end-1].p.particles[1,pfs[end].r.s]),
+          y=vec(pfs[end-1].p.particles[2,pfs[end].r.s]))
+
+df = vcat(df1[1:nshow,:],df2[1:nshow,:])
+dfh = hcat(df1,df2)
+
+pp=Gadfly.plot(df,x="x",y="y",group="id",Gadfly.Geom.line,
+    Gadfly.Guide.annotation(
+        Gadfly.compose(Gadfly.context(),
+        Gadfly.ellipse(-.25,-0.5,.05,.10), Gadfly.fill(nothing),
+        Gadfly.stroke("red"))) )
+inch = Gadfly.inch
+pp
+show(pp)
+Gadfly.draw(Gadfly.SVG("/Users/chema/mydev/myplot2.svg", 4inch, 3inch), pp)
+
+pp2=Gadfly.plot(dfh,x="x",y="x_1",Gadfly.Geom.point)
+Gadfly.draw(Gadfly.SVG("/Users/chema/mydev/myplot3.svg", 4inch, 3inch), pp2)
+
+3
+
+
+
+
+#room for atom error display

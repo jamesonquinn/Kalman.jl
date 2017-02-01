@@ -1,5 +1,7 @@
 #######
 # Universal Kalman filtering methods
+import StatsBase.predict
+import StatsBase.predict!
 
 function predict!(kf::KalmanFilter)
     kf.x = ap(kf.f,kf.x)
@@ -15,10 +17,16 @@ function update(kf::KalmanFilter,y::Observation)
 end
 
 function update!(kf::KalmanFilter,y::Observation)
+    #println()
     (res,ph,s) = covs(kf,y)
+
+
+
+
+
     xn = kf.x.x + ph * (s\res)
     pn = kf.x.p - ph * (s'\ph')
-    
+
     # This is an ugly hack which works for now
     if typeof(kf.x) <: AbstractUnscentedState
         kf.x = UnscentedState(xn,pn,kf.x.α,kf.x.β,kf.x.κ)
