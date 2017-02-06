@@ -1,6 +1,7 @@
 module bkf
   using Distributions
   using StatsBase
+  using Memoize
   import Base.length
 
   abstract KalmanFilter
@@ -23,7 +24,7 @@ module bkf
   type LinearModel <: Model
       a::Matrix #state transition matrix
       g::Matrix #process noise to state
-      q::Matrix #process noise covariance (hopefully eye)
+      q::Matrix #process noise covariance (hopefully diagonal)
   end
 
   ## This is the first function a Kalman filter needs to
@@ -43,9 +44,14 @@ module bkf
 #  Base.convert(::Type{Observation},y) = Observation([y])
 
   type LinearObservationModel <: ObservationModel
-      h::Matrix #connects state to observations
+      h::Matrix #connects state to observations; hopefully diagonal
       r::Matrix #observation covariance
   end
+
+  function LinearObservationModel(h::Matrix)
+      LinearObservationModel(h,eye(size(h,1)))
+  end
+
 
   type BasicKalmanFilter <: LinearKalmanFilter
       x::State
@@ -67,114 +73,43 @@ module bkf
       (res,ph,s)
   end
 
-  function toDistribution(kf::BasicKalmanFilter)
+ function toDistribution(kf::BasicKalmanFilter)
     MvNormal(kf.x.x,kf.x.p)
   end
 
-  abstract AbstractParticle
+    function forwardDistribution(m::LinearModel,x::Vector,r::Range)
+        #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")
+        #print("bbb",noiseMatrix(m)[r,r],"\n")
+        #print("ccc",x[1:2],"\n")
+        #print("ddd",x[r],"\n")
 
-  type Particle{T} <: AbstractParticle
-      x::Vector{T}
-      logWeight::Float64
-  end
-
-  function noiseDistribution(kf::BasicKalmanFilter)
-    MvNormal(kf.f.g*kf.f.q*kf.f.g')
-  end
-
-  function obsNoiseDistribution(kf::BasicKalmanFilter)
-    MvNormal(kf.z.r)
-  end
-
-  function Particle(x)
-    Particle(x,1.)
-  end
-
-  abstract AbstractParticleFilter
-
-  type ParticleSet{T,F<:KalmanFilter} <: AbstractParticleFilter
-      filter::F
-      n::Int64
-      particles::Array{T,2}
-      weights::WeightVec
-  end
-
-  function Observation(ps::ParticleSet, n::Int64)
-    Observation(ps.particles[:,n], ps.filter.z)
-  end
-
-  function Observation(p::Vector, om::LinearObservationModel)
-    Observation(om.h * p + rand(MvNormal(om.r)))
-  end
-
-  type Resample
-    s::Array{Int64}
-  end
-
-  function Resample(n::Int64)
-    Resample(collect(1:n))
-  end
-
-  function length(r::Resample)
-    length(r.s)
-  end
-
-  function toParticleSet(kf::KalmanFilter, n::Int64)
-    d = toDistribution(kf)
-    ParticleSet(kf, n, rand(d,n), WeightVec(ones(n),n))
-  end
-
-  function ap(pset::ParticleSet)
-    noise=rand(noiseDistribution(pset.filter),pset.n)
-    ParticleSet(pset.filter, pset.n, pset.filter.f.a * pset.particles, pset.weights)
-  end
-
-  function ap(pset::ParticleSet, samp::Resample)
-    n = length(samp)
-    ε=rand(noiseDistribution(pset.filter),n)
-    newParticleBases = Array{Float64}(size(pset.particles)[1], n)
-    #println(size(ε))
-    #println(size(newParticles))
-    for i in 1:n
-
-      newParticleBases[:,i] = pset.filter.f.a * pset.particles[:,samp.s[i]]
+      MvNormal(x[r],noiseMatrix(m)[r,r])
     end
-    ParticleSet(pset.filter, n, newParticleBases + ε, WeightVec(ones(n),n))
-  end
 
-  function reweight!(pset::ParticleSet, y::Observation)
-    pset.weights = WeightVec(pdf(obsNoiseDistribution(pset.filter),
-                                  pset.particles - repeat(y.y,outer=[1,size(pset.particles)[2]])
-                                  ))
-  end
+    function forwardDistribution(m::LinearModel,x::Float64,l::Int64)
+        #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")
+        #print("bbb",noiseMatrix(m)[r,r],"\n")
+        #print("ccc",x[1:2],"\n")
+        #print("ddd",x[r],"\n")
 
-  function Resample(pset::ParticleSet)
-    Resample([sample(pset.weights) for i in 1:pset.n])
-  end
+      Normal(x,noiseMatrix(m)[l,l])
+    end
 
-  type ParticleStep <: AbstractParticleFilter
-    r::Resample
-    p::ParticleSet
-    y::Observation
-  end
+    @memoize function noiseMatrix(m::LinearModel)
+        m.g * m.q * m.g'
+    end
 
-  function ParticleStep(pset::ParticleSet)
-    o = Observation([0.])
-    r = Resample(pset.n)
-    ParticleStep(r, pset, o)
-  end
+    function noiseDistribution(kf::BasicKalmanFilter)
+      MvNormal(noiseMatrix(kf.f))
+    end
 
-  function ParticleStep(pset::ParticleSet, y::Observation)
-    r = Resample(pset)
-    p = ap(pset,r)
-    reweight!(p,y)
-    ParticleStep(r,p,y)
-  end
+    function obsNoiseDistribution(kf::BasicKalmanFilter)
+      MvNormal(kf.z.r)
+    end
 
-  function ParticleStep(pstep::ParticleStep, y::Observation)
-    ParticleStep(pstep.p,y)
-  end
 
+  include("particlefilter.jl")
+  include("finkel.jl")
 
   include("filter.jl")
   include("unscented.jl")
