@@ -177,7 +177,7 @@ kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
 
 nfp,npf = (5, 25)
-#nfp,npf = (31, 1000)
+nfp,npf = (31, 1000)
 
 fpf = bkf.toParticleSet(kf0,nfp)
 pf = bkf.toParticleSet(kf0,npf)

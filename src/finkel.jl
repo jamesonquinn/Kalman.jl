@@ -57,7 +57,7 @@ type FinkelParticles{T,F<:KalmanFilter} <: AbstractFinkel
         #[space][particle]
     #lps::Array{Nullable{Float64},2} #log probabilities from base to tip; size [n, n]
     means::Array{T,2} #base, progressed, without adding noise.
-    prevProbs::Array{Float64,2} #sum over neighborhood history of local probability - avoid double calculation
+    prevProbs::Array{Nullable{Float64},2} #sum over neighborhood history of local probability - avoid double calculation
     localDists::Array{Distribution,2} #for calculating probs
     totalProb::Vector{Float64} #convergence diagnostic
 end
@@ -79,7 +79,7 @@ function FinkelParticles(prev::AbstractFinkel)
                 stem,
                 Vector{WeightVec}(), #empty weights
                 filt.f.a * particleMatrix(prev),
-                Array{Float64,2}(d,n),
+                Array{Nullable{Float64},2}(d,n),
                 Array{Distribution,2}(d,n),
                 zeros(d),
                 )
@@ -161,21 +161,16 @@ function probSum(fp::FinkelParticles,l::Integer,i::Integer,p::Integer,d::Int64,
 end
 
 function probSum(fp::FinkelParticles,l::Integer,i::Integer,d::Int64,
-            centerOnly = false)
+            centerOnly::Bool = false)
     probSum(fp,l,i,fp.stem[l,i],d,centerOnly)
 end
 
 
 function calcPrevProbs!(fp::FinkelParticles, d, n)
 
-    print(d," ddnn ",n,"\n")
-
-
-
-
     for i in 1:n
         for l in 1:d
-            fp.prevProbs[l,i] = probSum(fp,l,i,d)
+            fp.prevProbs[l,i] = Nullable{Float64}()#Nullable(probSum(fp,l,i,d))
         end
     end
 end
@@ -187,10 +182,16 @@ function mcmc!(fp::FinkelParticles,i::Integer,steps::Integer)
         for l in order
             p = sample(fp.ws[l])
             if p != fp.stem[l,i]
-                neighorhood = max(l-1,1):min(l+1,d)
+                neighborhood = max(l-1,1):min(l+1,d)
                 oldSet = Set(fp.stem[i] for i in neighborhood)
                 baseNewProb = newProb = probSum(fp,l,i,p,neighborhood)
-                oldProb = fp.oldProbs[l,i]
+                oldProb = fp.prevProbs[l,i]
+                if isnull(oldProb)
+                    oldProb = probSum(fp, l, i, fp.stem[l,i], neighborhood)
+                    fp.prevProbs[l,i] = Nullable(oldProb)
+                else
+                    oldProb = get(oldProb)
+                end
                 if !(p in oldSet)
                     newProb += probSum(fp,l,i,fp.stem[l,i],neighborhood,true)
                     oldProb += probSum(fp,l,i,p,neighborhood,true)
@@ -204,6 +205,11 @@ function mcmc!(fp::FinkelParticles,i::Integer,steps::Integer)
                 fp.stem[l,i] = p
                 fp.tip.particles[l,i] = fp.base[l,p]
                 fp.prevProbs[l,i] = baseNewProb
+                for n in neighborhood
+                    if n != l
+                        fp.prevProbs[n,i] = Nullable{Float64}()
+                    end
+                end
             end
         end
     end
