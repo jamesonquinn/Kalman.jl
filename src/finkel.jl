@@ -59,7 +59,7 @@ type FinkelParticles{T,F<:KalmanFilter} <: AbstractFinkel
     means::Array{T,2} #base, progressed, without adding noise.
     prevProbs::Array{Nullable{Float64},2} #sum over neighborhood history of local probability - avoid double calculation
     localDists::Array{Distribution,2} #for calculating probs
-    totalProb::Vector{Float64} #convergence diagnostic
+    totalProb::Array{Float64,2} #convergence diagnostic
 end
 
 function FinkelParticles(prev::AbstractFinkel)
@@ -81,7 +81,7 @@ function FinkelParticles(prev::AbstractFinkel)
                 filt.f.a * particleMatrix(prev),
                 Array{Nullable{Float64},2}(d,n),
                 Array{Distribution,2}(d,n),
-                zeros(d),
+                zeros(d,n),
                 )
     getDists!(fp, d, n)
     calcPrevProbs!(fp, d, n)
@@ -197,11 +197,11 @@ function mcmc!(fp::FinkelParticles,i::Integer,steps::Integer)
                     oldProb += probSum(fp,l,i,p,neighborhood,true)
                 end
                 if newProb < oldProb && rand() > (newProb / oldProb)
-                    fp.totalProb[l] += newProb / oldProb
+                    fp.totalProb[l,i] += newProb / oldProb
                     continue #M-H rejection
                 end
                 #M-H accepted
-                fp.totalProb[l] += 1
+                fp.totalProb[l,i] += 1
                 fp.stem[l,i] = p
                 fp.tip.particles[l,i] = fp.base[l,p]
                 fp.prevProbs[l,i] = baseNewProb
@@ -215,11 +215,14 @@ function mcmc!(fp::FinkelParticles,i::Integer,steps::Integer)
     end
 end
 
-function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=5)
+function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=true)
     fp = FinkelParticles(prev)
     reweight!(fp, y)
     for i in 1:fp.tip.n
         mcmc!(fp,i,nIter)
+        if debug
+            print("Ran particle ", i, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")
+        end
     end
     fp
 end

@@ -139,6 +139,7 @@ d = 100
 bleed = .25
 jitter = .1
 jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
+temper = .9
 basenoise = 1
 lownoise = .04
 lowgap = 3
@@ -150,12 +151,12 @@ mciter = 6
 x0 = bkf.State(zeros(d),eye(d))
 
 a = SymTridiagonal(ones(d),bleed * ones(d-1))
-a = a / det(a)
+a = a / det(a)^(1/d)
 
 b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
 b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
 g = inv(b)
-g = g / det(g)
+g = g * (temper / det(g))^(1/d)
 
 q = eye(d)
 
@@ -170,7 +171,7 @@ end
 b = SymTridiagonal(ones(d),-noisebleed * ones(d-1))
 b[1,1] = b[d,d] = 1 - noisebleed^2 / (1-noisebleed^2)
 r = inv(b)
-r = r / det(r)
+r = r / det(r)^(1/d)
 
 z = bkf.LinearObservationModel(h)
 kf0 = bkf.BasicKalmanFilter(x0,f,z)
@@ -213,6 +214,15 @@ for i in 2:length(t)-1
     push!(kfs, kf)
     ps = bkf.ParticleStep(ps,observations[i])
     push!(pfs, ps)
-    fp = bkf.FinkelParticles(fp, observations[i])
+    fp = bkf.FinkelParticles(fp, observations[i], 4)
     push!(fps, fp)
 end
+
+dif = kfs[end].x.p - kfs[end].x.p'
+mean(dif)
+mean(kfs[end].x.p)
+finalDist = bkf.toDistribution(kfs[end])
+finkelmean = mean(bkf.pdf(finalDist,fps[end].tip.particles))
+partmean = mean(bkf.pdf(finalDist,pfs[end].p.particles))
+idealmean = mean(bkf.pdf(finalDist,rand(finalDist,50)))
+[finkelmean,partmean,idealmean]

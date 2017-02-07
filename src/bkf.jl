@@ -74,7 +74,7 @@ module bkf
   end
 
  function toDistribution(kf::BasicKalmanFilter)
-    MvNormal(kf.x.x,kf.x.p)
+    MvNormal(kf.x.x,((kf.x.p + kf.x.p') / 2))
   end
 
     function forwardDistribution(m::LinearModel,x::Vector,r::Range)
