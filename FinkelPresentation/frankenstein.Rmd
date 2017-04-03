@@ -1,0 +1,428 @@
+---
+title: | 
+  | The "Finkelstein" Particle Filter:
+  | A tool for the high-dimensional filtering problem
+author: "Jameson Quinn"
+date: "1/25/2017"
+output: beamer_presentation
+
+header-includes:
+   - \usepackage{tikz}
+   - \usepackage{pgfplots}
+   - \usepackage{lastpage}
+   - \usepackage[makeroom]{cancel}
+   - \usepackage{wrapfig} 
+   - \usetikzlibrary{fit,positioning}
+   - \tikzset{font={\fontsize{9pt}{12}\selectfont}}
+   - \setbeamertemplate{footline}{\begin{flushright}\thepage/\pageref{LastPage}~~.\\\end{flushright}}
+   - #\titlegraphic{\includegraphics[width=.5\textwidth,height=.5\textheight]{sallySewing.png}}
+---
+
+```{r, echo=FALSE, error=FALSE, warning=FALSE, results='asis'}
+library(knitr)
+
+outputFormat = opts_knit$get("rmarkdown.pandoc.to")
+color="red"
+if(outputFormat %in% c('latex','beamer')) {
+  note = function(x){cat(paste0("\\textcolor{",color,"}{{\\scriptsize ",x,"}}\n\n"))}
+} else if(outputFormat %in% c('html','ioslides')) {
+  note = function(x){cat(paste0("<font color='",color,"',size='small'>",x,"</font>\n\n"))}
+} else {
+  cat(outputFormat)
+  note = function(x){cat(x)}
+}
+final=F
+
+
+note = function(x){cat("")}; final=T #comment out for presenter notes
+```
+
+## Structure of talk (if there's not a fire alarm)
+
+* Basic filtering problem
+
+```{r, echo=FALSE, results='asis'}
+note("Many of you are familiar with filtering, but I remind")
+```
+
+* Curse of dimensions for particle filters
+
+```{r, echo=FALSE, results='asis'}
+note("why high-dimensional particle filters are hard")
+```
+
+* Existing state of the art (Rebeschini and van Handel, 2015): "Frankenstein"
+* Proposed algorithm ("Finkelstein") and justification
+
+```{r, echo=FALSE, results='asis'}
+note("I call Frank bc cuts apart and sews together at random. Sally F from NightmareBC cuts and sews, but chooses what fits.")
+```
+
+* Numerical results
+* Future work
+
+
+## Basic filtering problem
+
+\begin{tikzpicture}
+\tikzstyle{main}=[circle, minimum size = 5mm, thick, draw =black!80, node distance = 8mm]
+\tikzstyle{connect}=[-latex, thick]
+\tikzstyle{box}=[rectangle, draw=black!270]
+  \node[main, fill = white!100] (x0) [label=above:$x_0$] { };
+  \node[main] (x1) [right=of x0,label=above:$x_1$] { };
+  \node[main] (x2) [right=of x1,label=above:$\dots$] {};
+  \node[main] (x3) [right=of x2,label=above:$x_{t-1}$] { };
+  \node[main] (x4) [right=of x3,label=above:$x_t$] { };
+  \node[main, fill = black!27] (y0) [below=of x0,label=below:$y_0$] { };
+  \node[main, fill = black!27] (y1) [below=of x1,label=below:$y_1$] { };
+  \node[main, fill = black!27] (y2) [below=of x2,label=below:$\dots$] { };
+  \node[main, fill = black!27] (y3) [below=of x3,label=below:$y_{t-1}$] { };
+  \node[main, fill = black!27] (y4) [below=of x4,label=below:$y_t$] { };
+  \path (x0) edge [connect] (x1)
+        (x1) edge [connect] (x2)
+		(x2) edge [connect] (x3)
+		(x3) edge [connect] (x4)
+		(x0) edge [connect] (y0)
+		(x1) edge [connect] (y1)
+		(x2) edge [connect] (y2)
+		(x3) edge [connect] (y3)
+		(x4) edge [connect] (y4)
+		;
+\end{tikzpicture}
+
+What is $\pi_t\equiv(x_t|y_0,...,y_t)$?
+
+## Particle filter algorithm
+
+Algorithm:
+
+* Assume we have $M$ particles $x_{t-1}^{1..M}$, taken to be "representative" samples from $(x_{t-1}|y_0,...,y_{t-1})$.
+* For each $x_{t-1}^{i}$, "progress" it to get $x_{t}^{i*}\sim (x_t|x_{t-1})$.
+* Find weights $w^{i*}\equiv f(y_t|x_{t}^{i*})$
+* Sample (with replacement) $M$ new $x_{t}^{i}$ from $\{x_{t}^{i*}\}$ using probabilities $\{w^{i*}\}$.
+    
+Characteristics:
+
+* Clearly not iid, but $\frac{1}{M}\Sigma_{i=1}^M g(x_{t}^{i})$ estimates $E_{\mathcal{F}}(g(x_t))$.
+* Error falls like $\frac{1}{\sqrt{M}}$ and does *not* grow with $t$ (under weak assumptions).
+
+```{r, echo=FALSE, results='asis'}
+note("adequately representative: neither independent nor exactly the right distribution, but close enough")
+```
+
+## High-dimensional filtration
+
+\begin{tikzpicture}
+\tikzstyle{main}=[circle, minimum size = 8mm, thick, draw =black!80, node distance = 12mm]
+\tikzstyle{connect}=[-latex, thick]
+\tikzstyle{box}=[rectangle, draw=black!270]
+  \node[main, fill = white!100] (x0) [] {$x_{\substack{0\\0}}$ };
+  \node[main] (x1) [right=of x0,label=above:] {$x_{\substack{0\\1}}$ };
+  \node[main] (x2) [right=of x1,label=above:] {$\dots$};
+  \node[main] (x3) [right=of x2,label=above:] {$x_{\substack{0\\ t}}$ };
+  
+  \node[main] (x01) [above right=1mm of x0,label=above:] { $x_{\substack{1\\0}}$};
+  \node[main] (x11) [above right=1mm of x1,label=above:] {$x_{\substack{1\\1}}$ };
+  \node[main] (x21) [above right=1mm of x2,label=above:] {$\dots$ };
+  \node[main] (x31) [above right=1mm of x3,label=above:] {$x_{\substack{1\\t}}$ };
+  
+  \node[main] (x02) [above right=1mm of x01,label=above:] {$\dots$ };
+  \node[main] (x12) [above right=1mm of x11,label=above:] {$\dots$  };
+  \node[main] (x22) [above right=1mm of x21,label=above:] {$\dots$ };
+  \node[main] (x32) [above right=1mm of x31,label=above:] {$\dots$  };
+  
+  \node[main] (x03) [above right=1mm of x02,label=above:] { $x_{\substack{D\\0}}$};
+  \node[main] (x13) [above right=1mm of x12,label=above:] {$x_{\substack{D\\1}}$ };
+  \node[main] (x23) [above right=1mm of x22,label=above:] {$\dots$ };
+  \node[main] (x33) [above right=1mm of x32,label=above:] {$x_{\substack{D\\t}}$ };
+  
+  \node[main, fill = black!27] (y0) [below=of x0,label=below:]   { $y_{\substack{0\\0}}$ };
+  \node[main, fill = black!27] (y1) [below=of x1,label=below:]   { $y_{\substack{0\\1}}$ };
+  \node[main, fill = black!27] (y2) [below=of x2,label=below:]   { $\dots$ };
+  \node[main, fill = black!27] (y3) [below=of x3,label=below:]   { $y_{\substack{0\\t}}$ };
+  
+  
+  \node[main, fill = black!27] (y01) [below=of x01,label=below:]   { $y_{\substack{1\\0}}$ };
+  \node[main, fill = black!27] (y11) [below=of x11,label=below:]   { $y_{\substack{1\\1}}$ };
+  \node[main, fill = black!27] (y21) [below=of x21,label=below:]   { $\dots$ };
+  \node[main, fill = black!27] (y31) [below=of x31,label=below:]   { $y_{\substack{1\\t}}$ };
+  
+  
+  \node[main, fill = black!27] (y02) [below=of x02,label=below:]   { $\dots$  };
+  \node[main, fill = black!27] (y12) [below=of x12,label=below:]   { $\dots$  };
+  \node[main, fill = black!27] (y22) [below=of x22,label=below:]   { $\dots$ };
+  \node[main, fill = black!27] (y32) [below=of x32,label=below:]   { $\dots$  };
+  
+  
+  \node[main, fill = black!27] (y33) [below=of x33,label=below:]   {$y_{\substack{D\\t}}$  };
+  \path 
+    (x0) edge [connect] (x1)
+    (x1) edge [connect] (x2)
+		(x2) edge [connect] (x3)
+		
+    (x0) edge [connect] (x11)
+    (x1) edge [connect] (x21)
+		(x2) edge [connect] (x31)
+		
+		
+    (x01) edge [connect] (x1)
+    (x11) edge [connect] (x2)
+		(x21) edge [connect] (x3)
+		
+    (x01) edge [connect] (x11)
+    (x11) edge [connect] (x21)
+		(x21) edge [connect] (x31)
+		
+    (x01) edge [connect] (x12)
+    (x11) edge [connect] (x22)
+		(x21) edge [connect] (x32)
+		
+		
+    (x02) edge [connect] (x11)
+    (x12) edge [connect] (x21)
+		(x22) edge [connect] (x31)
+		
+    (x02) edge [connect] (x12)
+    (x12) edge [connect] (x22)
+		(x22) edge [connect] (x32)
+		
+    (x02) edge [connect] (x13)
+    (x12) edge [connect] (x23)
+		(x22) edge [connect] (x33)
+		
+		
+    (x03) edge [connect] (x12)
+    (x13) edge [connect] (x22)
+		(x23) edge [connect] (x32)
+		
+    (x03) edge [connect] (x13)
+    (x13) edge [connect] (x23)
+		(x23) edge [connect] (x33)
+		
+		
+		
+		(x0) edge [connect] (y0)
+		(x1) edge [connect] (y1)
+		(x2) edge [connect] (y2)
+		(x3) edge [connect] (y3)
+		
+		(x01) edge [connect] (y01)
+		(x11) edge [connect] (y11)
+		(x21) edge [connect] (y21)
+		(x31) edge [connect] (y31)
+		
+		
+		(x02) edge [connect] (y02)
+		(x12) edge [connect] (y12)
+		(x22) edge [connect] (y22)
+		(x32) edge [connect] (y32)
+		
+		
+		(x33) edge [connect] (y33)
+		;
+\end{tikzpicture}
+
+What is $\pi_t\equiv(x_{\substack{\dots\\t}}|y_{\substack{\dots\\0}},...,y_{\substack{\dots\\t}})$?
+
+
+```{r, echo=FALSE, results='asis'}
+note("Note local connectivity. Example: weather prediction; $D$ can easily reach $10^4$ or more.")
+```
+
+## Curse of dimensionality
+
+Each particle $x_t^i$ encompasses $x{\substack{i\\0\\t}},...,x{\substack{i\\D\\t}}$?
+
+* Particle filter still "works" in that estimation error falls like $\frac{1}{\sqrt{M}}$ and doesn't grow with $t$.
+* ... but error is exponential in $D$.
+
+Separate particles for each $x{\substack{i\\l\\t}}$?
+
+* Works if $(x{\substack{l\\t}}|y_{\substack{\dots\\0}},...,y_{\substack{\dots\\t}})\perp\!\!\!\perp(x{\substack{k\\t}}|y_{\substack{\dots\\0}},...,y_{\substack{\dots\\t}})$
+
+
+```{r, echo=FALSE, results='asis'}
+note("...which may be nearly true in some cases, but is almost never strictly true, and can be strongly violated in general.")
+```
+
+## Existing state of the art (Rebeschini and van Handel, 2015)
+
+```{r, out.width = "80px", echo=FALSE}
+knitr::include_graphics("franken2.jpeg")
+```
+
+* Assume we have $M$ particles $x{\substack{1..M\\\textcolor{red}\dots\\t-1}}$, taken to be "representative" samples from $(x_{\substack{\textcolor{red}\dots\\t-1}}|y_{\substack{\textcolor{red}\dots\\0}},...,y_{\substack{\textcolor{red}\dots\\t-1}})$.
+* For each $x{\substack{i\\\textcolor{red}\dots\\t-1}}$, "progress" it to get $x{\substack{i*\\\textcolor{red}\dots\\t}}\sim (x_{\substack{\textcolor{red}\dots\\t}}|x_{\substack{\textcolor{red}\dots\\t-1}})$.
+* *Split each $\textcolor{red}{x{\substack{i*\\\dots\\t}}}$ into neigborhoods $\textcolor{red}{\{x{\substack{i*\\N_l\\t}}:0<l<L<D\}}$*
+* Find weights $w^{\substack{i*\\\textcolor{red}{N_l}}}=f_{x_{\substack{\textcolor{red}{N_l}\\t}}|y_{\substack{\textcolor{red}{N_l}\\t}}}(x{\substack{i*\\\textcolor{red}{N_l}\\t}})$
+* Sample (*independently*, with replacement) each neighborhood $\textcolor{red}{N_l}$ of $x{\substack{i\\\textcolor{red}{N_l}\\t}}$ from $\{x{\substack{i*\\\textcolor{red}{N_l}\\t}}\}$ using probabilities $\{w^{\substack{i*\\\textcolor{red}{N_l}}}\}$.
+
+## Characteristics
+
+* Rebeschini and van Handel show that the error using their method is bounded by $||\pi_{\substack{l\\t}}-\hat{\pi}{\substack{M\\l\\t}}||_{MC}\leq\alpha(\frac{e^{\beta|N_l|}}{\sqrt{M}}+e^{-\gamma\inf|l-b\in N_l^{C}|})$,
+where the constants $\alpha,\beta,\gamma$ do not depend on $t$.
+
+```{r, echo=FALSE, results='asis'}
+note("Using a notation involving density operators, instead of pseudocode. MC error is the sup for any set of possibilities of the standard deviation of the calculated ps around the truth")
+```
+
+* Thus there is a tradeoff: using smaller neighborhoods and/or more particles
+will control the term $\frac{e^{\beta| N_l|}}{\sqrt{M}}$, while using
+larger neighborhoods will control the term $e^{-\gamma\inf|m-b\in N_l^{C}|}$.
+
+```{r, echo=FALSE, results='asis'}
+note("the distance of a given locus to the
+edge of its neigborhood... Still, attaining a given error may involve exponential computing power.")
+```
+    
+## "Finkelstein" solution 1/3
+
+```{r, out.width = "80px", echo=FALSE, results='asis'}
+if(final){knitr::include_graphics("sallySewing.png")}
+note("10m? Sally Finkelstein from NightmareBC here.")
+```
+
+* Assume we have $M$ particles $x{\substack{1..M\\\textcolor{black}\dots\\t-1}}$, taken to be "representative" samples from $(x_{\substack{\textcolor{black}\dots\\t-1}}|y_{\substack{\textcolor{black}\dots\\0}},...,y_{\substack{\textcolor{black}\dots\\t-1}})$.
+* For each $x{\substack{i\\\textcolor{black}\dots\\t-1}}$, "progress" it to get a "full particle" $x{\substack{i,0\\\textcolor{black}\dots\\t}}\sim (x_{\substack{\textcolor{black}\dots\\t}}|x_{\substack{\textcolor{black}\dots\\t-1}})$ whose spatial "subparticles" are known as $x{\substack{i\\\textcolor{black}{l}\\t}}$.
+* Find weights for each subparticle locus, denoted $w^{\substack{i\\l}}\equiv f(y_{\substack{l\\t}}|x{\substack{i\\\textcolor{black}{l}\\t}})$; and probabilities conditional on $x_{t-1}^i$, denoted $f_i(x{\substack{k\\\textcolor{black}{l}\\t}})\equiv f(x{\substack{k\\\textcolor{black}{l}\\t}}|x{\substack{i\\\textcolor{black}\dots\\t-1}})$.
+* For each full particle $x{\substack{i,0\\\textcolor{black}\dots\\t}}$, run an MCMC chain targeting the filtration distribution up to convergence at $x{\substack{i,C\\\textcolor{black}\dots\\t}}$
+
+## 2/3: Metropolis-Hastings MCMC (Starting at $x{\substack{P,s\\\dots\\t}}$)
+
+* Choose a spatial locus $l\in {1...D}$ and draw, with probability weighted by $w^{\substack{i\\l}}$, a proposed replacement subparticle for that locus $x{\substack{k\\l\\t}}$.
+
+```{r, echo=FALSE, results='asis'}
+note("Locus selection: random or systematic; actually there are some simple adaptive tricks that probably help.")
+```
+
+* Accept this replacement as $x{\substack{P,s+1\\l\\t}}$ with probability: $1\wedge$ 
+$$\frac{\Sigma_{i\in \{k,h^{P,s}(l)\}}f_i(x{\substack{k\\l\\t}})\Pi_{l\in n(l)\setminus l}f_i(x{\substack{P,s\\l\\t}})} {\Sigma_{i\in\{k,h^{P,s}(l)\}}\Pi_{l\in{n}(l)}f_i(x{\substack{P,s\\l\\t}})}~~~\textcolor{blue}{(1)}$$
+
+* Sum of probabilities contributions from neighborhood _history_: $h^{i,j}(l)\equiv \{m:\exists k\in n(l):x{\substack{i,j\\k\\t}}=x{\substack{m,0\\k\\t}}\}$
+* Each contribution a product of locus probabilities over _neighborhood_: $n(l\in {1...D})\equiv\{k\}:(x_{\substack{l\\t}}|x_{\substack{k\in n(l)\\t-1}})\perp\!\!\!\perp x_{\substack{n(l)^C\\t-1}}$.
+
+## 3/3: Why does this work?
+
+\begin{wraptable}{r}{3.5cm}
+```{r, out.width = "60px", echo=FALSE, fig.align="right", fig.}
+knitr::include_graphics("sallySewingClose.png")
+```
+\end{wraptable}
+
+Imagine $M\rightarrow\infty$ so $\frac{1}{M}\Sigma_i\delta(x_{\substack{\dots\\t-1}})\rightarrow\pi_{\substack{\dots\\t-1}}$.
+
+$$f(x_{\substack{\dots\\t}}|y_{\substack{\dots\\0}},...,y_{\substack{\dots\\t}})=f(x_{\substack{\dots\\t}}|\pi_{\substack{\dots\\t-1}},y_{\substack{\dots\\t}})\propto f(y_{\substack{\dots\\t}}|x_{\substack{\dots\\t}})f(x_{\substack{\dots\\t}}|\pi_{\substack{\dots\\t-1}})$$
+$$=[\Pi_{l}f(y_{\substack{l\\t}}|x_{\substack{l\\t}})]\int_{\pi_{t-1} }\Pi_{l}f(x_{\substack{l\\t}}|x{\substack{\iota\\\dots\\t-1}})dx{\substack{\iota\\\dots\\t-1}}$$
+Converting the integral to a sum, the appropriate   
+M-H acceptance for switching from   
+$x{\substack{0\\l\\t}}$ to $x{\substack{1\\l\\t}}$ would be:
+
+$$\frac{\renewcommand\CancelColor{\color{blue}}\cancel{w^{\substack{1\\l}}}\renewcommand\CancelColor{\color{red}}\cancel{\Pi_{-l}w^{\substack{\\-l}}}~~~~~\Sigma_{i}[f_i(x{\substack{1\\l\\t}})\Pi_{-l}f_i(x_{\substack{-l\\t}})]} {\renewcommand\CancelColor{\color{green}}\cancel{w^{\substack{0\\l}}}\renewcommand\CancelColor{\color{red}}\cancel{\Pi_{-l}w^{\substack{\\-l}}}~~~~~\Sigma_{i}[f_i(x{\substack{0\\l\\t}})\Pi_{-l}f_i(x_{\substack{-l\\t}})]}~~~~~~~ \frac{\renewcommand\CancelColor{\color{green}}\cancel{w^{\substack{0\\l}}}} {\renewcommand\CancelColor{\color{blue}}\cancel{w^{\substack{1\\l}}}}~~~~~~~\textcolor{blue}{(2)}$$
+
+```{r, echo=FALSE, results='asis'}
+note("rat. of target densities (obs., kernel); inv. rat. proposal densities")
+```
+
+Exp. $\textcolor{blue}{(1)}$ above ignores "far away" and/or "unrelated" terms for computational simplicity, but unbiased estimator of exp. \textcolor{blue}{(2)}.
+
+```{r, echo=FALSE, results='asis'}
+note("'far away'=spatially; 'unrelated'=from particles that made no local contribution. Unbiasedness in terms of density; may not lead to unbiased convergence.")
+```
+
+
+## Computational complexity:
+
+* Progressing the particles and calculating weights: $O(MD)$
+* Calculating conditional probabilities: $O(M^2D)$
+
+```{r, echo=FALSE, results='asis'}
+note("Usually you don't have to calculate all probabilities, as low-weight possibilities are never chosen.")
+```
+
+* Running MCMC: $O(MDBC)$ where block size $B=|n(\dot)|<<D$ and $C$ is convergence time.
+
+```{r, echo=FALSE, results='asis'}
+note("As soon as the total acceptance probability at each locus for the possibilities that have been considered is 1 or greater, the chain has converged")
+```
+
+* Overall worst-case: $O(M^2DC)=O(\frac{D}{\epsilon^4})<<O(\frac{e^{\alpha D}}{\epsilon^2})$
+
+
+```{r, echo=FALSE, results='asis'}
+note("... Note that in practice, $C$ probably depends on the connectivity pattern of the loci; a 2D grid can be much harder than a 1D sequence. Think of phase transitions in an Ising model.")
+```
+    
+    
+## Assumptions involved; strong but probably unnecessary
+
+We found the ratio $f(x{\substack{i\\l\\t}})/f(x{\substack{j\\l\\t}})$ using the expression $f(x_{\substack{\dots\\t}}|x_{\substack{\dots\\t-1}})=\Pi_{l}f(x_{\substack{l\\t}}|x_{\substack{\dots\\t-1}})$. This assumes: 
+
+* Can obtain density $f(x_{\substack{l\\t}}|x_{\substack{\dots\\t-1}})$ (up to a constant).
+* Conditional independence: $(x_{\substack{\textcolor{red}l\\t}}|x_{\substack{\dots\\t-1}})\perp\!\!\!\perp (x_{\substack{\textcolor{red}j\\t}}|x_{\substack{\dots\\t-1}})$ for $\textcolor{red}l\neq\textcolor{red}j$.
+
+Both are unrealistic in most interesting problems. But often we can still *estimate* that ratio feasibly.
+
+```{r, echo=FALSE, results='asis'}
+note("Product of conditional marginals. Unrealistic; consider conservation of matter. But there is hope. For example, Kalman filter (Normal/Normal) case, involves a correction term based on the precision (inverse covariance) matrix. Remember that the precision matrix is generally relatively sparse; only neighbors matter. Even if we can't get analytic answers, we might be able to estimate sparse precision matrix using our particle set, and estimate densities somehow.")
+```
+
+
+## Error behavior: reasons for hope
+
+Is the error $\propto\frac{1}{\sqrt{M}}$ and not dependent on $t$? Consider as density operators:
+
+$${\pi}_{t}=K_{t}P{\pi}_{t-1}=QF_{P}K_{t}LP^{*}{\pi}_{t-1}\approx Q\textcolor{blue}{F_{P}}K_{t}L\textcolor{red}{S^{N}}P^{*}\hat{\pi}_{t-1}^{N}$$
+ 
+
+From right to left, in order of application, this last is: 
+
+1. Begin with $\hat{\pi}_{t-1}^{N}$ , the set of weighted particles at time $t-1$. 
+
+2. Progress with $P^{*}$, labeling each $x_t$ with its origin $x_{t-1}$.
+
+3. \textcolor{red}{Resample with $S^{N}$, for N new equally-weighted particles.}
+
+4. Localize with $L$, breaking the density over $\mathcal{W}_{t}\times\mathcal{W}_{t-1}$ into $D$ separate densities over each $\mathcal{L}_{\substack{l\\t}}\times\mathcal{W}_{t-1}$.
+
+5. Reweight with $K_{t}$, based on $y_t$.
+
+6. Rejoin with $F_{P}$, Finkelstein operator based on progression $P$.
+
+7. Quash with $Q$, integrating over the history $\mathcal{W}_{t-1}$.
+
+## Results
+
+Fully Normal example, $d$ dimensions arranged linearly (2 neighbors), 5 random time steps from "tightish" prior, this computer, average of 16 runs with same model, non-optimized code (Julia)
+
+Finkelstein: 50 particles, 35s; Frankenstein, 10K particles, 13s; Standard particle filter, 10K particles, 7.7s.
+
+```{r, echo=FALSE, warning=FALSE, error=FALSE, fig.height=4}
+library(ggplot2)
+library(data.table)
+fink = fread("finkResults.csv")
+fink=fink[,method:=factor(variable, levels=unique(variable))]
+
+ggplot(fink,aes(x=d,y=value,color=method)) + geom_line() + ylab("Mean log density per dimension")
+```
+
+## I guess there wasn't a fire alarm
+
+Further work:
+
+* Loosen assumptions
+    * Present states not independent conditional on past? Relatively easy.
+    * Can's obtain density for present conditional on past? Less clear, but likely some of these ideas (MCMC chain targeting best-guess conditional distribution) still "help".
+    
+* Find applications/test data sets
+    * Ideas?
+    
+* Finish proof of error behavior
+    * Assuming perfect convergence (not unreasonable)
+    
+* Explore convergence issues
+    * Effect of connectivity; conditions for phase change?
+
+## Thank you!
+
+Thanks to my advisor Luke Miratrix, and to Pierre Jacob for helping me refine these ideas and notation. All mistakes of course are my own.
+    
