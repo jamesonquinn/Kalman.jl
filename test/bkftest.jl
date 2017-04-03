@@ -134,95 +134,127 @@ Gadfly.draw(Gadfly.SVG("/Users/chema/mydev/myplot3.svg", 4inch, 3inch), pp2)
 
 
 @load bkf
+ds = [10,25,50,100]
+ln = size(ns,1)
+reps = 5
+finkelmean = zeros(ln,reps)
+frankenmean = zeros(ln,reps)
+partmean = zeros(ln,reps)
+idealmean = zeros(ln,reps)
+for width in 1:ln
 
-d = 100
-bleed = .25
-jitter = .1
-jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
-temper = .9
-basenoise = 1
-lownoise = .04
-lowgap = 3
-noisebleed = .1
-n = 100
-mciter = 6
+    d = ds[width]
+    bleed = .25
+    jitter = .1
+    jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
+    temper = .9
+    basenoise = 1
+    lownoise = .04
+    lowgap = 3
+    noisebleed = .1
+    mciter = 6
+
+    
+    x0 = bkf.State(zeros(d),eye(d))
+
+    a = SymTridiagonal(ones(d),bleed * ones(d-1))
+    a = a / det(a)^(1/d)
+
+    b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
+    b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
+    g = inv(b)
+    g = g * (temper / det(g))^(1/d)
+
+    q = eye(d)
+
+    f = bkf.LinearModel(a,g,q)
 
 
-x0 = bkf.State(zeros(d),eye(d))
+    h = eye(d) * basenoise
+    for i in 1:lowgap:d
+        h[i,i] = lownoise
+    end
 
-a = SymTridiagonal(ones(d),bleed * ones(d-1))
-a = a / det(a)^(1/d)
+    b = SymTridiagonal(ones(d),-noisebleed * ones(d-1))
+    b[1,1] = b[d,d] = 1 - noisebleed^2 / (1-noisebleed^2)
+    r = inv(b)
+    r = r / det(r)^(1/d)
 
-b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
-b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
-g = inv(b)
-g = g * (temper / det(g))^(1/d)
-
-q = eye(d)
-
-f = bkf.LinearModel(a,g,q)
+    z = bkf.LinearObservationModel(h)
+    kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
 
-h = eye(d) * basenoise
-for i in 1:lowgap:d
-    h[i,i] = lownoise
+    nfp,npf,nfapf = (5, 25, 25)
+    #nfp,npf,nfapf = (31, 1000, 200)
+    nfp,npf,nfapf = (100, 10000, 2000)
+
+    for r in 1:reps
+
+
+        fpf = bkf.toParticleSet(kf0,nfp)
+        pf = bkf.toParticleSet(kf0,npf)
+        fapf = bkf.toFrankenSet(kf0,n,5)
+        fp = bkf.FinkelToe(fpf)
+
+        pf1 = bkf.toParticleSet(kf0,1)
+
+        T = 3
+        t = collect(0:T)
+
+        truth = Vector{bkf.ParticleSet}(0)#length(t))
+        observations = Vector{bkf.Observation}(0)#length(t))
+        kfs = Vector{bkf.BasicKalmanFilter}(0)#length(t))
+        pfs = Vector{bkf.ParticleStep}(0)#length(t))
+        fps = Vector{bkf.AbstractFinkel}(0)#length(t))
+        faps = Vector{bkf.FrankenStep}(0)
+
+        kf = kf0
+        push!(kfs, kf)
+        ps = bkf.ParticleStep(pf)
+        push!(pfs, ps)
+        push!(fps, fp)
+        fap = bkf.FrankenStep(fapf)
+        push!(faps, fap)
+
+        push!(truth, pf1)
+        push!(observations, bkf.Observation(pf1,1))
+
+
+
+        for i in 2:length(t)-1
+            push!(truth, bkf.ap(truth[i-1]))
+            push!(observations, bkf.Observation(truth[i],1))
+            kf2 = bkf.predict(kf)
+            kf = bkf.update(kf2,observations[i])
+            push!(kfs, kf)
+            ps = bkf.ParticleStep(ps,observations[i])
+            push!(pfs, ps)
+            fp = bkf.FinkelParticles(fp, observations[i], 4)
+            push!(fps, fp)
+            fap = bkf.FrankenStep(fap, observations[i])
+            push!(faps, fap)
+        end
+
+        dif = kfs[end].x.p - kfs[end].x.p'
+        mean(dif)
+        mean(kfs[end].x.p)
+        finalDist = bkf.toDistribution(kfs[end])
+        finkelmean[width,r] = mean(log(bkf.pdf(finalDist,fps[end].tip.particles)))/d
+        partmean[width,r] = mean(log(bkf.pdf(finalDist,pfs[end].p.particles)))/d
+        frankenmean[width,r] = mean(log(bkf.pdf(finalDist,faps[end].p.particles)))/d
+        idealmean[width,r] = mean(log(bkf.pdf(finalDist,rand(finalDist,50))))/d
+    end
 end
 
-b = SymTridiagonal(ones(d),-noisebleed * ones(d-1))
-b[1,1] = b[d,d] = 1 - noisebleed^2 / (1-noisebleed^2)
-r = inv(b)
-r = r / det(r)^(1/d)
-
-z = bkf.LinearObservationModel(h)
-kf0 = bkf.BasicKalmanFilter(x0,f,z)
-
-
-nfp,npf = (5, 25)
-nfp,npf = (31, 1000)
-
-fpf = bkf.toParticleSet(kf0,nfp)
-pf = bkf.toParticleSet(kf0,npf)
-fp = bkf.FinkelToe(fpf)
-
-pf1 = bkf.toParticleSet(kf0,1)
-
-T = 3
-t = collect(0:T)
-
-truth = Vector{bkf.ParticleSet}(0)#length(t))
-observations = Vector{bkf.Observation}(0)#length(t))
-kfs = Vector{bkf.BasicKalmanFilter}(0)#length(t))
-pfs = Vector{bkf.ParticleStep}(0)#length(t))
-fps = Vector{bkf.AbstractFinkel}(0)#length(t))
-
-kf = kf0
-push!(kfs, kf)
-ps = bkf.ParticleStep(pf)
-push!(pfs, ps)
-push!(fps, fp)
-
-push!(truth, pf1)
-push!(observations, bkf.Observation(pf1,1))
+[idealmean,finkelmean,frankenmean,partmean]
 
 
 
-for i in 2:length(t)-1
-    push!(truth, bkf.ap(truth[i-1]))
-    push!(observations, bkf.Observation(truth[i],1))
-    kf2 = bkf.predict(kf)
-    kf = bkf.update(kf2,observations[i])
-    push!(kfs, kf)
-    ps = bkf.ParticleStep(ps,observations[i])
-    push!(pfs, ps)
-    fp = bkf.FinkelParticles(fp, observations[i], 4)
-    push!(fps, fp)
-end
 
-dif = kfs[end].x.p - kfs[end].x.p'
-mean(dif)
-mean(kfs[end].x.p)
-finalDist = bkf.toDistribution(kfs[end])
-finkelmean = mean(bkf.pdf(finalDist,fps[end].tip.particles))
-partmean = mean(bkf.pdf(finalDist,pfs[end].p.particles))
-idealmean = mean(bkf.pdf(finalDist,rand(finalDist,50)))
-[finkelmean,partmean,idealmean]
+
+
+
+
+
+
+#....

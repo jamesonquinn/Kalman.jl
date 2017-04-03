@@ -2,6 +2,7 @@ module bkf
   using Distributions
   using StatsBase
   using Memoize
+  using Compat
   import Base.length
 
   abstract KalmanFilter
@@ -107,9 +108,14 @@ module bkf
       MvNormal(kf.z.r)
     end
 
+    function obsNoiseDistribution(kf::BasicKalmanFilter, fromI, toI)
+      MvNormal(kf.z.r[fromI:toI,fromI:toI])
+    end
 
-  include("particlefilter.jl")
-  include("finkel.jl")
+
+include("particlefilter.jl")
+include("frankenfilter.jl")
+include("finkel.jl")
 
   include("filter.jl")
   include("unscented.jl")
