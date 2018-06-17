@@ -5,22 +5,22 @@ module bkf
   using Compat
   import Base.length
 
-  abstract KalmanFilter
+  abstract type KalmanFilter end
 
-  abstract LinearKalmanFilter <: KalmanFilter
+  abstract type LinearKalmanFilter <: KalmanFilter end
 
-  abstract Model
+  abstract type Model end
 
-  abstract ObservationModel
+  abstract type ObservationModel end
 
-  abstract AbstractState
+  abstract type AbstractState end
 
   type State{T} <: AbstractState
       x::Vector{T}
       p::Matrix  #covariance
   end
 
-  Base.(:(==))(x1::State,x2::State) = x1.x==x2.x && x1.p == x2.p
+  Base.:(==)(x1::State,x2::State) = x1.x==x2.x && x1.p == x2.p
 
   type LinearModel <: Model
       a::Matrix #state transition matrix

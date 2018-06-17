@@ -31,29 +31,29 @@ function SparseKF(f::BasicKalmanFilter) #assumes neighborliness is symmetric
     SparseKF(f,neighbors)
 end
 
-abstract AbstractFinkel <: AbstractParticleFilter
+abstract AbstractOldfinkel <: AbstractParticleFilter
 
-type FinkelToe{T,F<:KalmanFilter} <: AbstractFinkel
+type OldfinkelToe{T,F<:KalmanFilter} <: AbstractOldfinkel
     tip::ParticleSet{T,F}
 end
 
-function particleMatrix(fp::AbstractFinkel)
+function particleMatrix(fp::AbstractOldfinkel)
     fp.tip.particles
 end
 
-function getbkf(fp::AbstractFinkel)
+function getbkf(fp::AbstractOldfinkel)
     fp.tip.filter
 end
 
-type FinkelParticles{T,F<:KalmanFilter} <: AbstractFinkel
+type OldfinkelParticles{T,F<:KalmanFilter} <: AbstractOldfinkel
     tip::ParticleSet{T,F} #This is where we do MCMC and get the answer. Also holds the filter. It's got extra stuff; ignore.
     base::Array{T,2} #This is the raw 1-step progression from last time.
                 #As with all similar arrays, size is [d,n]; that is, first index is space and second is particle.
         #[space, particle]
-    prev::AbstractFinkel
+    prev::AbstractOldfinkel
     stem::Array{Int64,2} #tells which base each tip comes from
         #[space, particle]
-    ws::Vector{WeightVec} #selection probabilities at each point; p(y_l|x^i_l)
+    ws::Vector{ProbabilityWeights} #selection probabilities at each point; p(y_l|x^i_l)
         #[space][particle]
     #lps::Array{Nullable{Float64},2} #log probabilities from base to tip; size [n, n]
     means::Array{T,2} #base, progressed, without adding noise.
@@ -62,7 +62,7 @@ type FinkelParticles{T,F<:KalmanFilter} <: AbstractFinkel
     totalProb::Array{Float64,2} #convergence diagnostic
 end
 
-function FinkelParticles(prev::AbstractFinkel)
+function OldfinkelParticles(prev::AbstractOldfinkel)
     d, n = size(particleMatrix(prev))
     print(d," dn ",n,"\n")
     tip = ap(prev.tip)
@@ -73,11 +73,11 @@ function FinkelParticles(prev::AbstractFinkel)
             stem[i,j] = j
         end
     end
-    fp = FinkelParticles(tip,
+    fp = OldfinkelParticles(tip,
                 copy(tip.particles), #base
                 prev,
                 stem,
-                Vector{WeightVec}(), #empty weights
+                Vector{ProbabilityWeights}(), #empty weights
                 filt.f.a * particleMatrix(prev),
                 Array{Nullable{Float64},2}(d,n),
                 Array{Distribution,2}(d,n),
@@ -88,12 +88,12 @@ function FinkelParticles(prev::AbstractFinkel)
     fp
 end
 
-function particles(fp::FinkelParticles)
+function particles(fp::OldfinkelParticles)
     fp.tip.particles
 end
 
-function reweight!(fp::FinkelParticles, y::Observation)
-    fp.ws = Vector{WeightVec}()
+function reweight!(fp::OldfinkelParticles, y::Observation)
+    fp.ws = Vector{ProbabilityWeights}()
     diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
     vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.r is diagonal
     for i = 1:size(fp.base,1)
@@ -101,11 +101,11 @@ function reweight!(fp::FinkelParticles, y::Observation)
         for j = 1:fp.tip.n
             wvec[j] = exp(-diffs[i,j]^2 / vars[i] / 2)
         end
-        push!(fp.ws,WeightVec(wvec))
+        push!(fp.ws,ProbabilityWeights(wvec))
     end
 end
 
-function getDists!(fp::FinkelParticles, d, n)
+function getDists!(fp::OldfinkelParticles, d, n)
     for i in 1:n
         x = Vector(slice(fp.means,:,i))
         for l in 1:d
@@ -115,7 +115,7 @@ function getDists!(fp::FinkelParticles, d, n)
 end
 
 
-function probSum(fp::FinkelParticles,l::Integer,i::Integer,p::Integer,
+function probSum(fp::OldfinkelParticles,l::Integer,i::Integer,p::Integer,
             neighborhood::Range,
             centerOnly = false)
     ps = 0.
@@ -152,7 +152,7 @@ function probSum(fp::FinkelParticles,l::Integer,i::Integer,p::Integer,
     ps
 end
 
-function probSum(fp::FinkelParticles,l::Integer,i::Integer,p::Integer,d::Int64,
+function probSum(fp::OldfinkelParticles,l::Integer,i::Integer,p::Integer,d::Int64,
                 centerOnly = false)
 
     probSum(fp,l,i,p,
@@ -160,13 +160,13 @@ function probSum(fp::FinkelParticles,l::Integer,i::Integer,p::Integer,d::Int64,
             )
 end
 
-function probSum(fp::FinkelParticles,l::Integer,i::Integer,d::Int64,
+function probSum(fp::OldfinkelParticles,l::Integer,i::Integer,d::Int64,
             centerOnly::Bool = false)
     probSum(fp,l,i,fp.stem[l,i],d,centerOnly)
 end
 
 
-function calcPrevProbs!(fp::FinkelParticles, d, n)
+function calcPrevProbs!(fp::OldfinkelParticles, d, n)
 
     for i in 1:n
         for l in 1:d
@@ -175,7 +175,7 @@ function calcPrevProbs!(fp::FinkelParticles, d, n)
     end
 end
 
-function mcmc!(fp::FinkelParticles,i::Integer,steps::Integer)
+function mcmc!(fp::OldfinkelParticles,i::Integer,steps::Integer)
     d = size(fp.base,1)
     for s in 1:steps
         order = randperm(d)
@@ -215,8 +215,8 @@ function mcmc!(fp::FinkelParticles,i::Integer,steps::Integer)
     end
 end
 
-function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=true)
-    fp = FinkelParticles(prev)
+function OldfinkelParticles(prev::AbstractOldfinkel, y::Observation, nIter=15, debug=true)
+    fp = OldfinkelParticles(prev)
     reweight!(fp, y)
     for i in 1:fp.tip.n
         mcmc!(fp,i,nIter)

@@ -1,8 +1,8 @@
 #######
 # Unscented Kalman filter types and filtering interface
 
-abstract UnscentedKalmanFilter <: KalmanFilter
-abstract AbstractUnscentedState <: AbstractState
+abstract type UnscentedKalmanFilter <: KalmanFilter end
+abstract type AbstractUnscentedState <: AbstractState end
 
 type UnscentedState{T} <: AbstractUnscentedState
     x::Vector{T}
@@ -75,7 +75,7 @@ function covs(kf::AdditiveUnscentedKalmanFilter,y::Observation)
     end
 
     res = y.y-yhat
-    
+
     ph = zeros(n,m)
     s = zeros(m,m)
     for i in 1:k

@@ -1,13 +1,13 @@
 #included in bkf.jl
 
-  abstract AbstractParticleFilter
+  abstract type AbstractParticleFilter end
 
 type FrankenSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     filter::F
     n::Int64
     hoodSize::Int64
     particles::Array{T,2}
-    weights::Vector{WeightVec{Float64,Array{Float64,1}}}
+    weights::Vector{ProbabilityWeights{Float64,Float64,Array{Float64,1}}}
 end
 
 
@@ -16,7 +16,9 @@ end
     width = size(kf.f.a, 1)
     nHoods = div(width, hoodSize)
     FrankenSet(kf, n, hoodSize, rand(d,n),
-                    [WeightVec(ones(n),Float64(n)) for i in 1:nHoods])
+                    [ProbabilityWeights(ones(n),Float64(n)) for i in 1:nHoods])
+                    #maybe declare generic type for array to prevent over-specific?
+                    #ProbabilityWeights[ProbabilityWeights(ones(n),Float64(n)) for i in 1:nHoods]) #?
   end
 
   #function ap(f::KalmanFilter,ps::Array{T,2})
@@ -49,14 +51,14 @@ end
     #println(size(newParticles))
     FrankenSet(pset.filter, n, pset.hoodSize,
                 pset.filter.f.a * resampledParticles + ε,
-                [WeightVec(ones(n),Float64(n)) for i in 1:size(pset.weights,1)])
+                [ProbabilityWeights(ones(n),Float64(n)) for i in 1:size(pset.weights,1)])
   end
 
   function reweight!(pset::FrankenSet, y::Observation)
     for i in 1:size(pset.weights,1)
         toI = i*pset.hoodSize
         fromI = toI - pset.hoodSize + 1
-        pset.weights[i] = WeightVec(
+        pset.weights[i] = ProbabilityWeights(
                   pdf(obsNoiseDistribution(pset.filter, fromI, toI),
                       pset.particles[fromI:toI,:] - pset.filter.z.h[fromI:toI,fromI:toI] * repeat(y.y[fromI:toI],outer=[1,size(pset.particles,2)])
                   ))

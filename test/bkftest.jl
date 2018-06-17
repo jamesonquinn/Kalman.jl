@@ -135,12 +135,13 @@ Gadfly.draw(Gadfly.SVG("/Users/chema/mydev/myplot3.svg", 4inch, 3inch), pp2)
 
 @load bkf
 ds = [10,25,50,100]
-ln = size(ns,1)
+ln = size(ds,1)
 reps = 5
 finkelmean = zeros(ln,reps)
 frankenmean = zeros(ln,reps)
 partmean = zeros(ln,reps)
 idealmean = zeros(ln,reps)
+width = 1
 for width in 1:ln
 
     d = ds[width]
@@ -154,7 +155,7 @@ for width in 1:ln
     noisebleed = .1
     mciter = 6
 
-    
+
     x0 = bkf.State(zeros(d),eye(d))
 
     a = SymTridiagonal(ones(d),bleed * ones(d-1))
@@ -188,12 +189,13 @@ for width in 1:ln
     #nfp,npf,nfapf = (31, 1000, 200)
     nfp,npf,nfapf = (100, 10000, 2000)
 
+    r = 1
     for r in 1:reps
 
 
         fpf = bkf.toParticleSet(kf0,nfp)
         pf = bkf.toParticleSet(kf0,npf)
-        fapf = bkf.toFrankenSet(kf0,n,5)
+        fapf = bkf.toFrankenSet(kf0,nfapf,5)
         fp = bkf.FinkelToe(fpf)
 
         pf1 = bkf.toParticleSet(kf0,1)
@@ -219,7 +221,7 @@ for width in 1:ln
         push!(truth, pf1)
         push!(observations, bkf.Observation(pf1,1))
 
-
+        i = 2
 
         for i in 2:length(t)-1
             push!(truth, bkf.ap(truth[i-1]))

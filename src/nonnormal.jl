@@ -20,7 +20,7 @@ module bkf
       p::Matrix  #covariance
   end
 
-  Base.(:(==))(x1::State,x2::State) = x1.x==x2.x && x1.p == x2.p
+  Base.:(==)(x1::State,x2::State) = x1.x==x2.x && x1.p == x2.p
 
   type LinearModel <: Model
       a::Matrix #state transition matrix

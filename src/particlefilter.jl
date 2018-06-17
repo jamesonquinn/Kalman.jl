@@ -1,12 +1,18 @@
 #included in bkf.jl
 
-  abstract AbstractParticleFilter
+  abstract type AbstractParticleFilter end
 
 type ParticleSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     filter::F
     n::Int64
     particles::Array{T,2}
-    weights::WeightVec
+    weights::ProbabilityWeights
+end
+
+Base.copy(pw::ProbabilityWeights) = deepcopy(pw) #Annoying that I have to do this explicitly because otherwise copy() isn't type-preserving
+
+function Base.copy(ps::ParticleSet)
+    ParticleSet(ps.filter,ps.n,copy(ps.particles),copy(ps.weights)) #Note that the filter is NOT copied but just referenced!
 end
 
   function Observation(ps::ParticleSet, n::Int64)
@@ -31,7 +37,7 @@ end
 
   function toParticleSet(kf::KalmanFilter, n::Int64)
     d = toDistribution(kf)
-    ParticleSet(kf, n, rand(d,n), WeightVec(ones(n),n))
+    ParticleSet(kf, n, rand(d,n), ProbabilityWeights(ones(n),n))
   end
 
   #function ap(f::KalmanFilter,ps::Array{T,2})
@@ -54,11 +60,11 @@ end
 
       newParticleBases[:,i] = pset.filter.f.a * pset.particles[:,samp.s[i]]
     end
-    ParticleSet(pset.filter, n, newParticleBases + ε, WeightVec(ones(n),n))
+    ParticleSet(pset.filter, n, newParticleBases + ε, ProbabilityWeights(ones(n),n))
   end
 
   function reweight!(pset::ParticleSet, y::Observation)
-    pset.weights = WeightVec(pdf(obsNoiseDistribution(pset.filter),
+    pset.weights = ProbabilityWeights(pdf(obsNoiseDistribution(pset.filter),
                                   pset.particles - pset.filter.z.h * repeat(y.y,outer=[1,size(pset.particles,2)])
                                   ))
   end
