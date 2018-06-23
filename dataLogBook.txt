@@ -1,0 +1,5 @@
+filtertest4.csv: using exp(-lp) INCONSISTENTLY in probSum, nIter = [1, 5, 20, 400]. No obvious trend in divergence over nIter; if anything, getting better.
+
+filtertest5.csv: using exp(lp). Worse than filtertest4.
+
+filtertest6.csv: using exp(-lp) consistently. Seems that it's right — the trace part of the divergence has a clear downward trend, yay. But — the diff-in-means part of the divergence has an upward trend. I think it's because I have not corrected for the forward density? I will try fixing that.

@@ -267,7 +267,7 @@ function probSum(fp::FinkelParticles,
     for λ in neighborhood
         lp += fp.lps[λ,fp.stem[λ,i],h]
     end
-    exp(lp)
+    exp(-lp)
 end
 
 function probSum(fp::FinkelParticles,
@@ -284,7 +284,7 @@ function probSum(fp::FinkelParticles,
             lp += fp.lps[λ,lstem,h]
         end
     end
-    exp(lp)
+    exp(-lp)
 end
 
 """
