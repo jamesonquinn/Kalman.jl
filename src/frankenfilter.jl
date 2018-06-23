@@ -32,7 +32,7 @@ end
 
 
   function ap(pset::FrankenSet, samp::Vector{Resample})
-    n = length(samp[1])
+    n = pset.n
     w = length(samp)
     ε=rand(noiseDistribution(pset.filter),n)
     resampledParticles = Array{Float64}(size(pset.particles,1), n)
