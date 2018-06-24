@@ -152,6 +152,10 @@ nParticles = [(5,25,5,40,5,10), #nfp,npf,nfapf,reps,max nIters slot, steps
               (100, 10000,2000,10,5,10),
               (500,250000,10000,7,3,5),
               (1000,10,10,4,3,3)]
+
+#Small numbers for quicker test
+nParticles = [(5,25,5,5,5,4), #nfp,npf,nfapf,reps,max nIters slot, steps
+            (100, 10000,2000,5,5,4)]
 reps = max([np[4] for np in nParticles]...)#max of reps above
 nIters = [1,10,50,200,800]
 lnIters = length(nIters)
@@ -373,14 +377,14 @@ for np in 1:lnParts
                 global fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                 push!(fps, fp)
                 print("\nfinkel:")
-                kls = bkf.kl2(finalDist,fps[end].tip.particles)
+                kls = bkf.kl2(finalDist,fps[1].tip.particles)
                 finkelkl[np,width,r]  = kls[1]
                 for i in 2:length(t)-1
                     fp = bkf.FinkelParticles(fp, observations[i], nIter)
                     push!(fps, fp)
                     print("\nfinkel:")
                     try
-                        kls = bkf.kl2(finalDist,fps[end].tip.particles)
+                        kls = bkf.kl2(finalDist,fps[i].tip.particles)
                         finkelkl[np,width,r]  = kls[1]
                         writecsv( outfile, trsp([["finkel",
                                             d,#dimension
