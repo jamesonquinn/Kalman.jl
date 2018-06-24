@@ -3,3 +3,23 @@ filtertest4.csv: using exp(-lp) INCONSISTENTLY in probSum, nIter = [1, 5, 20, 40
 filtertest5.csv: using exp(lp). Worse than filtertest4.
 
 filtertest6.csv: using exp(-lp) consistently. Seems that it's right — the trace part of the divergence has a clear downward trend, yay. But — the diff-in-means part of the divergence has an upward trend. I think it's because I have not corrected for the forward density? I will try fixing that.
+
+
+filtertest9.csv: bigger numbers of particles.
+
+10: even more particles, but just for finkel.
+
+11: like 10, ... forgot to make fps global. oh well.
+
+12: global fps...
+julia> print([cor(wmean,bkf.params(finalDist)[1]),
+       cor(vec(mean(fps[end].tip.particles,2)),bkf.params(finalDist)[1]),
+       cor(wmean,vec(mean(fps[end].tip.particles,2))),
+       cor(wmean,observations[end].y),
+       cor(observations[end].y,bkf.params(finalDist)[1])
+       ])
+[0.85266, 0.863401, 0.999003, 0.91942, 0.791686]
+
+13: removing forwardProb correction. Better!
+
+14: mega sim — but no timing.

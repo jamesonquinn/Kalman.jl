@@ -145,10 +145,15 @@ NEIGHBORHOOD_SIZE = 5
 IDEAL_SAMPLES = 100
 
 ds = [3]
-ds = [10,25,50,100]
+ds = [25]
+d = ds[end]
 ln = size(ds,1)
-reps = 3
-nIters = [1, 5, 20, 400]
+nParticles = [(5,25,5,40,5,10), #nfp,npf,nfapf,reps,max nIters slot, steps
+              (100, 10000,2000,10,5,10),
+              (500,250000,10000,7,3,5),
+              (1000,10,10,4,3,3)]
+reps = max([np[4] for np in nParticles]...)#max of reps above
+nIters = [1,10,50,200,800]
 lnIters = length(nIters)
 # finkelmeand = zeros(lnIters,ln,reps)
 # frankenmeand = zeros(lnIters,ln,reps)
@@ -159,8 +164,10 @@ frankenkl = zeros(lnIters,ln,reps)
 partkl = zeros(lnIters,ln,reps)
 idealkl = zeros(lnIters,ln,reps)
 
-for ni in 1:lnIters
-    nIter = nIters[ni]
+lnParts = length(nParticles)
+for np in 1:lnParts
+
+    nfp,npf,nfapf,reps,lnIters,T = nParticles[np]
 
     width = 1
     for width in 1:ln
@@ -205,11 +212,6 @@ for ni in 1:lnIters
         z = bkf.LinearObservationModel(h)
         kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
-
-        nfp,npf,nfapf = (5, 25, 55)
-        #nfp,npf,nfapf = (3, 5, 5)
-        nfp,npf,nfapf = (100, 10000, 2000)
-
         r = 1
         for r in 1:reps
 
@@ -217,30 +219,81 @@ for ni in 1:lnIters
             fpf = bkf.toParticleSet(kf0,nfp)
             pf = bkf.toParticleSet(kf0,npf)
             fapf = bkf.toFrankenSet(kf0,nfapf,NEIGHBORHOOD_SIZE)
-            fp = bkf.FinkelToe(fpf)
 
             pf1 = bkf.toParticleSet(kf0,1)
 
-            T = 3
             t = collect(0:T)
 
-            truth = Vector{bkf.ParticleSet}(0)#length(t))
-            observations = Vector{bkf.Observation}(0)#length(t))
-            kfs = Vector{bkf.BasicKalmanFilter}(0)#length(t))
-            pfs = Vector{bkf.ParticleStep}(0)#length(t))
-            fps = Vector{bkf.AbstractFinkel}(0)#length(t))
-            faps = Vector{bkf.FrankenStep}(0)
+            global truth = Vector{bkf.ParticleSet}(0)#length(t))
+            global observations = Vector{bkf.Observation}(0)#length(t))
+            global kfs = Vector{bkf.BasicKalmanFilter}(0)#length(t))
+            global pfs = Vector{bkf.ParticleStep}(0)#length(t))
+            global faps = Vector{bkf.FrankenStep}(0)
 
             kf = kf0
             push!(kfs, kf)
             ps = bkf.ParticleStep(pf)
             push!(pfs, ps)
-            push!(fps, fp)
             fap = bkf.FrankenStep(fapf)
             push!(faps, fap)
 
             push!(truth, pf1)
             push!(observations, bkf.Observation(pf1,1))
+
+            nIter = 0
+#####
+            global finalDist = bkf.toDistribution(kfs[end])
+            # finkelmeand[width,r] = mean(log.(bkf.pdf(finalDist,fps[end].tip.particles)))/d
+            # partmeand[width,r] = mean(log.(bkf.pdf(finalDist,pfs[end].p.particles)))/d
+            # frankenmeand[width,r] = mean(log.(bkf.pdf(finalDist,faps[end].p.particles)))/d
+            # idealmeand[width,r] = mean(log.(bkf.pdf(finalDist,rand(finalDist,50))))/d
+
+            print("\nideal:")
+            kls = bkf.kl2(finalDist,rand(finalDist,IDEAL_SAMPLES))
+            idealkl[np,width,r] = kls[1]
+            writecsv( outfile, trsp([["ideal",
+                                d,#dimension
+                                r,#rep number
+                                1,#steps
+                                nfp,#finkel particles
+                                nfapf,#franken particles
+                                npf,#part particles
+                                nIter, #mcmc steps in finkel
+                                0
+                                ] #note no comma - concatenate vector
+                                kls]))
+
+            print("\npart:")
+            kls = bkf.kl2(finalDist,pfs[end].p.particles)
+            partkl[np,width,r]  = kls[1]
+            writecsv( outfile, trsp([["particle",
+                                d,#dimension
+                                r,#rep number
+                                1,#steps
+                                nfp,#finkel particles
+                                nfapf,#franken particles
+                                npf,#part particles
+                                nIter,#mcmc steps in finkel
+                                0
+                                ]
+                                 #note no comma - concatenate vector
+                                kls]))
+            print("\nfranken:")
+            kls = bkf.kl2(finalDist,faps[end].p.particles)
+            frankenkl[np,width,r]  = kls[1]
+            writecsv( outfile, trsp([["franken",
+                                d,#dimension
+                                r,#rep number
+                                1,#steps
+                                nfp,#finkel particles
+                                nfapf,#franken particles
+                                npf,#part particles
+                                nIter,#mcmc steps in finkel
+                                0
+                                ]
+                                 #note no comma - concatenate vector
+                                kls]))
+######
 
             i = 2
 
@@ -252,80 +305,99 @@ for ni in 1:lnIters
                 push!(kfs, kf)
                 ps = bkf.ParticleStep(ps,observations[i])
                 push!(pfs, ps)
-                fp = bkf.FinkelParticles(fp, observations[i], nIter)
-                push!(fps, fp)
                 fap = bkf.FrankenStep(fap, observations[i])
                 push!(faps, fap)
+
+                dif = kfs[end].x.p - kfs[end].x.p'
+                mean(dif)
+                mean(kfs[end].x.p)
+                global finalDist = bkf.toDistribution(kfs[end])
+                # finkelmeand[width,r] = mean(log.(bkf.pdf(finalDist,fps[end].tip.particles)))/d
+                # partmeand[width,r] = mean(log.(bkf.pdf(finalDist,pfs[end].p.particles)))/d
+                # frankenmeand[width,r] = mean(log.(bkf.pdf(finalDist,faps[end].p.particles)))/d
+                # idealmeand[width,r] = mean(log.(bkf.pdf(finalDist,rand(finalDist,50))))/d
+
+                print("\nideal:")
+                kls = bkf.kl2(finalDist,rand(finalDist,IDEAL_SAMPLES))
+                idealkl[np,width,r] = kls[1]
+                writecsv( outfile, trsp([["ideal",
+                                    d,#dimension
+                                    r,#rep number
+                                    i,#steps
+                                    nfp,#finkel particles
+                                    nfapf,#franken particles
+                                    npf,#part particles
+                                    nIter, #mcmc steps in finkel
+                                    0
+                                    ] #note no comma - concatenate vector
+                                    kls]))
+
+                print("\npart:")
+                kls = bkf.kl2(finalDist,pfs[end].p.particles)
+                partkl[np,width,r]  = kls[1]
+                writecsv( outfile, trsp([["particle",
+                                    d,#dimension
+                                    r,#rep number
+                                    i,#steps
+                                    nfp,#finkel particles
+                                    nfapf,#franken particles
+                                    npf,#part particles
+                                    nIter,#mcmc steps in finkel
+                                    0
+                                    ]
+                                     #note no comma - concatenate vector
+                                    kls]))
+                print("\nfranken:")
+                kls = bkf.kl2(finalDist,faps[end].p.particles)
+                frankenkl[np,width,r]  = kls[1]
+                writecsv( outfile, trsp([["franken",
+                                    d,#dimension
+                                    r,#rep number
+                                    i,#steps
+                                    nfp,#finkel particles
+                                    nfapf,#franken particles
+                                    npf,#part particles
+                                    nIter,#mcmc steps in finkel
+                                    0
+                                    ]
+                                     #note no comma - concatenate vector
+                                    kls]))
+            end
+            print("Finkel ",r, " ... ",nfp)
+            for ni = 1:lnIters
+                nIter = nIters[ni]
+
+                print("nIter ",nIter)
+
+                fp = bkf.FinkelToe(fpf)
+                global fps = Vector{bkf.AbstractFinkel}(0)#length(t))
+                push!(fps, fp)
+                print("\nfinkel:")
+                kls = bkf.kl2(finalDist,fps[end].tip.particles)
+                finkelkl[np,width,r]  = kls[1]
+                for i in 2:length(t)-1
+                    fp = bkf.FinkelParticles(fp, observations[i], nIter)
+                    push!(fps, fp)
+                    print("\nfinkel:")
+                    try
+                        kls = bkf.kl2(finalDist,fps[end].tip.particles)
+                        finkelkl[np,width,r]  = kls[1]
+                        writecsv( outfile, trsp([["finkel",
+                                            d,#dimension
+                                            r,#rep number
+                                            i,#steps
+                                            nfp,#finkel particles
+                                            nfapf,#franken particles
+                                            npf,#part particles
+                                            nIter, #mcmc steps in finkel
+                                            fps[end].numMhAccepts
+                                            ] #note no comma - concatenate vector
+                                            kls]))
+                    catch
+                    end
+                end
             end
 
-            dif = kfs[end].x.p - kfs[end].x.p'
-            mean(dif)
-            mean(kfs[end].x.p)
-            finalDist = bkf.toDistribution(kfs[end])
-            # finkelmeand[width,r] = mean(log.(bkf.pdf(finalDist,fps[end].tip.particles)))/d
-            # partmeand[width,r] = mean(log.(bkf.pdf(finalDist,pfs[end].p.particles)))/d
-            # frankenmeand[width,r] = mean(log.(bkf.pdf(finalDist,faps[end].p.particles)))/d
-            # idealmeand[width,r] = mean(log.(bkf.pdf(finalDist,rand(finalDist,50))))/d
-
-            print("\nideal:")
-            kls = bkf.kl2(finalDist,rand(finalDist,IDEAL_SAMPLES))
-            idealkl[ni,width,r] = kls[1]
-            writecsv( outfile, trsp([["ideal",
-                                d,#dimension
-                                r,#rep number
-                                T,#steps
-                                nfp,#finkel particles
-                                nfapf,#franken particles
-                                npf,#part particles
-                                nIter, #mcmc steps in finkel
-                                fps[end].numMhAccepts
-                                ] #note no comma - concatenate vector
-                                kls]))
-
-            print("\nfinkel:")
-            kls = bkf.kl2(finalDist,fps[end].tip.particles)
-            finkelkl[ni,width,r]  = kls[1]
-            writecsv( outfile, trsp([["finkel",
-                                d,#dimension
-                                r,#rep number
-                                T,#steps
-                                nfp,#finkel particles
-                                nfapf,#franken particles
-                                npf,#part particles
-                                nIter, #mcmc steps in finkel
-                                fps[end].numMhAccepts
-                                ] #note no comma - concatenate vector
-                                kls]))
-            print("\npart:")
-            kls = bkf.kl2(finalDist,pfs[end].p.particles)
-            partkl[ni,width,r]  = kls[1]
-            writecsv( outfile, trsp([["particle",
-                                d,#dimension
-                                r,#rep number
-                                T,#steps
-                                nfp,#finkel particles
-                                nfapf,#franken particles
-                                npf,#part particles
-                                nIter,#mcmc steps in finkel
-                                fps[end].numMhAccepts
-                                ]
-                                 #note no comma - concatenate vector
-                                kls]))
-            print("\nfranken:")
-            kls = bkf.kl2(finalDist,faps[end].p.particles)
-            frankenkl[ni,width,r]  = kls[1]
-            writecsv( outfile, trsp([["franken",
-                                d,#dimension
-                                r,#rep number
-                                T,#steps
-                                nfp,#finkel particles
-                                nfapf,#franken particles
-                                npf,#part particles
-                                nIter,#mcmc steps in finkel
-                                fps[end].numMhAccepts
-                                ]
-                                 #note no comma - concatenate vector
-                                kls]))
         end
 
 
@@ -339,12 +411,17 @@ close(outfile)
 
 
 
+wmean = zeros(d)
+for l in 1:d
+    wmean[l] = fps[end].ws[l]' * fps[end].base[l,:] / sum(fps[end].ws[l])
+end
 
-
-
-
-
-
+print([cor(wmean,bkf.params(finalDist)[1]),
+cor(vec(mean(fps[end].tip.particles,2)),bkf.params(finalDist)[1]),
+cor(wmean,vec(mean(fps[end].tip.particles,2))),
+cor(wmean,observations[end].y),
+cor(observations[end].y,bkf.params(finalDist)[1])
+])
 
 
 #....

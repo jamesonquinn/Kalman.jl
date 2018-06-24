@@ -204,15 +204,24 @@ function particles(fp::FinkelParticles)
 end
 
 function reweight!(fp::FinkelParticles, y::Observation)
-    fp.ws = Vector{ProbabilityWeights}()
+    d = size(fp.base,1)
+    fp.ws = Vector{ProbabilityWeights}(d)
     diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
     vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.r is diagonal
-    for i = 1:size(fp.base,1)
+    for l = 1:d
         wvec = Vector{Float64}(fp.tip.n)
-        for j = 1:fp.tip.n
-            wvec[j] = exp(-diffs[i,j]^2 / vars[i] / 2)
+        for p = 1:fp.tip.n
+            if false
+                forwardProb = 0.
+                for ph = 1:fp.tip.n
+                    forwardProb += exp(fp.lps[l,p,ph])
+                end
+            else
+                forwardProb = 1.
+            end
+            wvec[p] = exp(-diffs[l,p]^2 / vars[l] / 2 ) / forwardProb
         end
-        push!(fp.ws,ProbabilityWeights(wvec))
+        fp.ws[l] = ProbabilityWeights(wvec)
     end
 end
 
