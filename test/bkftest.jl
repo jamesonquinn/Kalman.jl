@@ -148,14 +148,19 @@ ds = [3]
 ds = [25]
 d = ds[end]
 ln = size(ds,1)
-nParticles = [(5,25,5,40,5,10), #nfp,npf,nfapf,reps,max nIters slot, steps
-              (100, 10000,2000,10,5,10),
-              (500,250000,10000,7,3,5),
-              (1000,10,10,4,3,3)]
+histPerLocs = [4,8,16]
+nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
+              (100, 10000,2000,10,5,10,3),
+              (500,250000,10000,7,3,5,2),
+              (1000,10,10,4,3,3,2)]
+nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
+            (100, 100,20,10,5,10,3),
+            (500,250,10,7,3,5,2),
+            (1000,10,10,4,3,3,2)]
 
 #Small numbers for quicker test
-nParticles = [(5,25,5,5,5,4), #nfp,npf,nfapf,reps,max nIters slot, steps
-            (100, 10000,2000,5,5,4)]
+# nParticles = [(5,25,5,5,5,4), #nfp,npf,nfapf,reps,max nIters slot, steps
+#             (100, 10000,2000,5,5,4)]
 reps = max([np[4] for np in nParticles]...)#max of reps above
 nIters = [1,10,50,200,800]
 lnIters = length(nIters)
@@ -171,7 +176,7 @@ idealkl = zeros(lnIters,ln,reps)
 lnParts = length(nParticles)
 for np in 1:lnParts
 
-    nfp,npf,nfapf,reps,lnIters,T = nParticles[np]
+    nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc = nParticles[np]
 
     width = 1
     for width in 1:ln
@@ -281,7 +286,8 @@ for np in 1:lnParts
                                 0
                                 ]
                                  #note no comma - concatenate vector
-                                kls]))
+                                kls #again no comma
+                                []]))
             print("\nfranken:")
             kls = bkf.kl2(finalDist,faps[end].p.particles)
             frankenkl[np,width,r]  = kls[1]
@@ -370,34 +376,39 @@ for np in 1:lnParts
             print("Finkel ",r, " ... ",nfp)
             for ni = 1:lnIters
                 nIter = nIters[ni]
-
                 print("nIter ",nIter)
+                for nhist = 1:lnHistPerLoc
+                    histPerLoc = histPerLocs[nhist]
 
-                fp = bkf.FinkelToe(fpf)
-                global fps = Vector{bkf.AbstractFinkel}(0)#length(t))
-                push!(fps, fp)
-                print("\nfinkel:")
-                kls = bkf.kl2(finalDist,fps[1].tip.particles)
-                finkelkl[np,width,r]  = kls[1]
-                for i in 2:length(t)-1
-                    fp = bkf.FinkelParticles(fp, observations[i], nIter)
+
+                    fp = bkf.FinkelToe(fpf,bkf.fparams(histPerLoc,7.5,20.0))
+                    global fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                     push!(fps, fp)
                     print("\nfinkel:")
-                    try
-                        kls = bkf.kl2(finalDist,fps[i].tip.particles)
-                        finkelkl[np,width,r]  = kls[1]
-                        writecsv( outfile, trsp([["finkel",
-                                            d,#dimension
-                                            r,#rep number
-                                            i,#steps
-                                            nfp,#finkel particles
-                                            nfapf,#franken particles
-                                            npf,#part particles
-                                            nIter, #mcmc steps in finkel
-                                            fps[end].numMhAccepts
-                                            ] #note no comma - concatenate vector
-                                            kls]))
-                    catch
+                    kls = bkf.kl2(finalDist,fps[1].tip.particles)
+                    finkelkl[np,width,r]  = kls[1]
+                    for i in 2:length(t)-1
+                        fp = bkf.FinkelParticles(fp, observations[i], nIter)
+                        push!(fps, fp)
+                        print("\nfinkel:")
+                        try
+                            kls = bkf.kl2(finalDist,fps[i].tip.particles)
+                            finkelkl[np,width,r]  = kls[1]
+                            writecsv( outfile, trsp([["finkel",
+                                                d,#dimension
+                                                r,#rep number
+                                                i,#steps
+                                                nfp,#finkel particles
+                                                nfapf,#franken particles
+                                                npf,#part particles
+                                                nIter, #mcmc steps in finkel
+                                                fps[end].numMhAccepts
+                                                ] #note no comma - concatenate vector
+                                                kls #again no comma
+                                                [histPerLoc]
+                                                ]))
+                        catch
+                        end
                     end
                 end
             end

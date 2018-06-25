@@ -22,4 +22,10 @@ julia> print([cor(wmean,bkf.params(finalDist)[1]),
 
 13: removing forwardProb correction. Better!
 
-14: mega sim — but no timing.
+14: mega sim — but no timing. BROKEN! measures divegence from final step, not from current step.
+
+15: mega sim 2. 2 histPerLoc.
+
+16: vary histPerLoc. uniform history sampling
+
+17: as above, with MhSampLog(7.5,20.0)

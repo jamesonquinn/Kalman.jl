@@ -5,7 +5,7 @@
 type ParticleSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     filter::F
     n::Int64
-    particles::Array{T,2}
+    particles::Array{T,2} #[location, particle]
     weights::ProbabilityWeights
 end
 
