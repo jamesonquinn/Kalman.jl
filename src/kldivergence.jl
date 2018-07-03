@@ -18,7 +18,14 @@ function kl2(dist::MvNormal,
         diff = (μ2[r] - μ1[r])
         subtr[w] = (trace(inv(Σ2[r,r]) * Σ1[r,r]) - window) / 2
         subdif[w] = diff' * Σ2[r,r] * diff / 2
-        sublog[w] = (log(det(Σ2[r,r])/det(Σ1[r,r]))) / 2
+        d2, d1 = det(Σ2[r,r]), det(Σ1[r,r])
+        if (d2 <= 0)
+            print("kl2 non-positive determinant", d1, " ", d2, " ")
+            print(Σ1[r,r])
+            print(Σ2[r,r])
+            d2 = d1
+        end
+        sublog[w] = (log(d2/d1)) / 2
         subdivs[w] = subtr[w] + subdif[w] + sublog[w]
     end
     #print("KL parts:",mean(subtr),",",mean(subdif),",",mean(sublog),",",mean(subdivs))

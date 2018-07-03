@@ -29,3 +29,15 @@ julia> print([cor(wmean,bkf.params(finalDist)[1]),
 16: vary histPerLoc. uniform history sampling
 
 17: as above, with MhSampLog(7.5,20.0)
+
+NOOOOO! 15-17 were as broken as 14. Fixed.
+
+18: like 17 but works???
+
+19: now with timing. But finkel fails — try/catch issue?
+
+20: several abortive runs trying to fix try/catch.
+
+21: fixed??
+
+22: compromise?

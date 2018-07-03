@@ -329,25 +329,26 @@ function probSum(fp::FinkelParticles,
     exp(-lp)
 end
 
-function getSampProb(fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
+function getSampProb(fp::FinkelParticles,
         i::Int64,#current particle
         l::Int64, #location for neighborhood center
-        lstem::Int64) where {T,F,S}
+        lstem::Int64)
 
     fp.histSampProbs[l,i][lstem] / sum(fp.histSampProbs[l,i])
 end
 
-function getSampProb(fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
+function getSampProb(fp::FinkelParticles,
         i::Int64,#current particle
         ln::Int64, #location for neighborhood center
         lr::Void = nothing, #location to replace
-        lstem::Void = nothing) where {T,F,S}
+        lstem::Void = nothing)
     getSampProb(fp,i,ln,fp.stem[ln,i])
 end
 
 function getSampProb(fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
         i::Int64,#current particle
         ln::Int64, #location for neighborhood center
+        myneighborhood, #location for history samples
         lr::Int64, #location to replace
         lstem::Int64) where {T,F,S}
 
@@ -357,6 +358,25 @@ function getSampProb(fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
         getSampProb(fp,i,ln)
     end
 end
+
+function getSampProb(fp::FinkelParticles     ,#{T,F,FinkelParams{S,MhMultisampled}},
+        i::Int64,#current particle
+        ln::Int64, #location for neighborhood center
+        myneighborhood::UnitRange{Int64},
+        lr::Union{Int64,Void}, #location to replace
+        lstem::Union{Int64,Void}) #where {T,F,S}
+
+    result = 0.
+    for l in myneighborhood
+        if lr==l
+            result += getSampProb(fp,i,ln,lstem)
+        else
+            result += getSampProb(fp,i,ln)
+        end
+    end
+    result
+end
+
 """
     probSum...
 
@@ -377,7 +397,7 @@ function probSum(fp::FinkelParticles{},
     for h in fp.historyTerms[lh,:,i]
         prob += probSum(fp, i, h, myneighborhood,
             lr, lstem
-            ) / getSampProb(fp, i, locn, lr, lstem)
+            ) / getSampProb(fp, i, locn, myneighborhood, lr, lstem)
     end
     prob
 end
@@ -416,7 +436,7 @@ function probSum(
     l::Int64,
     fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
     lstem::XT = nothing,
-    lhist::XT2 = nothing) where {XT <: Union{Void,Int64},
+    lhist::XT2 = nothing) where {XT <: Union{Void,Int64}, #lhist is the newly proposed history samples
                                 XT2 <: Union{Void,Vector{Int64}},
                                 T, F, S}
 
@@ -425,6 +445,73 @@ function probSum(
     else
         probSum(fp,i,d,l,l,l,lstem,lhist)
     end
+end
+
+function  probSumWeight(fp::FinkelParticles{},
+            ln::Int64) #location for neighborhood center
+    1 #stub; in future, look at distribution of forward weights...
+end
+
+"""
+    probSum for MhCompromise
+
+    multiply likelihood from history samples for locus lh to neighborhood of particle i.
+    If 0<l<=d, use lstem instead of current value at location l.
+"""
+function probSum(
+    i::Int64,#current particle
+    d::Int64,
+    l::Int64,
+    fp::FinkelParticles{T,F,FinkelParams{S,MhCompromise}},
+    lstem::XT = nothing,
+    lhist::XT2 = nothing) where {XT <: Union{Void,Int64},
+                                XT2 <: Union{Void,Vector{Int64}},
+                                T, F, S}
+
+    myCenters = prodNeighborhood( ln, fp, d, fp.params.mh.rSub)
+    result = 0.
+    if typeof(lstem) == Void
+        for c = myCenters
+            result += probSum(fp,i,d,c,c,nothing,nothing,nothing) * probSumWeight(fp,c)
+        end
+    else
+
+        for c = myCenters
+            result += probSum(fp,i,d,c,c,l,lstem,lhist) * probSumWeight(fp,c)
+        end
+    end
+    result
+end
+
+"""
+    probSum for MhMultisampled
+
+    multiply likelihood from history samples for locus lh to neighborhood of particle i.
+    If 0<l<=d, use lstem instead of current value at location l.
+"""
+function probSum(
+    i::Int64,#current particle
+    d::Int64,
+    l::Int64,
+    fp::FinkelParticles{T,F,FinkelParams{S,MhMultisampled}},
+    lstem::XT = nothing,
+    lhist::XT2 = nothing) where {XT <: Union{Void,Int64},
+                                XT2 <: Union{Void,Vector{Int64}},
+                                T, F, S}
+
+    myCenters = prodNeighborhood( ln, fp, d, fp.params.mh.rSub)
+    result = 0.
+    if typeof(lstem) == Void
+        for c = myCenters
+            result += probSum(fp,i,d,c,c,nothing,nothing,nothing) * probSumWeight(fp,c)
+        end
+    else
+
+        for c = myCenters
+            result += probSum(fp,i,d,c,c,l,lstem,lhist) * probSumWeight(fp,c)
+        end
+    end
+    result
 end
 
 

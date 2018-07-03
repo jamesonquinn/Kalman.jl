@@ -141,6 +141,22 @@ function trsp(v)
     reshape(v,(1,:))
 end
 outfile = open( "filtertest.csv",  "a")
+
+writecsv( outfile, trsp(["model",
+                    "dimension",
+                    "rep",
+                    "steps",
+                    "nfp",#finkel particles
+                    "nfapf",#franken particles
+                    "npf",#part particles
+                    "nIter", #mcmc steps in finkel
+                    "numMhAccepts",
+                    "kl","covdiv","meandiv","entropydiv",
+                    "histPerLoc",#hpl
+                    "sampType",#samp
+                    "runtime",#time
+                    "errorType"
+                    ]))
 NEIGHBORHOOD_SIZE = 5
 IDEAL_SAMPLES = 100
 
@@ -148,21 +164,22 @@ ds = [3]
 ds = [25]
 d = ds[end]
 ln = size(ds,1)
-histPerLocs = [4,8,16]
-nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (100, 10000,2000,10,5,10,3),
-              (500,250000,10000,7,3,5,2),
-              (1000,10,10,4,3,3,2)]
-nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-            (100, 100,20,10,5,10,3),
-            (500,250,10,7,3,5,2),
-            (1000,10,10,4,3,3,2)]
+histPerLocs = [3,5,8,13]
+nIters = [1,10,50,200,800]
+nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
+              (100, 1000,200,3,5,10,4),
+              (200, 4000,800,3,5,10,4),
+              (500,25000,5000,2,3,5,3),
+              (1000,    10,  10,2,3,3,3)]
+# nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
+#             (100, 100,20,10,5,10,3),
+#             (500,250,10,7,3,5,2),
+#             (1000,10,10,4,3,3,2)]
 
 #Small numbers for quicker test
 # nParticles = [(5,25,5,5,5,4), #nfp,npf,nfapf,reps,max nIters slot, steps
 #             (100, 10000,2000,5,5,4)]
 reps = max([np[4] for np in nParticles]...)#max of reps above
-nIters = [1,10,50,200,800]
 lnIters = length(nIters)
 # finkelmeand = zeros(lnIters,ln,reps)
 # frankenmeand = zeros(lnIters,ln,reps)
@@ -174,11 +191,13 @@ partkl = zeros(lnIters,ln,reps)
 idealkl = zeros(lnIters,ln,reps)
 
 lnParts = length(nParticles)
+np = 1
+nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc = nParticles[np]
+width = 1
 for np in 1:lnParts
 
     nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc = nParticles[np]
 
-    width = 1
     for width in 1:ln
 
         d = ds[width]
@@ -313,9 +332,10 @@ for np in 1:lnParts
                 kf2 = bkf.predict(kf)
                 kf = bkf.update(kf2,observations[i])
                 push!(kfs, kf)
-                ps = bkf.ParticleStep(ps,observations[i])
+
+                parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
                 push!(pfs, ps)
-                fap = bkf.FrankenStep(fap, observations[i])
+                franktime = (@timed fap = bkf.FrankenStep(fap, observations[i]))[2]
                 push!(faps, fap)
 
                 dif = kfs[end].x.p - kfs[end].x.p'
@@ -340,7 +360,11 @@ for np in 1:lnParts
                                     nIter, #mcmc steps in finkel
                                     0
                                     ] #note no comma - concatenate vector
-                                    kls]))
+                                    kls#again no comma
+                                    ["NA",#hpl
+                                    "NA",#samp
+                                    "NA"#time
+                                    ]]))
 
                 print("\npart:")
                 kls = bkf.kl2(finalDist,pfs[end].p.particles)
@@ -356,7 +380,10 @@ for np in 1:lnParts
                                     0
                                     ]
                                      #note no comma - concatenate vector
-                                    kls]))
+                                    kls#again no comma
+                                    ["NA",#hpl
+                                    "NA",#samp
+                                    parttime]]))
                 print("\nfranken:")
                 kls = bkf.kl2(finalDist,faps[end].p.particles)
                 frankenkl[np,width,r]  = kls[1]
@@ -371,9 +398,13 @@ for np in 1:lnParts
                                     0
                                     ]
                                      #note no comma - concatenate vector
-                                    kls]))
+                                    kls#again no comma
+                                    ["NA",
+                                    "NA",#samp
+                                    franktime]]))
             end
             print("Finkel ",r, " ... ",nfp)
+            ni, nhist, nIter, i = 1,1,1,2
             for ni = 1:lnIters
                 nIter = nIters[ni]
                 print("nIter ",nIter)
@@ -382,13 +413,16 @@ for np in 1:lnParts
 
 
                     fp = bkf.FinkelToe(fpf,bkf.fparams(histPerLoc,7.5,20.0))
+                    sampType = "log7.5_20"
                     global fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                     push!(fps, fp)
                     print("\nfinkel:")
                     kls = bkf.kl2(finalDist,fps[1].tip.particles)
                     finkelkl[np,width,r]  = kls[1]
                     for i in 2:length(t)-1
-                        fp = bkf.FinkelParticles(fp, observations[i], nIter)
+
+                        global finalDist = bkf.toDistribution(kfs[i])
+                        finktime = (@timed fp = bkf.FinkelParticles(fp, observations[i], nIter))[2]
                         push!(fps, fp)
                         print("\nfinkel:")
                         try
@@ -405,9 +439,66 @@ for np in 1:lnParts
                                                 fps[end].numMhAccepts
                                                 ] #note no comma - concatenate vector
                                                 kls #again no comma
-                                                [histPerLoc]
+                                                [histPerLoc,
+                                                sampType,
+                                                finktime]
                                                 ]))
-                        catch
+                        catch y
+                            if isa(y, LinAlg.SingularException)
+                                writecsv( outfile, trsp([["finkel",
+                                                    d,#dimension
+                                                    r,#rep number
+                                                    i,#steps
+                                                    nfp,#finkel particles
+                                                    nfapf,#franken particles
+                                                    npf,#part particles
+                                                    nIter, #mcmc steps in finkel
+                                                    fps[end].numMhAccepts
+                                                    ] #note no comma - concatenate vector
+                                                    ["","","",""] #again no comma
+                                                    [histPerLoc,
+                                                    sampType,
+                                                    finktime,
+                                                    "SingularException"]
+                                                    ]))
+                            elseif isa(y, LinAlg.LAPACKException)
+                                writecsv( outfile, trsp([["finkel",
+                                                    d,#dimension
+                                                    r,#rep number
+                                                    i,#steps
+                                                    nfp,#finkel particles
+                                                    nfapf,#franken particles
+                                                    npf,#part particles
+                                                    nIter, #mcmc steps in finkel
+                                                    fps[end].numMhAccepts
+                                                    ] #note no comma - concatenate vector
+                                                    ["","","",""] #again no comma
+                                                    [histPerLoc,
+                                                    sampType,
+                                                    finktime,
+                                                    "LAPACKException"]
+                                                    ]))
+                            elseif isa(y, DomainError)
+                                writecsv( outfile, trsp([["finkel",
+                                                    d,#dimension
+                                                    r,#rep number
+                                                    i,#steps
+                                                    nfp,#finkel particles
+                                                    nfapf,#franken particles
+                                                    npf,#part particles
+                                                    nIter, #mcmc steps in finkel
+                                                    fps[end].numMhAccepts
+                                                    ] #note no comma - concatenate vector
+                                                    ["","","",""] #again no comma
+                                                    [histPerLoc,
+                                                    sampType,
+                                                    finktime,
+                                                    "DomainError"]
+                                                    ]))
+                                rethrow()
+                            else
+                                rethrow()
+                            end
                         end
                     end
                 end
