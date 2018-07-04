@@ -41,3 +41,7 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 21: fixed??
 
 22: compromise?
+
+23: more compromise, with lower histPerLoc (to make up for more locs)
+
+24: mhcompromise with sampleuniform 

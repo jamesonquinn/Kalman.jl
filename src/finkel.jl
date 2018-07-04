@@ -71,11 +71,11 @@ type MhCompromise <: MhType #Fixed neighborhood product, sum using histories sam
     rSub::Int64 #neighborhood size for history samples
 end
 
-
 type FinkelParams{S<:SampleType,MH<:MhType}
     s::S
     mh::MH
 end
+
 
 abstract type AbstractFinkel <: AbstractParticleFilter end
 
@@ -96,6 +96,27 @@ function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
             radius::Int64 = DEFAULT_PRODUCT_RADIUS)
     FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc))
 end
+
+function fparams(inflectionPoint::Float64,
+            factor::Float64,
+
+            radius::Int64 ,
+            histPerLoc::Int64 ,
+            rSub::Int64
+            )
+    FinkelParams(SampleLog(inflectionPoint,factor),
+                MhCompromise(radius, histPerLoc, rSub))
+end
+
+function fparams(
+            radius::Int64 ,
+            histPerLoc::Int64 ,
+            rSub::Int64
+            )
+    FinkelParams(SampleUniform(),
+                MhCompromise(radius, histPerLoc, rSub))
+end
+
 
 function fparams(histPerLoc::Int64,
             inflectionPoint::Float64,
