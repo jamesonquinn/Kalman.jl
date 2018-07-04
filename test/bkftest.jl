@@ -167,9 +167,9 @@ ln = size(ds,1)
 histPerLocs = [1,2,4,6]
 nIters = [1,10,50,200,800]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (100, 1000,200,3,5,10,4),
-              (200, 4000,800,3,5,10,4),
-              (500,25000,5000,2,3,5,3),
+              (100, 10000,2000,3,5,10,4),
+              (200, 40000,8000,3,5,10,4),
+              (500,250000,50000,2,3,5,3),
               (1000,    10,  10,2,3,3,3)]
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 #             (100, 100,20,10,5,10,3),
@@ -412,9 +412,8 @@ for np in 1:lnParts
                     histPerLoc = histPerLocs[nhist]
 
 
-                    fp = bkf.FinkelToe(fpf,bkf.fparams(
-                                                    2,histPerLoc,1))
-                    sampType = "compromise2.1..uniform"
+                    fp = bkf.FinkelToe(fpf,bkf.fparams(histPerLoc,2))
+                    sampType = "sampled..uniform"
                     global fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                     push!(fps, fp)
                     print("\nfinkel:")

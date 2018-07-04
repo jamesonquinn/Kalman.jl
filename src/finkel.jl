@@ -92,11 +92,30 @@ function getbkf(fp::AbstractFinkel)
     fp.tip.filter
 end
 
+#uniform, sampled
 function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
             radius::Int64 = DEFAULT_PRODUCT_RADIUS)
     FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc))
 end
 
+#uniform, compromise
+function fparams(
+            radius::Int64 ,
+            histPerLoc::Int64 ,
+            rSub::Int64
+            )
+    FinkelParams(SampleUniform(),
+                MhCompromise(radius, histPerLoc, rSub))
+end
+
+#log, sampled
+function fparams(histPerLoc::Int64,
+            inflectionPoint::Float64,
+            factor::Float64)
+    FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc))
+end
+
+#log, compromise
 function fparams(inflectionPoint::Float64,
             factor::Float64,
 
@@ -108,22 +127,9 @@ function fparams(inflectionPoint::Float64,
                 MhCompromise(radius, histPerLoc, rSub))
 end
 
-function fparams(
-            radius::Int64 ,
-            histPerLoc::Int64 ,
-            rSub::Int64
-            )
-    FinkelParams(SampleUniform(),
-                MhCompromise(radius, histPerLoc, rSub))
-end
 
 
-function fparams(histPerLoc::Int64,
-            inflectionPoint::Float64,
-            factor::Float64)
-    FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc))
-end
-
+#uniform, sampled is default
 function fparams(basedOn::Any)
     fparams()
 end
