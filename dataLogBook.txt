@@ -46,4 +46,6 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 24: mhcompromise with sampleuniform
 
-25: mhsampled, SampleUniform; with higher particles for non-finkel 
+25: mhsampled, SampleUniform; with higher particles for non-finkel
+
+26: as above, measuring squared error 

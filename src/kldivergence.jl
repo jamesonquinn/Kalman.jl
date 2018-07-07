@@ -31,3 +31,11 @@ function kl2(dist::MvNormal,
     #print("KL parts:",mean(subtr),",",mean(subdif),",",mean(sublog),",",mean(subdivs))
     [mean(subdivs),mean(subtr),mean(subdif),mean(sublog)]
 end
+
+function sqerr(truth::Array{Float64,1},
+            samps::Array{Float64,2})
+    nsamps = size(samps)[2]
+    mean(
+        mean((truth - samps[:,i]) .^ 2) for i = 1:nsamps
+        )
+end

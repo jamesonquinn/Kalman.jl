@@ -277,7 +277,9 @@ for np in 1:lnParts
             # idealmeand[width,r] = mean(log.(bkf.pdf(finalDist,rand(finalDist,50))))/d
 
             print("\nideal:")
-            kls = bkf.kl2(finalDist,rand(finalDist,IDEAL_SAMPLES))
+            rsamps = rand(finalDist,IDEAL_SAMPLES)
+            kls = bkf.kl2(finalDist,rsamps)
+            sqe = sqerr(observations[end].y,rsamps)
             idealkl[np,width,r] = kls[1]
             writecsv( outfile, trsp([["ideal",
                                 d,#dimension
@@ -289,10 +291,16 @@ for np in 1:lnParts
                                 nIter, #mcmc steps in finkel
                                 0
                                 ] #note no comma - concatenate vector
-                                kls]))
+                                kls
+                                [0,#hpl
+                                "none",#samptype
+                                "",
+                                "",
+                                sqe]]))
 
             print("\npart:")
             kls = bkf.kl2(finalDist,pfs[end].p.particles)
+            sqe = sqerr(observations[end].y,pfs[end].p.particles)
             partkl[np,width,r]  = kls[1]
             writecsv( outfile, trsp([["particle",
                                 d,#dimension
@@ -306,9 +314,14 @@ for np in 1:lnParts
                                 ]
                                  #note no comma - concatenate vector
                                 kls #again no comma
-                                []]))
+                                [0,#hpl
+                                "none",#samptype
+                                "",
+                                "",
+                                sqe]]))
             print("\nfranken:")
             kls = bkf.kl2(finalDist,faps[end].p.particles)
+            sqe = sqerr(observations[end].y,faps[end].p.particles)
             frankenkl[np,width,r]  = kls[1]
             writecsv( outfile, trsp([["franken",
                                 d,#dimension
@@ -321,7 +334,12 @@ for np in 1:lnParts
                                 0
                                 ]
                                  #note no comma - concatenate vector
-                                kls]))
+                                kls
+                                [0,#hpl
+                                "none",#samptype
+                                "",
+                                "",
+                                sqe]]))
 ######
 
             i = 2
@@ -348,7 +366,9 @@ for np in 1:lnParts
                 # idealmeand[width,r] = mean(log.(bkf.pdf(finalDist,rand(finalDist,50))))/d
 
                 print("\nideal:")
-                kls = bkf.kl2(finalDist,rand(finalDist,IDEAL_SAMPLES))
+                rsamps = rand(finalDist,IDEAL_SAMPLES)
+                kls = bkf.kl2(finalDist,rsamps)
+                sqe = sqerr(observations[i].y,rsamps)
                 idealkl[np,width,r] = kls[1]
                 writecsv( outfile, trsp([["ideal",
                                     d,#dimension
@@ -361,13 +381,15 @@ for np in 1:lnParts
                                     0
                                     ] #note no comma - concatenate vector
                                     kls#again no comma
-                                    ["NA",#hpl
-                                    "NA",#samp
-                                    "NA"#time
-                                    ]]))
+                                    [0,#hpl
+                                    "none",#samp
+                                    "",#time
+                                    "",#error
+                                    sqe]]))
 
                 print("\npart:")
                 kls = bkf.kl2(finalDist,pfs[end].p.particles)
+                sqe = sqerr(observations[end].y,pfs[end].p.particles)
                 partkl[np,width,r]  = kls[1]
                 writecsv( outfile, trsp([["particle",
                                     d,#dimension
@@ -381,11 +403,14 @@ for np in 1:lnParts
                                     ]
                                      #note no comma - concatenate vector
                                     kls#again no comma
-                                    ["NA",#hpl
-                                    "NA",#samp
-                                    parttime]]))
+                                    [0,#hpl
+                                    "none",#samp
+                                    parttime,#time
+                                    "",#error
+                                    sqe]]))
                 print("\nfranken:")
                 kls = bkf.kl2(finalDist,faps[end].p.particles)
+                sqe = sqerr(observations[end].y,faps[end].p.particles)
                 frankenkl[np,width,r]  = kls[1]
                 writecsv( outfile, trsp([["franken",
                                     d,#dimension
@@ -399,9 +424,11 @@ for np in 1:lnParts
                                     ]
                                      #note no comma - concatenate vector
                                     kls#again no comma
-                                    ["NA",
-                                    "NA",#samp
-                                    franktime]]))
+                                    [0,#hpl
+                                    "none",#samp
+                                    franktime,#time
+                                    "",#error
+                                    sqe]]))
             end
             print("Finkel ",r, " ... ",nfp)
             ni, nhist, nIter, i = 1,1,1,2
@@ -418,6 +445,7 @@ for np in 1:lnParts
                     push!(fps, fp)
                     print("\nfinkel:")
                     kls = bkf.kl2(finalDist,fps[1].tip.particles)
+                    sqe = sqerr(observations[i].y,fps[1].tip.particles)
                     finkelkl[np,width,r]  = kls[1]
                     for i in 2:length(t)-1
 
@@ -427,6 +455,7 @@ for np in 1:lnParts
                         print("\nfinkel:")
                         try
                             kls = bkf.kl2(finalDist,fps[i].tip.particles)
+                            sqe = sqerr(observations[i].y,fps[i].tip.particles)
                             finkelkl[np,width,r]  = kls[1]
                             writecsv( outfile, trsp([["finkel",
                                                 d,#dimension
@@ -441,7 +470,9 @@ for np in 1:lnParts
                                                 kls #again no comma
                                                 [histPerLoc,
                                                 sampType,
-                                                finktime]
+                                                finktime,
+                                                "", #error
+                                                sqe]
                                                 ]))
                         catch y
                             if isa(y, LinAlg.SingularException)
