@@ -55,6 +55,10 @@ type MhSampled <: MhType #Neighborhood product, sum using locally sampled histor
     histPerLoc::Int64 #history samples
 end
 
+function MhSampled(histPerLoc)
+    MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc)
+end
+
 type MhMultilocus <: MhType #Variable neighborhood product, sum using histories sampled for each center
     r::Int64 #neighborhood size for product. radius of 1 = magnitude 3.
     histPerLoc::Int64 #history samples per locus
@@ -69,6 +73,10 @@ type MhCompromise <: MhType #Fixed neighborhood product, sum using histories sam
     r::Int64 #neighborhood size for product. radius of 1 = magnitude 3.
     histPerLoc::Int64 #history samples per locus
     rSub::Int64 #neighborhood size for history samples
+end
+
+function MhCompromise(histPerLoc) #actually, total histories per attempt, rounded to nearest
+    MhCompromise(DEFAULT_PRODUCT_RADIUS, round(Int64,histPerLoc/(DEFAULT_PRODUCT_RADIUS - 1)), DEFAULT_PRODUCT_RADIUS - 1)
 end
 
 type FinkelParams{S<:SampleType,MH<:MhType}
