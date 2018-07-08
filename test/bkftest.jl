@@ -503,7 +503,7 @@ for mhType in mhTypes
                                                             ] #note no comma - concatenate vector
                                                             ["","","",""] #again no comma
                                                             [histPerLoc,
-                                                            sampType,
+                                                            string(typeof(sampType)),
                                                             finktime,
                                                             "SingularException",
                                                             "",
@@ -541,7 +541,7 @@ for mhType in mhTypes
                                                             ] #note no comma - concatenate vector
                                                             ["","","",""] #again no comma
                                                             [histPerLoc,
-                                                            sampType,
+                                                            string(typeof(sampType)),
                                                             finktime,
                                                             "DomainError",
                                                             "",
