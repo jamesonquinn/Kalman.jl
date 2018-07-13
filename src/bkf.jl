@@ -78,14 +78,22 @@ module bkf
     MvNormal(kf.x.x,((kf.x.p + kf.x.p') / 2))
   end
 
-    function forwardDistribution(m::LinearModel,x::Vector,r::Range)
-        #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")
-        #print("bbb",noiseMatrix(m)[r,r],"\n")
-        #print("ccc",x[1:2],"\n")
-        #print("ddd",x[r],"\n")
+      function forwardDistribution(m::LinearModel,x::Vector,r::Range)
+          #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")
+          #print("bbb",noiseMatrix(m)[r,r],"\n")
+          #print("ccc",x[1:2],"\n")
+          #print("ddd",x[r],"\n")
 
-      MvNormal(x[r],noiseMatrix(m)[r,r])
-    end
+        MvNormal(x[r],noiseMatrix(m)[r,r])
+      end
+      function forwardDistribution(m::LinearModel,x::Vector,l::Int64)
+          #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")
+          #print("bbb",noiseMatrix(m)[r,r],"\n")
+          #print("ccc",x[1:2],"\n")
+          #print("ddd",x[r],"\n")
+
+        forwardDistribution(m,x,l:l)
+      end
 
     function forwardDistribution(m::LinearModel,x::Float64,l::Int64)
         #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")

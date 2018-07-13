@@ -48,4 +48,12 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 25: mhsampled, SampleUniform; with higher particles for non-finkel
 
-26: as above, measuring squared error 
+26: as above, measuring squared error
+
+27: as above, varying mh and sample
+
+28: redo 27 with some changing numbers (lower nIters/different particles)
+
+29: sqerr for above is broken. fix?
+
+30: reweight! had r and h switched. Fixed now? Nope....

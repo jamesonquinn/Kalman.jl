@@ -33,19 +33,20 @@ if testbkf
 
     @load bkf
 
-    x0 = bkf.State([1.,1],[1. -.99; -.99 1])
-    a = [1. .5; -.5 1]
+    x0 = bkf.State([2.,1],[1. -.99; -.99 1])
+    a = eye(2)#[1. .5; -.5 1]
     a = a / det(a)
-    g = [0.05 0; 0 .01]
+    g = [0.1 0; 0 .1]
     q = eye(2)
     f = bkf.LinearModel(a,g,q)
     h = eye(2)
-    g = [0.15 0; 0 .01]
-    z = bkf.LinearObservationModel(h)
+    g2 = [3 0; 0 3]
+    z = bkf.LinearObservationModel(g2)
     kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
-    pf = bkf.toParticleSet(kf0,1000)
+    pf = bkf.toParticleSet(kf0,300)
     pf1 = bkf.toParticleSet(kf0,1)
+    fap = bkf.FinkelToe(pf,bkf.FinkelParams(bkf.SampleLog(3.,3.), bkf.MhCompromise(3,5,3)))
 
     dt = .1
     t = collect(0:dt:1)
@@ -63,7 +64,7 @@ if testbkf
     pf
 
     push!(truth, pf1)
-    push!(observations, bkf.Observation(pf1,1))
+    push!(observations, bkf.Observation([0.,0]))
 
 
 
@@ -74,7 +75,12 @@ if testbkf
 
 
     kf1 = bkf.predictupdate(kf,observations[1])
-    bkf.predictupdate!(kf,observations[1])
+    fra1 = bkf.FinkelParticles(fap,observations[1],1)
+    fra100 = bkf.FinkelParticles(fap,observations[1],100)
+    fra1k = bkf.FinkelParticles(fap,observations[1],1000)
+    finalDist = bkf.toDistribution(kf1)
+    rsamps = rand(finalDist,1000)
+    mean(rsamps,2)
     #@test kf1.x == kf.x
 
     for i in 2:length(t)-1
@@ -135,12 +141,10 @@ end
 
 
 
-@load bkf
-
 function trsp(v)
     reshape(v,(1,:))
 end
-outfile = open( "filtertest.csv",  "a")
+outfile = open( "filtertesty.csv",  "a")
 
 writecsv( outfile, trsp(["model",
                     "dimension",
@@ -159,6 +163,8 @@ writecsv( outfile, trsp(["model",
                     "sqerr",
                     "mhType"
                     ]))
+@load bkf
+
 NEIGHBORHOOD_SIZE = 5
 IDEAL_SAMPLES = 100
 
@@ -167,7 +173,7 @@ ds = [25]
 d = ds[end]
 ln = size(ds,1)
 histPerLocs = [2,3,6,9]
-nIters = [1,10,50,200,800]
+nIters = [5,15,30,70,110]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
               (200, 40000,8000,3,5,10,4),
@@ -198,6 +204,8 @@ lnParts = length(nParticles)
 np = 1
 nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc = nParticles[np]
 width = 1
+mhType = mhTypes[1]
+sampType = sampTypes[1]
 for mhType in mhTypes
     for sampType in sampTypes
 
@@ -286,7 +294,7 @@ for mhType in mhTypes
                     print("\nideal:")
                     rsamps = rand(finalDist,IDEAL_SAMPLES)
                     kls = bkf.kl2(finalDist,rsamps)
-                    sqe = bkf.sqerr(observations[end].y,rsamps)
+                    sqe = bkf.sqerr(truth[end].particles[:,1],rsamps)
                     idealkl[np,width,r] = kls[1]
                     writecsv( outfile, trsp([["ideal",
                                         d,#dimension
@@ -308,7 +316,7 @@ for mhType in mhTypes
 
                     print("\npart:")
                     kls = bkf.kl2(finalDist,pfs[end].p.particles)
-                    sqe = bkf.sqerr(observations[end].y,pfs[end].p.particles)
+                    sqe = bkf.sqerr(truth[end].particles[:,1],pfs[end].p.particles)
                     partkl[np,width,r]  = kls[1]
                     writecsv( outfile, trsp([["particle",
                                         d,#dimension
@@ -330,7 +338,7 @@ for mhType in mhTypes
                                         "none"]]))
                     print("\nfranken:")
                     kls = bkf.kl2(finalDist,faps[end].p.particles)
-                    sqe = bkf.sqerr(observations[end].y,faps[end].p.particles)
+                    sqe = bkf.sqerr(truth[end].particles[:,1],faps[end].p.particles)
                     frankenkl[np,width,r]  = kls[1]
                     writecsv( outfile, trsp([["franken",
                                         d,#dimension
@@ -378,7 +386,7 @@ for mhType in mhTypes
                         print("\nideal:")
                         rsamps = rand(finalDist,IDEAL_SAMPLES)
                         kls = bkf.kl2(finalDist,rsamps)
-                        sqe = bkf.sqerr(observations[i].y,rsamps)
+                        sqe = bkf.sqerr(truth[i].particles[:,1],rsamps)
                         idealkl[np,width,r] = kls[1]
                         writecsv( outfile, trsp([["ideal",
                                             d,#dimension
@@ -400,7 +408,7 @@ for mhType in mhTypes
 
                         print("\npart:")
                         kls = bkf.kl2(finalDist,pfs[end].p.particles)
-                        sqe = bkf.sqerr(observations[end].y,pfs[end].p.particles)
+                        sqe = bkf.sqerr(truth[end].particles[:,1],pfs[end].p.particles)
                         partkl[np,width,r]  = kls[1]
                         writecsv( outfile, trsp([["particle",
                                             d,#dimension
@@ -422,7 +430,7 @@ for mhType in mhTypes
                                             "none"]]))
                         print("\nfranken:")
                         kls = bkf.kl2(finalDist,faps[end].p.particles)
-                        sqe = bkf.sqerr(observations[end].y,faps[end].p.particles)
+                        sqe = bkf.sqerr(truth[end].particles[:,1],faps[end].p.particles)
                         frankenkl[np,width,r]  = kls[1]
                         writecsv( outfile, trsp([["franken",
                                             d,#dimension
@@ -458,7 +466,7 @@ for mhType in mhTypes
                             push!(fps, fp)
                             print("\nfinkel:")
                             kls = bkf.kl2(finalDist,fps[1].tip.particles)
-                            sqe = bkf.sqerr(observations[i].y,fps[1].tip.particles)
+                            sqe = bkf.sqerr(truth[i].particles[:,1],fps[1].tip.particles)
                             finkelkl[np,width,r]  = kls[1]
                             for i in 2:length(t)-1
 
@@ -468,7 +476,7 @@ for mhType in mhTypes
                                 print("\nfinkel:")
                                 try
                                     kls = bkf.kl2(finalDist,fps[i].tip.particles)
-                                    sqe = bkf.sqerr(observations[i].y,fps[i].tip.particles)
+                                    sqe = bkf.sqerr(truth[i].particles[:,1],fps[i].tip.particles)
                                     finkelkl[np,width,r]  = kls[1]
                                     writecsv( outfile, trsp([["finkel",
                                                         d,#dimension

@@ -203,8 +203,8 @@ function FinkelParticles(prev::AbstractFinkel,
     localDists = Array{Distribution,2}(d,n)
     for ph = 1:n
         for l = 1:d #Ideally we could somehow call forwardDistribution just once but meh
-            localDists[l,ph] = forwardDistribution(getbkf(prev).f,
-                                    means[ph,],
+            localDists[l,ph] = forwardDistribution(filt.f,
+                                    means[:,ph],
                                     l)
         end
     end
@@ -213,7 +213,7 @@ function FinkelParticles(prev::AbstractFinkel,
         for l = 1:d
             for ph = 1:n
                 lps[l,pf,ph] = logpdf(localDists[l,ph],
-                                base[l,pf])
+                                base[l:l,pf] - means[l:l,ph])
             end
             histSampProbs[l,pf] = getSampProbs(lps[l,pf,1:n],myparams.s)
         end
@@ -274,8 +274,8 @@ end
 function reweight!(fp::FinkelParticles, y::Observation)
     d = size(fp.base,1)
     fp.ws = Vector{ProbabilityWeights}(d)
-    diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
-    vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.r is diagonal
+    diffs = fp.base - fp.tip.filter.z.r * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
+    vars = 1./diag(fp.tip.filter.z.h).^2 #assumes fp.tip.f.z.r is eye and ...h is diagonal
     for l = 1:d
         wvec = Vector{Float64}(fp.tip.n)
         for p = 1:fp.tip.n
@@ -344,7 +344,7 @@ function probSum(fp::FinkelParticles,
     for λ in neighborhood
         lp += fp.lps[λ,fp.stem[λ,i],h]
     end
-    exp(-lp)
+    exp(lp)
 end
 
 function probSum(fp::FinkelParticles,
@@ -361,7 +361,7 @@ function probSum(fp::FinkelParticles,
             lp += fp.lps[λ,lstem,h]
         end
     end
-    exp(-lp)
+    exp(lp)
 end
 
 function getSampProb(fp::FinkelParticles,
@@ -627,8 +627,8 @@ end
 
 function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=true)
     fp = FinkelParticles(prev)
-    reweight!(fp, y)
-    replant!(fp)
+    reweight!(fp, y) #set lps
+    replant!(fp) #set tip from base
     for i in 1:fp.tip.n
         mcmc!(fp,i,nIter)
         if debug & ((i % 10)==0)
