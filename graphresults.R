@@ -51,9 +51,31 @@ runs[sampType=="compromise2.1..uniform",`:=`(sampType="bkf.SampleUniform",mhType
 runs[sampType=="sampled..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhSampled")]
 runs[is.na(sampType),`:=`(sampType="none",mhType="none")]
 
-runs[sampType=="bkf.SampleLog",sampParams="5_5"]
+runs[sampType=="bkf.SampleLog",sampParams:="5_5"]
 
 runs = rbind(runs,runs7,runs8,fill=TRUE)
+
+runs[model=="particle",particles:=npf]
+runs[model=="franken",particles:=nfapf]
+runs[model=="finkel",particles:=nfp]
+runs[model=="ideal",particles:=1]
+
+oldruns = runs
+
+
+
+
+
+
+runs = runs9 = fread("filtertest30.csv", fill=TRUE)
+
+runs[sampType=="log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhSampled")]
+runs[sampType=="compromise2.1..log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhCompromise")]
+runs[sampType=="compromise2.1..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhCompromise")]
+runs[sampType=="sampled..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhSampled")]
+runs[is.na(sampType),`:=`(sampType="none",mhType="none")]
+
+
 
 
 runs[model=="particle",particles:=npf]
@@ -73,8 +95,23 @@ runmeans2 = runs[,list(meankl=mean(kl),sdkl=sd(kl),
                       meantime=mean(runtime,na.rm=T),meansq=mean(sqerr,na.rm=T)),
                 by=list(model,particles,nIter,histPerLoc,sampType,mhType)] #no steps
 
-rf = runmeans[model=="finkel",]
+
+
+
+rf = runmeans[model=="finkel"|model=="ideal",]
 rnf = runmeans2[model!="finkel",]
+
+
+
+qplot(meankl,meansq,data=runmeans[meankl<50&meankl>0&meansq<50,],shape=model,color=steps,main="all from run 30")
+qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],color=model,main="zoom 30 colors")
+
+
+qplot(meankl,meansq,data=runmeans[meankl<50&meankl>0&meansq<50,],shape=model,color=steps,main="all from run 30")
+
+
+
+
 
 runs[is.na(sampType),sampType:="NA"]
 runs[model !="finkel",sampType:="none"]

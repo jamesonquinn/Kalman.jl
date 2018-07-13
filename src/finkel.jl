@@ -44,6 +44,16 @@ type SampleLog <: SampleType
     factor::Float64 #how much probability slope bends
 end
 
+type SampleLogM <: SampleType
+    inflectionPoint::Float64 #Distance below max log prob where probability slope bends
+    factor::Float64 #how much probability slope bends
+    minSpan::Float64 #minimum distance from max to min
+end
+
+function SampleLogM(inflectionPoint::Float64,factor::Float64)
+    SampleLog(inflectionPoint,factor,inflectionPoint*1.5)
+end
+
 abstract type MhType end #how to calculate MH acceptance probability
 
 type MhLocal <: MhType #Restricted product, unrestricted sum
@@ -168,7 +178,7 @@ type FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
     numMhAccepts::Int64
 end
 
-function fparams(fp::FinkelParticles)
+function fparams(fp::AbstractFinkel)
     fp.params
 end
 
@@ -213,9 +223,9 @@ function FinkelParticles(prev::AbstractFinkel,
         for l = 1:d
             for ph = 1:n
                 lps[l,pf,ph] = logpdf(localDists[l,ph],
-                                base[l:l,pf] - means[l:l,ph])
+                                base[l:l,pf])
             end
-            histSampProbs[l,pf] = getSampProbs(lps[l,pf,1:n],myparams.s)
+            histSampProbs[l,pf] = getSampProbs(lps[l,pf,1:n],pf,myparams.s)
         end
     end
     tip = ParticleSet(filt,
@@ -245,19 +255,23 @@ function FinkelParticles(prev::AbstractFinkel,
 end
 
 function getSampProbs(logpdfs,
+                    pf::Int64,
                     s::SampleUniform)
     ProbabilityWeights(ones(logpdfs))
 end
 
-function getSampProbs(logpdfs,
+function getSampProbs(lpdfs,
+                    pf::Int64,
                     s::SampleLog)
+    logpdfs = copy(lpdfs)
     mn, mx = extrema(logpdfs)
     mn -= 1
+    #logpdfs[pf] = mn #avoid (over-juicing low-density futures by choosing the past they're conditional on)
     if (mx - mn) < s.inflectionPoint
         ProbabilityWeights(logpdfs - mn)
     else
         v = logpdfs - mn
-        inflec = max - mn - s.inflectionPoint
+        inflec = mx - mn - s.inflectionPoint
         for i = 1:length(v)
             if v[i] > inflec
                 v[i] += (v[i] - inflec) * s.factor
@@ -503,7 +517,7 @@ function probSum(
                                 XT2 <: Union{Void,Vector{Int64}},
                                 T, F, S}
 
-    myCenters = prodNeighborhood( ln, fp, d, fp.params.mh.rSub)
+    myCenters = prodNeighborhood( l, fp, d, fp.params.mh.rSub)
     result = 0.
     if typeof(lstem) == Void
         for c = myCenters
@@ -534,7 +548,7 @@ function probSum(
                                 XT2 <: Union{Void,Vector{Int64}},
                                 T, F, S}
 
-    myCenters = prodNeighborhood( ln, fp, d, fp.params.mh.rSub)
+    myCenters = prodNeighborhood( l, fp, d, fp.params.mh.rSub)
     result = 0.
     if typeof(lstem) == Void
         for c = myCenters
@@ -557,6 +571,19 @@ function clearOldProbs!(
     d::Int64) where {T, F, S}
 
     #do nothing - mhsampled means it's just local
+end
+
+function clearOldProbs!(
+    fp::FinkelParticles{T,F,FinkelParams{S,MhCompromise}},
+    i::Int64,#current particle
+    l::Int64,
+    d::Int64) where {T, F, S}
+
+
+    myCenters = prodNeighborhood( l, fp, d, fp.params.mh.rSub)
+    for λ = myCenters
+        fp.prevProbs[l,i] = nothing
+    end
 end
 
 
@@ -618,8 +645,8 @@ function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
                 fp.historyTerms[l,:,i] = newHistoryTerms
 
                 fp.tip.particles[l,i] = fp.base[l,p]
-                fp.prevProbs[l,i] = newProb
                 clearOldProbs!(fp,i,l,d)
+                fp.prevProbs[l,i] = newProb
             end
         end
     end

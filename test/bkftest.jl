@@ -36,11 +36,11 @@ if testbkf
     x0 = bkf.State([2.,1],[1. -.99; -.99 1])
     a = eye(2)#[1. .5; -.5 1]
     a = a / det(a)
-    g = [0.1 0; 0 .1]
+    g = [0.05 0; 0 .05]
     q = eye(2)
     f = bkf.LinearModel(a,g,q)
     h = eye(2)
-    g2 = [3 0; 0 3]
+    g2 = [1. 0; 0 .8]
     z = bkf.LinearObservationModel(g2)
     kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
@@ -172,13 +172,20 @@ ds = [3]
 ds = [25]
 d = ds[end]
 ln = size(ds,1)
-histPerLocs = [2,3,6,9]
-nIters = [5,15,30,70,110]
+histPerLocs = [3,6,9]
+nIters = [5,50,70,200]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
               (200, 40000,8000,3,5,10,4),
               (500,250000,50000,2,3,5,3),
               (1000,    10,  10,2,3,3,3)]
+#
+nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
+              (100, 10, 20,6,4,10,3),
+              (200, 40,  8,3,4,10,3),
+              (500,250, 50,2,3,10,2),
+              (1000,10, 10,1,3,10,2)]
+
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 #             (100, 100,20,10,5,10,3),
 #             (500,250,10,7,3,5,2),
