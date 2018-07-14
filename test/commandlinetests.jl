@@ -46,6 +46,9 @@ mean(rsamps,2)
 cov(fra1.tip.particles,2)
 
 
+cov(fra100.tip.particles,2)
+
+
 cov(fra1k.tip.particles,2)
 
 

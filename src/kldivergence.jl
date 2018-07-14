@@ -7,7 +7,6 @@ function kl2(dist::MvNormal,
     Σ1 = params(dist)[2] * eye(d)
     Σ2 = cov(samps,2)
 
-    print(size(μ1),size(μ2),size(Σ1),size(Σ2))
     nwind = div(d,window)
     subdivs = zeros(nwind)
     subtr = zeros(nwind)

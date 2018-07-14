@@ -57,3 +57,9 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 29: sqerr for above is broken. fix?
 
 30: reweight! had r and h switched. Fixed now? Nope....
+
+31: fixed params inheritance and forwardDistribution centering. Ran halfway, got impatient.
+
+32: other half of 31, with fewer runs.
+
+33: fixed tempering of model, so sqerr doesn't diverge. 
