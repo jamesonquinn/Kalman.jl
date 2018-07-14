@@ -192,6 +192,10 @@ nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (300,300^2,div(300^2,5),2,2,10,2),
               (800,800^2,div(800^2,5),1,2,10,2)]
 #
+nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
+              (80,  80,div(80,5), 4,3,10,2),
+              (300,300,div(300,5),2,2,10,2),
+              (800,800,div(800,5),1,2,10,2)]
 #
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -204,6 +208,7 @@ nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 #             (100, 10000,2000,5,5,4)]
 sampTypes = [bkf.SampleUniform(), bkf.SampleLog(5.,5.)]
 mhTypes = [bkf.MhSampled, bkf.MhCompromise]
+mhTypes = [bkf.MhCompromise]
 reps = max([np[4] for np in nParticles]...)#max of reps above
 lnIters = length(nIters)
 # finkelmeand = zeros(lnIters,ln,reps)
@@ -234,7 +239,7 @@ for mhType in mhTypes
                 bleed = .25
                 jitter = .1
                 jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
-                temper = .5
+                temper = .85
                 basenoise = 1
                 lownoise = .04
                 lowgap = 3
