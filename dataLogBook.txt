@@ -64,8 +64,10 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 33: fixed tempering of model, so sqerr doesn't diverge. temper=0.5
 
-34:  Incomplete rerun with temper=0.85 ???? (not sure)
+34: Quick rerun out to 20 steps to see if temper=0.5 is stable
 
-35: rerun with temper=0.85
+35: rerun with temper=0.5 (I think? see if it agrees with 34)
 
-36: finish temper=0.85
+36: with temper=0.85 (??)
+
+37: was in same file as 36, split off
