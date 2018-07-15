@@ -71,3 +71,10 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 36: with temper=0.85 (??)
 
 37: was in same file as 36, split off
+
+38: as above, focusing on 800 particles (and tiny nonfinkels) with 20/70 nIters. 10 reps. 3,9 hpl
+
+39: mhType/sampType loops in proper place inside; 400 particles 15 steps 4 reps 5,70 iters; 3,6 hpl. Note, part is running too fast compared to franken/finkel; should rebalance, not that it matters.
+
+40: more of above, with more particles for vanilla particle filter, and more frequent file writes so I can stop "whenever".
+(is there low-hanging fruit for optimizing franken?)
