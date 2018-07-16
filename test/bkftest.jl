@@ -170,11 +170,11 @@ NEIGHBORHOOD_SIZE = 5
 IDEAL_SAMPLES = 1000
 
 ds = [3]
-ds = [25]
+ds = [50]
 d = ds[end]
 ln = size(ds,1)
-histPerLocs = [3,6]
-nIters = [5,70,200]
+histPerLocs = [6]
+nIters = [40]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
               (200, 40000,8000,3,5,10,4),
@@ -197,8 +197,8 @@ nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 #
 
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (400,10*400^2,div(400^2,5),4,2,15,2),
-              (400,400,div(400,5),4,2,15,2)]
+              (600,600^2,div(600^2,5),10,1,20,1),
+              (600,600,div(600,5)    ,40,1,20,1)]
 #
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -239,7 +239,7 @@ for np in 1:lnParts
         bleed = .25
         jitter = .1
         jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
-        temper = .85
+        temper = 1/sqrt(2)
         basenoise = 1
         lownoise = .04
         lowgap = 3
@@ -250,7 +250,7 @@ for np in 1:lnParts
         x0 = bkf.State(zeros(d),eye(d))
 
         a = SymTridiagonal(ones(d),bleed * ones(d-1))
-        a = a * temper / det(a)^(1/d)
+        a = a * temper / det(a)^(1/d) #progression matrix
 
         b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
         b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
@@ -360,8 +360,11 @@ for np in 1:lnParts
                                     "none"]]))
                 print("\nfranken:")
                 kls = bkf.kl2(finalDist,faps[end].p.particles)
+                print("\nb11")
                 sqe = bkf.sqerr(truth[end].particles[:,1],faps[end].p.particles)
+                print("\nb12")
                 frankenkl[np,width,r]  = kls[1]
+                print("\nb13")
                 writecsv( outfile, trsp([["franken",
                                     d,#dimension
                                     r,#rep number
@@ -380,7 +383,9 @@ for np in 1:lnParts
                                     "",
                                     sqe,
                                     "none"]]))
+                print("\nb14")
             end
+            print("\nb15")
     ######
 
             i = 2
@@ -390,15 +395,19 @@ for np in 1:lnParts
                 open( "filtertesty.csv",  "a") do outfile
                     push!(truth, bkf.ap(truth[i-1]))
                     push!(observations, bkf.Observation(truth[i],1))
+                    print("\nideal:")
                     kf2 = bkf.predict(kf)
                     kf = bkf.update(kf2,observations[i])
                     push!(kfs, kf)
 
+                    print("\npart:")
                     parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
                     push!(pfs, ps)
+                    print("\nfranken:")
                     franktime = (@timed fap = bkf.FrankenStep(fap, observations[i]))[2]
                     push!(faps, fap)
 
+                    print("\nwriting:")
                     dif = kfs[end].x.p - kfs[end].x.p'
                     mean(dif)
                     mean(kfs[end].x.p)
@@ -408,7 +417,6 @@ for np in 1:lnParts
                     # frankenmeand[width,r] = mean(log.(bkf.pdf(finalDist,faps[end].p.particles)))/d
                     # idealmeand[width,r] = mean(log.(bkf.pdf(finalDist,rand(finalDist,50))))/d
 
-                    print("\nideal:")
                     rsamps = rand(finalDist,IDEAL_SAMPLES)
                     kls = bkf.kl2(finalDist,rsamps)
                     sqe = bkf.sqerr(truth[i].particles[:,1],rsamps)
@@ -430,8 +438,7 @@ for np in 1:lnParts
                                         "",#error
                                         sqe,
                                         "none"]]))
-
-                    print("\npart:")
+                    #
                     kls = bkf.kl2(finalDist,pfs[end].p.particles)
                     sqe = bkf.sqerr(truth[end].particles[:,1],pfs[end].p.particles)
                     partkl[np,width,r]  = kls[1]
@@ -453,10 +460,13 @@ for np in 1:lnParts
                                         "",#error
                                         sqe,
                                         "none"]]))
-                    print("\nfranken:")
+                    #
                     kls = bkf.kl2(finalDist,faps[end].p.particles)
+                    print("\nb1")
                     sqe = bkf.sqerr(truth[end].particles[:,1],faps[end].p.particles)
+                    print("\nb2")
                     frankenkl[np,width,r]  = kls[1]
+                    print("\nb3")
                     writecsv( outfile, trsp([["franken",
                                         d,#dimension
                                         r,#rep number
@@ -475,7 +485,10 @@ for np in 1:lnParts
                                         "",#error
                                         sqe,
                                         "none"]]))
+                    #
+                    print("\na")
                 end
+                print("\nb")
                 print("Finkel ",r, " ... ",nfp)
                 ni, nhist, nIter, i = 1,1,1,2
             end
@@ -602,7 +615,6 @@ for np in 1:lnParts
 
     end
 end
-close(outfile)
 
 [idealkl,finkelkl,frankenkl,partkl
 

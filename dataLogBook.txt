@@ -78,3 +78,7 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 40: more of above, with more particles for vanilla particle filter, and more frequent file writes so I can stop "whenever".
 (is there low-hanging fruit for optimizing franken?)
+
+41: more of the same
+
+42: width changed, from 25 to 50

@@ -165,13 +165,23 @@ table(runmeans[,list(meankl<10,model)])
 runs = fread("filtertest37.csv", fill=TRUE)
 runs = runs[model=="finkel",]
 runs = rbind(runs,fread("filtertest36.csv", fill=TRUE))
+runs = rbind(runs,fread("filtertest38.csv", fill=TRUE))
+runs = rbind(runs,fread("filtertest39.csv", fill=TRUE))
+#runs = rbind(runs,fread("filtertest40.csv", fill=TRUE))
+runs = rbind(runs,fread("filtertest41.csv", fill=TRUE))
+runs = rbind(runs,fread("filtertesty.csv", fill=TRUE))
 
+
+runs2 = fread("filtertest40.csv", fill=TRUE)
+runs = rbind(runs,runs2)
 
 runs[sampType=="log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhSampled")]
 runs[sampType=="compromise2.1..log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhCompromise")]
 runs[sampType=="compromise2.1..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhCompromise")]
 runs[sampType=="sampled..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhSampled")]
 runs[is.na(sampType),`:=`(sampType="none",mhType="none")]
+
+runs[,params:=paste(sampType,mhType)]
 
 
 
@@ -186,12 +196,12 @@ runmeans = runs[,list(meankl=mean(kl),sdkl=sd(kl),
                       meancov=mean(covdiv),sdcov=sd(covdiv),
                       meandiff=mean(meandiv),sddiff=sd(meandiv),
                       meantime=mean(runtime),meansq=mean(sqerr,na.rm=T)),
-                by=list(model,dimension,steps,particles,nIter,histPerLoc,sampType,mhType)]
+                by=list(model,dimension,steps,particles,nIter,histPerLoc,sampType,mhType,params)]
 runmeans2 = runs[,list(meankl=mean(kl),sdkl=sd(kl),
                        meancov=mean(covdiv),sdcov=sd(covdiv),
                        meandiff=mean(meandiv),sddiff=sd(meandiv),
                        meantime=mean(runtime,na.rm=T),meansq=mean(sqerr,na.rm=T)),
-                 by=list(model,particles,nIter,histPerLoc,sampType,mhType)] #no steps
+                 by=list(model,particles,nIter,histPerLoc,sampType,mhType,params)] #no steps
 
 
 
@@ -205,10 +215,27 @@ ggplot(data=runmeans[order(model,steps),],aes(x=meankl,y=meansq,shape=model,
                                               group=paste(model,particles,sampType,mhType,nIter,histPerLoc))
 ) + geom_path(aes(linetype=model)) + geom_point(aes(color=steps))
 
-ggplot(data=runmeans[,],aes(x=meankl,y=meansq,shape=model,group=model)
+ggplot(data=runmeans[,],aes(x=sqrt(meankl),y=sqrt(meansq),shape=model,group=model)
 ) + geom_path(aes(linetype=model,color=model)
 ) + geom_point(
-) + scale_x_continuous(limits=c(0,10)) + scale_y_continuous(limits=c(0,8))
+) 
+
+ggplot(data=runmeans[model=="finkel",],aes(x=sqrt(meankl),y=sqrt(meansq),shape=model,group=model)
+) + geom_path(aes(linetype=model,color=model)
+) + geom_point(
+) 
+
++ scale_x_continuous(limits=c(0,10)) + scale_y_continuous(limits=c(0,8))
+
+
+
+ggplot(data=runmeans[model!="finkel"|(nIter==70&particles==800),],aes(x=sqrt(meankl),y=sqrt(meansq),shape=paste(mhType,sampType),group=model)
+) + geom_path(aes(linetype=model,color=model)
+) + geom_point(
+) 
+
+
+
 
 ggplot(data=runmeans[model=="franken",],aes(x=sqrt(meankl),y=sqrt(meansq),shape=model,group=model)
 ) + geom_path(aes(linetype=model,color=factor(particles))
