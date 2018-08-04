@@ -39,11 +39,13 @@ function sqerr(truth::Array{Float64,1},
         )
 end
 
+#http://www.nowozin.net/sebastian/blog/streaming-log-sum-exp-computation.html
 function logsumexp_batch(X)
     alpha = maximum(X)  # Find maximum value in X
     log(sum(exp(X-alpha))) + alpha
 end
 
+#http://www.nowozin.net/sebastian/blog/streaming-log-sum-exp-computation.html
 function logsumexp_stream(X)
     alpha = -Inf
     r = 0.0

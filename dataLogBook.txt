@@ -82,3 +82,9 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 41: more of the same
 
 42: width changed, from 25 to 50
+
+43: ??
+
+44: useForward=true, width 50
+
+45: back to width 25, lots of reps
