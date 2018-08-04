@@ -92,6 +92,7 @@ end
 type FinkelParams{S<:SampleType,MH<:MhType}
     s::S
     mh::MH
+    useForward::Bool
 end
 
 
@@ -112,25 +113,31 @@ end
 
 #uniform, sampled
 function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
-            radius::Int64 = DEFAULT_PRODUCT_RADIUS)
-    FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc))
+            radius::Int64 = DEFAULT_PRODUCT_RADIUS,
+            useForward::Bool=true)
+    FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc),
+                useForward)
 end
 
 #uniform, compromise
 function fparams(
             radius::Int64 ,
             histPerLoc::Int64 ,
-            rSub::Int64
+            rSub::Int64,
+            useForward::Bool=true
             )
     FinkelParams(SampleUniform(),
-                MhCompromise(radius, histPerLoc, rSub))
+                MhCompromise(radius, histPerLoc, rSub),
+                useForward)
 end
 
 #log, sampled
 function fparams(histPerLoc::Int64,
             inflectionPoint::Float64,
-            factor::Float64)
-    FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc))
+            factor::Float64,
+            useForward::Bool=true)
+    FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc),
+                useForward)
 end
 
 #log, compromise
@@ -139,10 +146,12 @@ function fparams(inflectionPoint::Float64,
 
             radius::Int64 ,
             histPerLoc::Int64 ,
-            rSub::Int64
+            rSub::Int64,
+            useForward::Bool=true
             )
     FinkelParams(SampleLog(inflectionPoint,factor),
-                MhCompromise(radius, histPerLoc, rSub))
+                MhCompromise(radius, histPerLoc, rSub),
+                useForward)
 end
 
 
@@ -162,8 +171,10 @@ type FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
         #[space, sample, particle]
     stem::Array{Int64,2} #tells which base each tip comes from
         #[space, particle]
-    ws::Vector{ProbabilityWeights} #selection probabilities at each point; p(y_l|x^i_l)
+    ws::Vector{ProbabilityWeights} #selection probabilities at each point; p(y_l|z^i_l)
         #[space][particle]
+    logForwardDensities::Array{Float64,2} #forward densities at each point; p(z_l|x^{1..M}_l)
+        #[space, particle]
     lps::Array{Float64,3} #log probabilities from hist to fut; size [d, n, n]
         #[space, pfuture, phistory]
     histSampProbs::Array{ProbabilityWeights,2}
@@ -211,6 +222,7 @@ function FinkelParticles(prev::AbstractFinkel,
     means = filt.f.a * particleMatrix(prev)
     histSampProbs = Array{ProbabilityWeights,2}(d,n)
     localDists = Array{Distribution,2}(d,n)
+    logForwardDensities = Array{Float64,2}(d,n)
     for ph = 1:n
         for l = 1:d #Ideally we could somehow call forwardDistribution just once but meh
             localDists[l,ph] = forwardDistribution(filt.f,
@@ -218,13 +230,16 @@ function FinkelParticles(prev::AbstractFinkel,
                                     l)
         end
     end
+
     lps = Array{Float64,3}(d,n,n)
     for pf = 1:n
         for l = 1:d
+
             for ph = 1:n
                 lps[l,pf,ph] = logpdf(localDists[l,ph],
                                 base[l:l,pf])
             end
+            logForwardDensities[l,pf] = logsumexp(lps[l,pf,:])
             histSampProbs[l,pf] = getSampProbs(lps[l,pf,1:n],pf,myparams.s)
         end
     end
@@ -240,6 +255,7 @@ function FinkelParticles(prev::AbstractFinkel,
                 historyTerms, #historyTerms
                 stem,
                 Vector{ProbabilityWeights}(), #empty weights
+                logForwardDensities,
                 lps,
                 histSampProbs,
                 means, #means
@@ -633,6 +649,11 @@ function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
                 end
                 newHistoryTerms = histTerms(l, p, fp)
                 newProb = probSum(i, d, l, fp, p, newHistoryTerms)
+                if fp.params.useForward
+                    newProb = newProb / exp(fp.logForwardDensities[l,p])
+                    oldProb = oldProb / exp(fp.logForwardDensities[l,fp.stem[l,i]])
+                end
+
                 if (newProb < oldProb) && (newProb < rand() * oldProb)
                     fp.totalProb[l,i] += newProb / oldProb
                     continue #M-H rejection

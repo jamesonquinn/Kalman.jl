@@ -175,6 +175,12 @@ runs = rbind(runs,fread("filtertesty.csv", fill=TRUE))
 runs2 = fread("filtertest40.csv", fill=TRUE)
 runs = rbind(runs,runs2)
 
+#above is largely focused on 400/.85. Now, some 600/.7:
+runs = fread("filtertesty.csv", fill=TRUE)
+
+
+
+
 runs[sampType=="log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhSampled")]
 runs[sampType=="compromise2.1..log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhCompromise")]
 runs[sampType=="compromise2.1..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhCompromise")]
@@ -209,7 +215,10 @@ runmeans2 = runs[,list(meankl=mean(kl),sdkl=sd(kl),
 rf = runmeans[model=="finkel"|model=="ideal",]
 rnf = runmeans2[model!="finkel",]
 
+equilib = runmeans[steps>7,list(kl=mean(meankl),sq=mean(meansq)),by=list(model,params,sampType,mhType)]
 
+
+ggplot(data=equilib,aes(x=sqrt(kl),y=sqrt(sq),color=paste(model,sampType),shape=mhType)) + geom_point()
 
 ggplot(data=runmeans[order(model,steps),],aes(x=meankl,y=meansq,shape=model,
                                               group=paste(model,particles,sampType,mhType,nIter,histPerLoc))
@@ -220,12 +229,28 @@ ggplot(data=runmeans[,],aes(x=sqrt(meankl),y=sqrt(meansq),shape=model,group=mode
 ) + geom_point(
 ) 
 
-ggplot(data=runmeans[model=="finkel",],aes(x=sqrt(meankl),y=sqrt(meansq),shape=model,group=model)
-) + geom_path(aes(linetype=model,color=model)
-) + geom_point(
+ggplot(data=runmeans[model=="finkel"&nIter>10,],aes(x=sqrt(meankl),y=sqrt(meansq),shape=params,group=params)
+) + geom_path(aes(linetype=params,color=params)
+) + geom_point(aes(color=params)
 ) 
 
-+ scale_x_continuous(limits=c(0,10)) + scale_y_continuous(limits=c(0,8))
+ggplot(data=runmeans[model=="finkel"&particles==400&nIter>10,],aes(x=sqrt(meankl),y=sqrt(meansq),group=paste(params,particles,nIter,histPerLoc))
+) + geom_path(aes(linetype=params,color=params)
+) + geom_point(aes(color=params,shape=factor(histPerLoc))
+) 
+
+
+ggplot(data=runmeans[model=="ideal"|(particles==400&nIter>10),],aes(x=sqrt(meankl),y=sqrt(meansq),group=paste(model,params,particles,nIter,histPerLoc,dimension))
+) + geom_path(aes(linetype=params,color=params)
+) + geom_point(aes(color=params,shape=factor(histPerLoc))
+) 
+
+
+ggplot(data=runmeans[model=="ideal"|(particles>300&nIter>10&params=="bkf.SampleLog bkf.MhCompromise"),],aes(x=sqrt(meankl),y=sqrt(meansq),group=paste(model,params,particles,nIter,histPerLoc,dimension))
+) + geom_path(aes(linetype=factor(nIter),color=factor(nIter))
+) + geom_point(aes(shape=factor(histPerLoc))
+)
+#+ scale_x_continuous(limits=c(0,10)) + scale_y_continuous(limits=c(0,8))
 
 
 

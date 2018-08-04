@@ -38,3 +38,25 @@ function sqerr(truth::Array{Float64,1},
         mean((truth - samps[:,i]) .^ 2) for i = 1:nsamps
         )
 end
+
+function logsumexp_batch(X)
+    alpha = maximum(X)  # Find maximum value in X
+    log(sum(exp(X-alpha))) + alpha
+end
+
+function logsumexp_stream(X)
+    alpha = -Inf
+    r = 0.0
+    for x = X
+        if x <= alpha
+            r += exp(x - alpha)
+        else
+            r *= exp(alpha - x)
+            r += 1.0
+            alpha = x
+        end
+    end
+    log(r) + alpha
+end
+
+logsumexp = logsumexp_batch
