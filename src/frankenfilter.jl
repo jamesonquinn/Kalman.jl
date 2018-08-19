@@ -6,7 +6,7 @@ type FrankenSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     filter::F
     n::Int64
     hoodSize::Int64
-    particles::Array{T,2}
+    particles::Array{T,2} #[location, particle]
     weights::Vector{ProbabilityWeights{Float64,Float64,Array{Float64,1}}}
 end
 
@@ -46,7 +46,7 @@ end
         end
     end
 
-    newParticleBases =
+    #newParticleBases =
     #println(size(ε))
     #println(size(newParticles))
     FrankenSet(pset.filter, n, pset.hoodSize,
@@ -91,7 +91,7 @@ end
     r = FResample(pset)
     p = ap(pset,r)
     reweight!(p,y)
-    FrankenStep(r,p,y)
+    FrankenStep(r,p,y) #NOTE: Resample happens at beginning, not end... so all my tests have been measuring wrong.
   end
 
   function FrankenStep(pstep::FrankenStep, y::Observation)
@@ -100,4 +100,12 @@ end
 
 function particles(p::FrankenStep)
     p.particles
+end
+
+function nlocs(f::FrankenSet)
+    size(f.particles)[1]
+end
+
+function nlocs(f::FrankenStep)
+    nlocs(f.p)
 end

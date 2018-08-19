@@ -3,11 +3,8 @@ library(data.table)
 
 pd = position_dodge(20)
 
-runs = fread("filtertest14.csv",header=F)
-names(runs)[1:13] = c("model","dimensions","repNum",
-                "step","numFinkel","numFranken",
-                "numPart","nIter","mhAccepts",
-                "kl","covdiv","meandiv","entropydiv")
+runs = fread("graphone6.csv")
+ggplot(runs,aes(y=mvlmean,x=steps,color=paste(model,sampType,histPerLoc))) + geom_line() 
 
 runmeans = runs[,list(meankl=mean(kl),sdkl=sd(kl),
                       meancov=mean(covdiv),sdcov=sd(covdiv),

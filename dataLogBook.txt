@@ -85,6 +85,31 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 43: ??
 
-44: useForward=true, width 50
+44: useForward=true, width 50 ... but failed to build params
 
-45: back to width 25, lots of reps
+45: junk
+
+46: partial run width 25 useForward
+
+47: A couple of runs like 46
+
+
+
+
+
+
+graphone: (started after 47)
+
+1: initial testing, two runs concatted but misformatted. 800 finkel.
+
+2: down to 80 finkel.
+
+3: first graphable
+
+4: various trials
+
+5: 80 finkel, just one params --- but divergent
+
+6: non divergent
+
+7: 100 dimensions

@@ -161,12 +161,14 @@ open( "filtertesty.csv",  "a") do outfile
                         "runtime",#time
                         "errorType",
                         "sqerr",
-                        "mhType"
+                        "mhType",
+                        "useForward",
+                        "neighborhoodsize"
                         ]))
 end
 @load bkf
 
-NEIGHBORHOOD_SIZE = 5
+NEIGHBORHOOD_SIZE = 4
 IDEAL_SAMPLES = 1000
 
 ds = [3]
@@ -174,7 +176,7 @@ ds = [25]
 d = ds[end]
 ln = size(ds,1)
 histPerLocs = [3,9,6]
-nIters = [40,10,5,80]
+nIters = [30,2,15,60]
 useForwards = [true]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
@@ -226,12 +228,12 @@ lnIters = length(nIters)
 # frankenmeand = zeros(lnIters,ln,reps)
 # partmeand = zeros(lnIters,ln,reps)
 # idealmeand = zeros(lnIters,ln,reps)
-finkelkl = zeros(lnIters,ln,reps)
-frankenkl = zeros(lnIters,ln,reps)
-partkl = zeros(lnIters,ln,reps)
-idealkl = zeros(lnIters,ln,reps)
 
 lnParts = length(nParticles)
+finkelkl = zeros(lnParts,ln,reps)
+frankenkl = zeros(lnParts,ln,reps)
+partkl = zeros(lnParts,ln,reps)
+idealkl = zeros(lnParts,ln,reps)
 np = 1
 nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc = nParticles[np]
 width = 1
@@ -249,7 +251,7 @@ for useForward in useForwards
             bleed = .25
             jitter = .1
             jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
-            temper = 1/sqrt(2)
+            temper = .8 #1/sqrt(2)
             basenoise = 1
             lownoise = .04
             lowgap = 3
@@ -260,7 +262,8 @@ for useForward in useForwards
             x0 = bkf.State(zeros(d),eye(d))
 
             a = SymTridiagonal(ones(d),bleed * ones(d-1))
-            a = a * temper / det(a)^(1/d) #progression matrix
+            a = a * temper / (1+2*bleed) #progression matrix
+            #a = a * temper / det(a)^(1/d) #progression matrix - divergent
 
             b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
             b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
@@ -344,7 +347,9 @@ for useForward in useForwards
                                         "",
                                         "",
                                         sqe,
-                                        "none"]]))
+                                        "none",
+                                        "",
+                                        ""]]))
 
                     print("\npart:")
                     kls = bkf.kl2(finalDist,pfs[end].p.particles)
@@ -367,7 +372,9 @@ for useForward in useForwards
                                         "",
                                         "",
                                         sqe,
-                                        "none"]]))
+                                        "none",
+                                        "",
+                                        ""]]))
                     print("\nfranken:")
                     kls = bkf.kl2(finalDist,faps[end].p.particles)
                     print("\nb11")
@@ -392,7 +399,9 @@ for useForward in useForwards
                                         "",
                                         "",
                                         sqe,
-                                        "none"]]))
+                                        "none",
+                                        "",
+                                        NEIGHBORHOOD_SIZE]]))
                     print("\nb14")
                 end
                 print("\nb15")
@@ -447,7 +456,9 @@ for useForward in useForwards
                                             "",#time
                                             "",#error
                                             sqe,
-                                            "none"]]))
+                                            "none",
+                                            "",
+                                            ""]]))
                         #
                         kls = bkf.kl2(finalDist,pfs[end].p.particles)
                         sqe = bkf.sqerr(truth[end].particles[:,1],pfs[end].p.particles)
@@ -469,7 +480,9 @@ for useForward in useForwards
                                             parttime,#time
                                             "",#error
                                             sqe,
-                                            "none"]]))
+                                            "none",
+                                            "",
+                                            ""]]))
                         #
                         kls = bkf.kl2(finalDist,faps[end].p.particles)
                         print("\nb1")
@@ -494,7 +507,9 @@ for useForward in useForwards
                                             franktime,#time
                                             "",#error
                                             sqe,
-                                            "none"]]))
+                                            "none",
+                                            "",
+                                            NEIGHBORHOOD_SIZE]]))
                         #
                         print("\na")
                     end
@@ -512,7 +527,7 @@ for useForward in useForwards
                                 histPerLoc = histPerLocs[nhist]
 
 
-                                fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward)) #fparams(histPerLoc,2))
+                                global fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward)) #fparams(histPerLoc,2))
                                 #sampType = "sampled..uniform"
                                 global fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                                 push!(fps, fp)
@@ -548,7 +563,8 @@ for useForward in useForwards
                                                                 "", #error
                                                                 sqe,
                                                                 string(mhType),
-                                                                string(useForward)
+                                                                string(useForward),
+                                                                ""
                                                                 ]
                                                                 ]))
                                         catch y
@@ -570,7 +586,8 @@ for useForward in useForwards
                                                                     "SingularException",
                                                                     "",
                                                                     string(mhType),
-                                string(useForward)]
+                                                                    string(useForward),
+                                                                    ""]
                                                                     ]))
                                             elseif isa(y, LinAlg.LAPACKException)
                                                 writecsv( outfile, trsp([["finkel",
@@ -590,7 +607,8 @@ for useForward in useForwards
                                                                     "LAPACKException",
                                                                     "",
                                                                     string(mhType),
-                                string(useForward)]
+                                                                    string(useForward),
+                                                                    ""]
                                                                     ]))
                                             elseif isa(y, DomainError)
                                                 writecsv( outfile, trsp([["finkel",
@@ -610,7 +628,8 @@ for useForward in useForwards
                                                                     "DomainError",
                                                                     "",
                                                                     string(mhType),
-                                string(useForward)]
+                                                                    string(useForward),
+                                                                    ""]
                                                                     ]))
                                                 rethrow()
                                             else
