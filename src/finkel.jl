@@ -202,7 +202,6 @@ function FinkelParticles(prev::AbstractFinkel,
                          myparams::FinkelParams)
     d, n = size(particleMatrix(prev))
     h = myparams.mh.histPerLoc
-    print(d," dn ",n,"\n")
     base = ap(prev.tip).particles
     tipVals = copy(base)
 
@@ -679,7 +678,7 @@ function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=t
     replant!(fp) #set tip from base
     for i in 1:fp.tip.n
         mcmc!(fp,i,nIter)
-        if debug & ((i % 10)==0)
+        if debug & ((i % 40)==0)
             print("Ran particle ", i, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")
         end
     end

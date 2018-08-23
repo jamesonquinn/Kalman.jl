@@ -82,11 +82,7 @@ end
 
 function meanvarlocs(f::Union{BasicKalmanFilter, FrankenStep}, r::Range)
     p=musig(f)
-    d = length(p[1])
-    v = zeros(d)
-    v[r] = 1.
-
-    (sum(v .* p[1]), v⋅(p[2]*v))
+    meanvarlocs(p...,r)
 end
 
 function meanvarlocs(f::Observation, r::Range)
@@ -106,6 +102,15 @@ end
 function meanvarlocs(f::FrankenSet, r::Range)
     (sum(f.particles[r,1]),0.)
 end
+
+function meanvarlocs(μ,Σ,r::Range)
+    d = length(μ)
+    v = zeros(d)
+    v[r] = 1.
+
+    (sum(v .* μ), v⋅(Σ*v))
+end
+
 
 function musig(f::FrankenSet, lim=999)
 
@@ -132,7 +137,8 @@ function musig(f::BasicKalmanFilter)
 end
 
 function musig(f::MvNormal)
-    params(f)
+    p = params(f)
+    (p[1],full(p[2]))
 end
 
 function musig(f::ParticleStep)

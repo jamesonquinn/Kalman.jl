@@ -93,7 +93,25 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 47: A couple of runs like 46
 
+(48-52 I lost a save of this file, so reconstructed post-hoc)
 
+48: Aborted, ignore; no finkels
+
+49: dim 100, quickie/short
+
+50: Again, no finkels.
+
+51: dim 60, good! But pf particles just *2, not ^2.
+
+52: dim 60, as with 51
+
+53: dim 48, only log/compromise/6 for finkel
+
+54: quickie, testing for good numbers for pf and franken — used ^2 and ^2/5 — aborted
+
+55: 5x higher numbers for pf and franken...? d=48 or 60 (alternating). finkel still very roughly twice as slow but meh good enough.... aksh, nah, gonna make part/franken slower so finkel has no unfair adv. Aborted.
+
+56: 10* higher for pf and franken. as 55.
 
 
 
