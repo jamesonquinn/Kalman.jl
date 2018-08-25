@@ -148,7 +148,7 @@ end
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "filtertesty.csv"
+fname = "newtesty.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -271,7 +271,9 @@ sampType = sampTypes[1]
 
 
 d = ds[width]
-bleed = .25
+bleedl = 1
+bleedm = .1
+bleedr = .25
 jitter = .1
 jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
 temper = .8 #1/sqrt(2)
@@ -284,8 +286,8 @@ mciter = 6
 
 x0 = bkf.State(zeros(d),eye(d))
 
-a = SymTridiagonal(ones(d),bleed * ones(d-1))
-a = a * temper / (1+2*bleed) #progression matrix
+a = Tridiagonal(bleedl * ones(d-1),bleedm * ones(d),bleedr * ones(d-1))
+a = a * temper / (bleedl+bleedm+bleedr) #progression matrix
 #a = a * temper / det(a)^(1/d) #progression matrix - divergent
 
 b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
