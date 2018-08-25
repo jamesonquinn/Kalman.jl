@@ -45,6 +45,43 @@ function sqerr(truth::Array{Float64,1},
         )
 end
 
+function sqerr(truth::Array{Float64,1},
+    f::Union{ParticleStep,FrankenStep})
+    sqerr(truth,f.p)
+end
+
+function sqerr(truth::Array{Float64,1},
+    f::ParticleSet)
+    samps = f.particles
+
+    nsamps = size(samps)[2]
+    mean(
+        [mean((truth - samps[:,i]) .^ 2) for i = 1:nsamps], f.weights
+    )
+end
+
+function sqerr(truth::Array{Float64,1},
+    f::FrankenSet)
+
+    w = nlocs(f)
+    mu = zeros(w)
+    sig = zeros((w,w))
+
+    lim = size(f.weights,1)
+    submeans=zeros(lim)
+    for n in 1:lim
+        toN = n*f.hoodSize
+        fromN = toN - f.hoodSize + 1
+        # print(n," ",size(f.weights[n])," ",f.n," ")
+        # print(mean((truth[fromN:toN,i] - f.particles[fromN:toN,1]) .^ 2)," ")
+        # print()
+        submeans[n] = mean(
+            [mean((truth[fromN:toN] - f.particles[fromN:toN,i]) .^ 2) for i = 1:f.n], f.weights[n]
+        )
+    end
+    mean(submeans)
+end
+
 #http://www.nowozin.net/sebastian/blog/streaming-log-sum-exp-computation.html
 function logsumexp_batch(X)
     alpha = maximum(X)  # Find maximum value in X

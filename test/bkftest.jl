@@ -183,7 +183,7 @@ ds = [48]
 d = ds[end]
 ln = size(ds,1)
 histPerLocs = [6,3,9]
-nIters = [30,80,15]
+nIters = [30,60,15]
 useForwards = [true]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
@@ -219,10 +219,12 @@ nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
             (800,800*2,div(800*2,5),5,1,10,1)]
 #
 nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
-              (60,80,300^2    *10,div(300^2*2,1),4,2,20,1),
-              (48,300,800^2   *10,div(800^2*2,1),2,2,20,1),
-              (48,300,80^2    *10,div(80^2*2, 1),2,2,20,1)]
+              #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
+
+              (48,80,80^2    *2,div(80^2,2),4,2,15,1),
+              (60,80,80^2    *2,div(80^2,2),2,2,15,1),
+              (48,300,300^2   *2,div(300^2,2),4,2,15,1),
+              (48,800,800^2   *2,div(800^2,2),2,2,15,1)]
 #
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -333,15 +335,15 @@ for useForward in useForwards
                 global truth = Vector{bkf.ParticleSet}(0)#length(t))
                 global observations = Vector{bkf.Observation}(0)#length(t))
                 global kfs = Vector{bkf.BasicKalmanFilter}(0)#length(t))
-                global pfs = Vector{bkf.ParticleStep}(0)#length(t))
-                global faps = Vector{bkf.FrankenStep}(0)
+                #global pfs = Vector{bkf.ParticleStep}(0)#length(t))
+                #global faps = Vector{bkf.FrankenStep}(0)
 
                 global kf = kf0
                 push!(kfs, kf)
                 global ps = bkf.ParticleStep(pf)
-                push!(pfs, ps)
+                #push!(pfs, ps)
                 global fap = bkf.FrankenStep(fapf)
-                push!(faps, fap)
+                #push!(faps, fap)
 
                 push!(truth, pf1)
                 push!(observations, bkf.Observation(pf1,1))
@@ -443,9 +445,9 @@ for useForward in useForwards
                                             mvl[1], mvl[2]]]))
                         ##
                         print("\npart:")
-                        kls = bkf.kl2(finalDist,pfs[end].p.particles)
-                        sqe = bkf.sqerr(truth[end].particles[:,1],pfs[end].p.particles)
-                        mvl = bkf.meanvarlocs(pfs[end],3:5)
+                        kls = bkf.kl2(finalDist,ps.p.particles)
+                        sqe = bkf.sqerr(truth[end].particles[:,1],ps)
+                        mvl = bkf.meanvarlocs(ps,3:5)
                         partkl[np,width,r]  = kls[1]
                         writecsv( outfile, trsp([["particle",
                                             d,#dimension
@@ -469,9 +471,9 @@ for useForward in useForwards
                                             "",
                                             mvl[1], mvl[2]]]))
                         print("\nfranken:")
-                        kls = bkf.kl2(finalDist,faps[end].p.particles)
-                        sqe = bkf.sqerr(truth[end].particles[:,1],faps[end].p.particles)
-                        mvl = bkf.meanvarlocs(faps[end],3:5)
+                        kls = bkf.kl2(finalDist,fap.p.particles)
+                        sqe = bkf.sqerr(truth[end].particles[:,1],fap)
+                        mvl = bkf.meanvarlocs(fap,3:5)
                         frankenkl[np,width,r]  = kls[1]
                         writecsv( outfile, trsp([["franken",
                                             d,#dimension
@@ -513,10 +515,10 @@ for useForward in useForwards
 
                             print("\npart:")
                             parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
-                            push!(pfs, ps)
+                            #push!(pfs, ps)
                             print("\nfranken:")
                             franktime = (@timed fap = bkf.FrankenStep(fap, observations[i]))[2]
-                            push!(faps, fap)
+                            #push!(faps, fap)
 
                             print("\nwriting:")
                             dif = kfs[end].x.p - kfs[end].x.p'
@@ -599,9 +601,9 @@ for useForward in useForwards
                                                 "",
                                                 mvl[1], mvl[2]]]))
                             #
-                            kls = bkf.kl2(finalDist,pfs[end].p.particles)
-                            sqe = bkf.sqerr(truth[end].particles[:,1],pfs[end].p.particles)
-                            mvl = bkf.meanvarlocs(pfs[end],3:5)
+                            kls = bkf.kl2(finalDist,ps.p.particles)
+                            sqe = bkf.sqerr(truth[end].particles[:,1],ps)
+                            mvl = bkf.meanvarlocs(ps,3:5)
                             partkl[np,width,r]  = kls[1]
                             writecsv( outfile, trsp([["particle",
                                                 d,#dimension
@@ -625,9 +627,9 @@ for useForward in useForwards
                                                 "",
                                                 mvl[1], mvl[2]]]))
                             #
-                            kls = bkf.kl2(finalDist,faps[end].p.particles)
-                            sqe = bkf.sqerr(truth[end].particles[:,1],faps[end].p.particles)
-                            mvl = bkf.meanvarlocs(faps[end],3:5)
+                            kls = bkf.kl2(finalDist,fap.p.particles)
+                            sqe = bkf.sqerr(truth[end].particles[:,1],fap)
+                            mvl = bkf.meanvarlocs(fap,3:5)
                             frankenkl[np,width,r]  = kls[1]
                             writecsv( outfile, trsp([["franken",
                                                 d,#dimension
@@ -669,23 +671,23 @@ for useForward in useForwards
 
                                     global fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward)) #fparams(histPerLoc,2))
                                     #sampType = "sampled..uniform"
-                                    fps = Vector{bkf.AbstractFinkel}(0)#length(t))
-                                    push!(fps, fp)
+                                    #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
+                                    #push!(fps, fp)
                                     print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
-                                    kls = bkf.kl2(finalDist,fps[1].tip.particles)
-                                    sqe = bkf.sqerr(truth[i].particles[:,1],fps[1].tip.particles)
+                                    kls = bkf.kl2(finalDist,fp.tip.particles)
+                                    sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)
                                     finkelkl[np,width,r]  = kls[1]
                                     for i in 2:length(t)-1
 
                                         open( fname,  "a") do outfile
                                             finalDist = bkf.toDistribution(kfs[i])
                                             finktime = (@timed fp = bkf.FinkelParticles(fp, observations[i], nIter))[2]
-                                            push!(fps, fp)
+                                            #push!(fps, fp)
                                             print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
                                             try
-                                                kls = bkf.kl2(finalDist,fps[i].tip.particles)
-                                                sqe = bkf.sqerr(truth[i].particles[:,1],fps[i].tip.particles)
-                                                mvl = bkf.meanvarlocs(fps[i],3:5)
+                                                kls = bkf.kl2(finalDist,fp.tip.particles)
+                                                sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)
+                                                mvl = bkf.meanvarlocs(fp,3:5)
                                                 finkelkl[np,width,r]  = kls[1]
                                                 writecsv( outfile, trsp([["finkel",
                                                                     d,#dimension
@@ -695,7 +697,7 @@ for useForward in useForwards
                                                                     nfapf,#franken particles
                                                                     npf,#part particles
                                                                     nIter, #mcmc steps in finkel
-                                                                    fps[end].numMhAccepts
+                                                                    fp.numMhAccepts
                                                                     ] #note no comma - concatenate vector
                                                                     kls #again no comma
                                                                     [histPerLoc,
@@ -719,7 +721,7 @@ for useForward in useForwards
                                                                         nfapf,#franken particles
                                                                         npf,#part particles
                                                                         nIter, #mcmc steps in finkel
-                                                                        fps[end].numMhAccepts
+                                                                        fp.numMhAccepts
                                                                         ] #note no comma - concatenate vector
                                                                         ["","","",""] #again no comma
                                                                         [histPerLoc,
@@ -740,7 +742,7 @@ for useForward in useForwards
                                                                         nfapf,#franken particles
                                                                         npf,#part particles
                                                                         nIter, #mcmc steps in finkel
-                                                                        fps[end].numMhAccepts
+                                                                        fp.numMhAccepts
                                                                         ] #note no comma - concatenate vector
                                                                         ["","","",""] #again no comma
                                                                         [histPerLoc,
@@ -761,7 +763,7 @@ for useForward in useForwards
                                                                         nfapf,#franken particles
                                                                         npf,#part particles
                                                                         nIter, #mcmc steps in finkel
-                                                                        fps[end].numMhAccepts
+                                                                        fp.numMhAccepts
                                                                         ] #note no comma - concatenate vector
                                                                         ["","","",""] #again no comma
                                                                         [histPerLoc,
@@ -798,18 +800,6 @@ end
 ]
 
 
-
-wmean = zeros(d)
-for l in 1:d
-    wmean[l] = fps[end].ws[l]' * fps[end].base[l,:] / sum(fps[end].ws[l])
-end
-
-print([cor(wmean,bkf.params(finalDist)[1]),
-cor(vec(mean(fps[end].tip.particles,2)),bkf.params(finalDist)[1]),
-cor(wmean,vec(mean(fps[end].tip.particles,2))),
-cor(wmean,observations[end].y),
-cor(observations[end].y,bkf.params(finalDist)[1])
-])
 
 
 #....

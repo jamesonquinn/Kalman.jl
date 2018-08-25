@@ -113,6 +113,12 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 56: 10* higher for pf and franken. as 55.
 
+57: finishing 56, but lighter on memory (don't keep old steps).
+
+58: back to 5x higher for the 300 and 800 runs. Still too slow, going to go back to base as soon as one run finishes?
+
+
+
 
 
 
