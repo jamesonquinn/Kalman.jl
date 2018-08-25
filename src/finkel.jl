@@ -92,7 +92,7 @@ end
 type FinkelParams{S<:SampleType,MH<:MhType}
     s::S
     mh::MH
-    useForward::Bool
+    useForward::Float64
 end
 
 
@@ -114,7 +114,7 @@ end
 #uniform, sampled
 function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
             radius::Int64 = DEFAULT_PRODUCT_RADIUS,
-            useForward::Bool=true)
+            useForward::Float64=1.)
     FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc),
                 useForward)
 end
@@ -124,7 +124,7 @@ function fparams(
             radius::Int64 ,
             histPerLoc::Int64 ,
             rSub::Int64,
-            useForward::Bool=true
+            useForward::Float64=1.
             )
     FinkelParams(SampleUniform(),
                 MhCompromise(radius, histPerLoc, rSub),
@@ -135,7 +135,7 @@ end
 function fparams(histPerLoc::Int64,
             inflectionPoint::Float64,
             factor::Float64,
-            useForward::Bool=true)
+            useForward::Float64=1.)
     FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc),
                 useForward)
 end
@@ -147,7 +147,7 @@ function fparams(inflectionPoint::Float64,
             radius::Int64 ,
             histPerLoc::Int64 ,
             rSub::Int64,
-            useForward::Bool=true
+            useForward::Float64=1.
             )
     FinkelParams(SampleLog(inflectionPoint,factor),
                 MhCompromise(radius, histPerLoc, rSub),
@@ -648,9 +648,9 @@ function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
                 end
                 newHistoryTerms = histTerms(l, p, fp)
                 newProb = probSum(i, d, l, fp, p, newHistoryTerms)
-                if fp.params.useForward
-                    newProb = newProb / exp(fp.logForwardDensities[l,p])
-                    oldProb = oldProb / exp(fp.logForwardDensities[l,fp.stem[l,i]])
+                if fp.params.useForward != 0.
+                    newProb = newProb / exp(fp.params.useForward * fp.logForwardDensities[l,p])
+                    oldProb = oldProb / exp(fp.params.useForward * fp.logForwardDensities[l,fp.stem[l,i]])
                 end
 
                 if (newProb < oldProb) && (newProb < rand() * oldProb)

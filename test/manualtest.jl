@@ -148,31 +148,7 @@ end
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "filtertesty.csv"
-open( fname,  "a") do outfile
-
-    writecsv( outfile, trsp(["model",
-                        "dimension",
-                        "rep",
-                        "steps",
-                        "nfp",#finkel particles
-                        "nfapf",#franken particles
-                        "npf",#part particles
-                        "nIter", #mcmc steps in finkel
-                        "numMhAccepts",
-                        "kl","covdiv","meandiv","entropydiv",
-                        "histPerLoc",#hpl
-                        "sampType",#samp
-                        "runtime",#time
-                        "errorType",
-                        "sqerr",
-                        "mhType",
-                        "useForward",
-                        "neighborhoodsize",
-                        "mvlmean",
-                        "mvlvar"
-                        ]))
-end
+fname = "manualtest.csv"
 @load bkf
 
 NEIGHBORHOOD_SIZE = 4
@@ -183,8 +159,8 @@ ds = [48]
 d = ds[end]
 ln = size(ds,1)
 histPerLocs = [3,9,6]
-nIters = [30,1]
-useForwards = [-1.,0,.5]
+nIters = [30,45,1]
+useForwards = [true,false]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
               (200, 40000,8000,3,5,10,4),
@@ -229,7 +205,7 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
 
-              (40,100,100^2    *2,div(100^2,2),4,2,15,1)]
+              (48,80,80^2    *2,div(80^2,2),4,2,4,2)]
 #
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -243,7 +219,6 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 sampTypes = [bkf.SampleUniform(), bkf.SampleLog(5.,5.)]
 mhTypes = [bkf.MhSampled, bkf.MhCompromise]
 sampTypes = [bkf.SampleUniform()]
-mhTypes = [bkf.MhSampled]
 reps = max([np[4] for np in nParticles]...)#max of reps above
 lnIters = length(nIters)
 # finkelmeand = zeros(lnIters,ln,reps)
@@ -319,11 +294,11 @@ var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
 print("asdt")
 
 
-for np in 1:lnParts
+np = 1
 
     d,nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc = nParticles[np]
 
-    for width in 1:ln
+    width=1
 
 
         fpf = bkf.toParticleSet(kf0,nfp)
@@ -367,7 +342,7 @@ for np in 1:lnParts
         global mvl = bkf.meanvarlocs(kfs[end],3:5)
         global idealkl[np,width,r] = kls[1]
 
-
+        print("mvl: ",mvl,"\n")
 
 
 
@@ -375,12 +350,13 @@ for np in 1:lnParts
 
         r = 1
 
-        for r in 1:reps
 
 
 
             open( fname,  "a") do outfile
                 #
+                global mvl
+                print("2mvl: ",mvl,"\n")
                 writecsv( outfile, trsp([["truth",
                                     d,#dimension
                                     r,#rep number
@@ -445,7 +421,7 @@ for np in 1:lnParts
                 ##
                 print("\npart:")
                 kls = bkf.kl2(finalDist,ps.p.particles)
-                sqe = bkf.sqerr(truth[end].particles[:,1],ps)
+                global sqe = bkf.sqerr(truth[end].particles[:,1],ps)
                 mvl = bkf.meanvarlocs(ps,3:5)
                 partkl[np,width,r]  = kls[1]
                 writecsv( outfile, trsp([["particle",
@@ -508,14 +484,17 @@ for np in 1:lnParts
                     push!(truth, bkf.ap(truth[i-1]))
                     push!(observations, bkf.Observation(truth[i],1))
                     print("\nideal:")
+                    global kf
                     kf2 = bkf.predict(kf)
                     kf = bkf.update(kf2,observations[i])
                     push!(kfs, kf)
 
                     print("\npart:")
+                    global ps
                     parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
                     #push!(pfs, ps)
                     print("\nfranken:")
+                    global fap
                     franktime = (@timed fap = bkf.FrankenStep(fap, observations[i]))[2]
                     #push!(faps, fap)
 
@@ -654,22 +633,22 @@ for np in 1:lnParts
                     #
                     print("\na")
                 end
-                print("\nb")
-                print("Finkel ",r, " ... ",nfp)
+                print("\nb\n")
+                print("donish ",r, " ... ",nfp,"\n")
                 ni, nhist, nIter, i = 1,1,1,2
             end
             useforward, mhType, sampType, ni = [useForwards[1], mhTypes[1], sampTypes[1], 1]
-            1
-            for useForward in useForwards
-                for mhType in mhTypes
-                    for sampType in sampTypes
-                        for ni = 1:lnIters
+
                             nIter = nIters[ni]
                             print("nIter ",nIter)
                             for nhist = 1:lnHistPerLoc
                                 histPerLoc = histPerLocs[nhist]
 
-
+                                global fpf
+                                global useforward
+                                global mhType
+                                global sampType
+                                global ni
                                 global fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward)) #fparams(histPerLoc,2))
                                 #sampType = "sampled..uniform"
                                 #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
@@ -785,19 +764,7 @@ for np in 1:lnParts
                                 end
                             end
 
-                        end #Mh
-                    end #Samp
-                end
-            end
 
-
-        end
-    end
-end
-
-[idealkl,finkelkl,frankenkl,partkl
-
-]
 
 
 

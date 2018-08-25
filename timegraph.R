@@ -3,9 +3,10 @@ library(data.table)
 
 pd = position_dodge(20)
 
-runs = fread("filtertest60incomplete.csv")
+runs = fread("filtertest62.csv")
+runs = rbind(runs,fread("filtertest63.csv"))
 runs[,i:=.I]
-starts = runs[model=="truth"&rep==1&steps==1,i]
+starts = runs[model=="truth"&steps==1,i]
 worldnum = Vectorize(function(i) {sum(i>=starts)})
 runs[,worldid:=worldnum(i)]
 
@@ -13,26 +14,25 @@ runs[,worldid:=worldnum(i)]
 
 runs[model != "finkel",nIter:=0]
 # tracks over time of everything
-ggplot(runs[worldid==1,],aes(y=mvlmean,x=steps,color=paste(model,sampType,histPerLoc))) + geom_line() 
+wid = 15
+ggplot(runs[worldid==wid&histPerLoc<4,],aes(y=mvlmean,x=steps,color=paste(model,sampType,nIter,useForward,histPerLoc,mhType))) + geom_line() 
 
 # tracks over time of all 3 algorithms
-ggplot(runs[model %in% c("ideal", "finkel", "franken")],aes(y=mvlmean,x=steps,color=paste(model,sampType,histPerLoc,nIter))) + geom_line() 
+ggplot(runs[worldid==wid&model %in% c("ideal", "finkel", "franken")&histPerLoc<4&mhType!="bkf.MhSampled",],aes(y=mvlmean,x=steps,color=paste(model,sampType,histPerLoc,nIter,useForward,mhType))) + geom_line() 
 
 # calculate differences
-getidealmean = Vectorize(function(astep) {runs[model=="ideal"&steps==astep,mvlmean]})
-runs[,idealmean:=getidealmean(steps)]
+getidealmean = Vectorize(function(astep,wid) {runs[worldid==wid&model=="ideal"&steps==astep,mvlmean]})
+runs[,idealmean:=getidealmean(steps,worldid)]
+runs[,nid:=Vectorize(length)(idealmean)]
+runs[nid!=1,]
 runs[,err:=mvlmean-idealmean]
-ggplot(runs[model %in% c("finkel", "franken")],aes(y=err,x=steps,color=paste(model,sampType,histPerLoc,nIter))) + geom_line() 
+ggplot(runs[worldid==wid&model %in% c("finkel", "franken")],aes(y=err,x=steps,color=paste(model,sampType,histPerLoc,nIter))) + geom_line() 
 runs[,sum(err^2),by=paste(model,sampType,histPerLoc,nIter)]
 
+runs = runs[model!="",]
 
 
 
-
-runs[sampType=="log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhSampled")]
-runs[sampType=="compromise2.1..log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhCompromise")]
-runs[sampType=="compromise2.1..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhCompromise")]
-runs[sampType=="sampled..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhSampled")]
 runs[is.na(sampType),`:=`(sampType="none",mhType="none")]
 
 
@@ -48,12 +48,12 @@ runmeans = runs[,list(meankl=mean(kl),sdkl=sd(kl),
                       meancov=mean(covdiv),sdcov=sd(covdiv),
                       meandiff=mean(meandiv),sddiff=sd(meandiv),
                       meantime=mean(runtime),meansq=mean(sqerr,na.rm=T)),
-                by=list(model,dimension,steps,particles,nIter,histPerLoc,sampType,mhType)]
+                by=list(model,dimension,steps,particles,nIter,histPerLoc,sampType,mhType,useForward)]
 runmeans2 = runs[,list(meankl=mean(kl),sdkl=sd(kl),
                       meancov=mean(covdiv),sdcov=sd(covdiv),
                       meandiff=mean(meandiv),sddiff=sd(meandiv),
                       meantime=mean(runtime,na.rm=T),meansq=mean(sqerr,na.rm=T)),
-                by=list(model,particles,nIter,histPerLoc,sampType,mhType)] #no steps
+                by=list(model,dimension,particles,nIter,histPerLoc,sampType,mhType,useForward)] #no steps
 
 
 
@@ -64,20 +64,30 @@ rnf = runmeans2[model!="finkel",]
 
 
 qplot(meankl,meansq,data=runmeans[meankl<50&meankl>0&meansq<50,],shape=model,color=steps,main="all from run 30")
-qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],color=model,main="zoom 30 colors")
-
 
 qplot(meankl,meansq,data=runmeans[meankl<50&meankl>0&meansq<50,],shape=model,color=as.factor(particles),main="finkel by particles")
 qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(particles),main="finkel by particles zoom")
 qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(steps),main="finkel by steps zoom")
-qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(nIter),main="finkel by nIter zoom")
+qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=paste(nIter),main="finkel by nIter zoom")
+
+
+qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=paste(nIter,useForward),main=
+        "finkel by nIter useForward zoom")
+qplot(meankl,meansq,data=runmeans2[meankl<5&meankl>0&meansq<50,],shape=useForward,color=paste(nIter),main=
+        "finkel by nIter useForward zoom")
+
+
 qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(sampType),main="finkel by sampType zoom")
+
 qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(mhType),main="finkel by mhType zoom")
-qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(histPerLoc),main="finkel by histPerLoc zoom")
-qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(paste(sampType,mhType)),main="finkel by samp/mh zoom")
+qplot(meankl,meansq,data=runmeans2[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(mhType),main="finkel by mhType zoom")
+
+qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=paste(histPerLoc,nIter),main="finkel by histPerLoc zoom")
+qplot(meankl,meansq,data=runmeans2[meankl<5&meankl>0&meansq<50,],shape=model,color=paste(histPerLoc,nIter),main="finkel by histPerLoc zoom")
+
 qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(paste(sampType,mhType)),main="finkel by samp/mh zoom")
 qplot(meankl,meansq,data=rf[meankl<5&sampType=="bkf.SampleLog"&mhType=="bkf.MhCompromise",],shape=as.factor(nIter),color=as.factor(particles),size=steps,main="log/compromise by nIter/particles")
-qplot(meankl,meansq,data=runmeans[meankl<50&(model!="finkel"|(sampType=="bkf.SampleLog"&mhType=="bkf.MhCompromise")),],shape=model,color=as.factor(pmin(particles,1001)),main="nonfinkel plus log/compromise by nIter/particles")
+qplot(meankl,meansq,data=runmeans[meankl<50&(model!="finkel"|(sampType=="bkf.SampleLog"&mhType=="bkf.MhCompromise")),],shape=model,color=paste(as.factor(pmin(particles,1001)),nIter),main="nonfinkel plus log/compromise by nIter/particles")
 
 
 
@@ -158,12 +168,6 @@ runs = fread("filtertesty.csv", fill=TRUE)
 
 
 
-runs[sampType=="log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhSampled")]
-runs[sampType=="compromise2.1..log7.5_20",`:=`(sampType="bkf.SampleLog",mhType="bkf.MhCompromise")]
-runs[sampType=="compromise2.1..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhCompromise")]
-runs[sampType=="sampled..uniform",`:=`(sampType="bkf.SampleUniform",mhType="bkf.MhSampled")]
-runs[is.na(sampType),`:=`(sampType="none",mhType="none")]
-
 runs[,params:=paste(sampType,mhType)]
 
 
@@ -195,7 +199,7 @@ rnf = runmeans2[model!="finkel",]
 equilib = runmeans[steps>7,list(kl=mean(meankl),sq=mean(meansq)),by=list(model,params,sampType,mhType)]
 
 # x=time, y=meansq
-ggplot(data=runmeans[order(model,steps),],aes(x=steps,y=meansq,shape=model,
+ggplot(data=runmeans[dimension==48&(nIter %in% c(0,30))&(particles %in% c(1,300,45000,180000)),][order(model,steps),],aes(x=steps,y=meansq,shape=factor(particles),
                                               group=paste(model,particles,sampType,mhType,nIter,histPerLoc))
 ) + geom_path(aes(linetype=model)) + geom_point(aes(color=steps)) 
 
@@ -253,6 +257,10 @@ ggplot(data=runmeans[model=="franken",],aes(x=sqrt(meankl),y=sqrt(meansq),shape=
 
 
 qplot(sqrt(meankl),meansq,data=runmeans[,],color=model,main="zoom 30 colors")
+
+
+qplot(sqrt(meankl),sqrt(meansq),data=runmeans2[,],shape=paste(model,nIter),color=log(particles),main="finkel by particles")
+
 
 
 qplot(sqrt(meankl),sqrt(meansq),data=runmeans[,],shape=model,color=as.factor(particles),main="finkel by particles")

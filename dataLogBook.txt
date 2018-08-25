@@ -117,7 +117,19 @@ NOOOOO! 15-17 were as broken as 14. Fixed.
 
 58: back to 5x higher for the 300 and 800 runs. Still too slow, going to go back to base as soon as one run finishes?
 
+59:
 
+60:
+
+61:
+
+62: Good run, 48/60 dimensions
+
+63: more of same? Or like 64
+
+64: testing useForward t/f
+
+65: testing useForward 0/-1/.5
 
 
 
