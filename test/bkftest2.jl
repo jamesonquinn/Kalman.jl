@@ -152,6 +152,10 @@ if testbkf
     cov(fra0.tip.particles,2)[vis,vis]
 
 
+    bkf.kl2(kf1.x.x,kf1.x.p,mean(fra1k.tip.particles,2),cov(fra1k.tip.particles,2))
+    bkf.kl2(kf1.x.x,kf1.x.p,mean(fra1k.tip.particles,2),cov(fra1k.tip.particles,2))
+    pf = bkf.toParticleSet(kf0,M^2)
+
     finalDist = bkf.toDistribution(kf1)
     rsamps = rand(finalDist,1000)
     mean(rsamps,2)
@@ -218,7 +222,7 @@ end
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "newtesty.csv"
+fname = "fixed.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -248,8 +252,8 @@ end
 NEIGHBORHOOD_SIZE = 4
 IDEAL_SAMPLES = 1000
 
-histPerLocs = [30,3,9,6]
-nIters = [30,60,15,1]
+histPerLocs = [15,30,9]
+nIters = [40,0,80]
 useForwards = [1.,.5,0.]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
@@ -287,16 +291,14 @@ nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
-
-              (48,400,400^2    ,div(400^2,5),1,4,15,2,2,3),
-              (48,80,80^2      ,div(80^2,2), 1,1,15,1,1,1),
-              (48,90,90^2      ,div(90^2,2), 1,1,15,1,1,1),
-              (72,150,150^2    ,div(150^2,2),1,3,15,2,2,3),
-              (36,150,150^2    ,div(150^2,2),1,3,15,2,2,3),
-              (48,200,200^2    ,div(200^2,2),1,1,15,1,1,1),
-              (48,110,110^2    ,div(110^2,2),1,1,15,1,1,1),
-              (48,120,120^2    ,div(120^2,2),1,1,15,1,1,1),
-              (48,130,130^2    ,div(130^2,2),1,1,15,1,1,1)
+              #
+              (36,400,400^2    ,div(400^2,5),1,1,10,1,2  ,1),
+              (36,400,400^2    ,div(400^2,5),1,1,10,3  ,1,1),
+              (36,400,400^2    ,div(400^2,5),1,3  ,10,1,1,1),
+            (72  ,400,400^2    ,div(400^2,5),1,1,10,1,1,1),
+               (36,400,40^2    ,div(40^2,5) ,1,1,10,1,1,3  ),
+            (36,200,200^2      ,div(200^2,5),1,1,10,1,1,1),
+            (36,200,40^2        ,div(40^2,5),5,3,10,3,2,3),
               ]
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -377,7 +379,7 @@ for np in 1:lnParts
     noisevec[1:lowgap:d] = lownoise
     r = Diagonal(noisevec)
     #var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
-    z = bkf.LinearObservationModel(r)
+    z = bkf.LinearObservationModel(Array(r))
     var35 = bkf.meanvarlocs(zeros(d), inv(r), 3:5)[2]
 
     kf0 = bkf.BasicKalmanFilter(x0,f,z)

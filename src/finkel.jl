@@ -4,7 +4,8 @@ include("delegatemacro.jl")
 
 abstract type AbstractSparseFilter <: KalmanFilter end
 
-DEFAULT_PRODUCT_RADIUS = 2
+DEFAULT_PRODUCT_RADIUS = 1
+DEFAULT_RADIUS_FRINGE = 0
 DEFAULT_HISTPERLOC = 7
 
 type SparseKF <: AbstractSparseFilter
@@ -126,7 +127,9 @@ type MhCompromise <: MhType #Fixed neighborhood product, sum using histories sam
 end
 
 function MhCompromise(histPerLoc) #actually, total histories per attempt, rounded to nearest
-    MhCompromise(DEFAULT_PRODUCT_RADIUS, round(Int64,histPerLoc/(DEFAULT_PRODUCT_RADIUS - 1)), DEFAULT_PRODUCT_RADIUS - 1)
+    MhCompromise(DEFAULT_PRODUCT_RADIUS, round(Int64,histPerLoc/
+                        (DEFAULT_PRODUCT_RADIUS - DEFAULT_RADIUS_FRINGE)),
+                DEFAULT_PRODUCT_RADIUS - DEFAULT_RADIUS_FRINGE)
 end
 
 type FinkelParams{S<:SampleType,MH<:MhType}
