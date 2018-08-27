@@ -9,7 +9,7 @@ function kl2(dist::MvNormal,
     kl2(μ1,Σ1,μ2,Σ2, window)
 end
 
-function kl2(μ1,Σ1,μ2,Σ2, window = 12)
+function kl2(μ1,Σ1,μ2,Σ2, window = 15)
 
     d = length(μ1)
     nwind = div(d,window)

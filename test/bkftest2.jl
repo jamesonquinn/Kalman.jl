@@ -153,7 +153,7 @@ if testbkf
 
 
     bkf.kl2(kf1.x.x,kf1.x.p,mean(fra1k.tip.particles,2),cov(fra1k.tip.particles,2))
-    bkf.kl2(kf1.x.x,kf1.x.p,mean(fra1k.tip.particles,2),cov(fra1k.tip.particles,2))
+    bkf.kl2(kf1.x.x,kf1.x.p,mean(fra0.tip.particles,2),cov(fra0.tip.particles,2))
     pf = bkf.toParticleSet(kf0,M^2)
 
     finalDist = bkf.toDistribution(kf1)
@@ -222,7 +222,7 @@ end
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "fixed.csv"
+fname = "fixedest2.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -249,11 +249,11 @@ open( fname,  "a") do outfile
 end
 @load bkf
 
-NEIGHBORHOOD_SIZE = 4
+NEIGHBORHOOD_SIZE = 3
 IDEAL_SAMPLES = 1000
 
 histPerLocs = [15,30,9]
-nIters = [40,0,80]
+nIters = [40,0,80,20,160]
 useForwards = [1.,.5,0.]
 nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
               (100, 10000,2000,3,5,10,4),
@@ -292,13 +292,13 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (36,400,400^2    ,div(400^2,5),1,1,10,1,2  ,1),
-              (36,400,400^2    ,div(400^2,5),1,1,10,3  ,1,1),
-              (36,400,400^2    ,div(400^2,5),1,3  ,10,1,1,1),
-            (72  ,400,400^2    ,div(400^2,5),1,1,10,1,1,1),
-               (36,400,40^2    ,div(40^2,5) ,1,1,10,1,1,3  ),
-            (36,200,200^2      ,div(200^2,5),1,1,10,1,1,1),
-            (36,200,40^2        ,div(40^2,5),5,3,10,3,2,3),
+              (30,400,40^2      ,div(40^2,5),3,5  ,10,1,1,1),
+              (30,400,400^2    ,div(400^2,5),1,2,10,1,2  ,1),
+              (30,400,400^2    ,div(400^2,5),1,2,10,3  ,1,1),
+            (60  ,400,400^2    ,div(400^2,5),1,2,10,1,1,1),
+               (30,400,400^2   ,div(400^2,5),1,2,10,1,1,3  ),
+            (30,200,200^2      ,div(200^2,5),1,2,10,1,1,1),
+            (30,200,40^2        ,div(40^2,5),5,3,10,3,2,3)
               ]
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -341,11 +341,11 @@ bleedm = .8
 bleedr = .1#.25
 hijitter = 1.
 lojitter = .25
-higap = 2
+jitgap = 2
 temper = .8 #1/sqrt(2)
 basenoise = 1.
 lownoise = .16
-lowgap = 3
+lowgap = 5
 noisebleed = 0.
 mciter = 6
 initialvar = 1/(1-temper)
@@ -366,7 +366,7 @@ for np in 1:lnParts
     #a = a * temper / det(a)^(1/d) #progression matrix - divergent
 
     jitvec = fill(lojitter,d)
-    jitvec[1:lowgap:d] = hijitter
+    jitvec[1:jitgap:d] = hijitter
     g = Diagonal(jitvec)
 
 

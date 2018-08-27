@@ -1,15 +1,17 @@
 library(ggplot2)
 library(data.table)
-
+library(gridExtra)
+library(ggsci)
+source("theme_publication.R")
 pd = position_dodge(20)
 
-runs = fread("newtest6.csv")
-runs = fread("newtest1.csv")
-runs = rbind(runs,fread("newtest2.csv"))
-runs = rbind(runs,fread("newtest3.csv"))
-runs = rbind(runs,fread("newtest4.csv"))
-runs = rbind(runs,fread("newtest5.csv"))
-runs = rbind(runs,fread("newtest6.csv"))
+runs = fread("fixed.csv")
+#runs = fread("newtest1.csv")
+#runs = rbind(runs,fread("newtest2.csv"))
+#runs = rbind(runs,fread("newtest3.csv"))
+#runs = rbind(runs,fread("newtest4.csv"))
+#runs = rbind(runs,fread("newtest5.csv"))
+#runs = rbind(runs,fread("newtest6.csv"))
 runs[,i:=.I]
 starts = runs[model=="truth"&steps==1,i]
 worldnum = Vectorize(function(i) {sum(i>=starts)})
@@ -20,8 +22,17 @@ runs[,worldid:=worldnum(i)]
 runs[model != "finkel",nIter:=0]
 unique(runs[,worldid])
 # tracks over time of everything
-wid = 15
-ggplot(runs[worldid==wid&model %in% c("ideal", "observed", "truth"),],aes(y=mvlmean,x=steps,color=paste(model,sampType,nIter,useForward,histPerLoc,mhType))) + geom_line() 
+wid = 2
+runs[,step:=steps-1]
+#runs[model=="observed",step:=steps]
+runs[step==0,mvlmean:=0]
+runs[model=="observed"&step==0,mvlmean:=NA]
+(pp = ggplot(runs[worldid==wid&model %in% c("ideal", "observed", "truth"),],aes(y=mvlmean,x=step,color=model
+     )) + geom_line() + ggtitle("Evolution of truth, observation, and ideal Kalman filter"
+     ) + xlab("Time step") + ylab("sum of loci 3:5") 
+     + geom_errorbar(aes(ymin=mvlmean-1.96*sqrt(mvlvar), ymax=mvlmean+1.96*sqrt(mvlvar)), width=.5, position=position_dodge(.2)) 
+)
+pp + theme_bw()
 
 # tracks over time of all 3 algorithms
 ggplot(runs[worldid==wid&model %in% c("ideal", "finkel", "franken")&nIter!=30,],aes(y=mvlmean,x=steps,color=paste(model,sampType,histPerLoc,nIter,useForward,mhType))) + geom_line() 
@@ -77,13 +88,12 @@ rnf = runmeans2[model!="finkel",]
 
 nicepar = function(d=allrunmeans2) {d[sampType %in% c("none","bkf.SampleLog") & d[,mhType] %in% c("none","bkf.MhCompromise"),]}
 #nicedim = function(dim) {dim == 48}
-nicehpl = function(d=allrunmeans2) {d[histPerLoc %in% c(0,6),]}
-niceit = function(d=allrunmeans2) {d[nIter %in% c(0,30),]}
-nicehpl = function(d=allrunmeans2) {d[histPerLoc %in% c(0,6),]}
-nicen = function(d=allrunmeans2) {d[particles %in% c(150,45000,11250),]}
-nicen2 = function(d=allrunmeans2) {d[particles %in% c(100,20000,5000),]}
+nicehpl = function(d=allrunmeans2) {d[histPerLoc %in% c(0,15),]}
+niceit = function(d=allrunmeans2) {d[nIter %in% c(0,40),]}
+nicen2 = function(d=allrunmeans2) {d[particles %in% c(200,40000,8000),]}
+nicen = function(d=allrunmeans2) {d[particles %in% c(400,160000,32000),]}
 nicefw = function(d=allrunmeans2) {d[useForward %in% c(NA,1.),]}
-nicedim = function(d=allrunmeans2) {d[dimension==48,]}
+nicedim = function(d=allrunmeans2) {d[dimension==36,]}
 niceval = function(d=allrunmeans2) {d[meankl<50&meansq<50,]}
 
 
@@ -126,25 +136,25 @@ qplot(meankl,meansq,data=nice(val),shape=model,color=model,
 
 qplot(meankl,meansq,data=nice(not,n),shape=model,color=as.factor(particles),
           main="finkel by particles")
-qplot(meankl,meansq,data=nice(fw,val),shape=model,color=as.factor(useForward),
-          main="finkel by particles zoom")
 #qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(steps),main="finkel by steps zoom")
           #finkel by steps zoom
 qplot(meankl,meansq,data=nice(not,it),shape=model,color=paste(nIter),
-          main="finkel by nIter zoom")
+          main="finkel by nIter")
 
 
-qplot(meankl,meansq,data=allrunmeans2[meankl<5&meankl>0&meansq<50,],shape=paste(useForward),color=paste(nIter),main=
-        "by nIter useForward ")
+#qplot(meankl,meansq,data=allrunmeans2[meankl<5&meankl>0&meansq<50,],shape=paste(useForward),color=paste(nIter),main=
+#        "by nIter useForward ")
 #qplot(meankl,meansq,data=runmeans[model=="finkel"&meankl<5&meankl>0&meansq<50,],shape=paste(useForward),color=paste(nIter),main=
  #       "finkel by nIter useForward ")
-qplot(meancov,meankl,data=nice(not,it,fw,dim),shape=paste(useForward),color=paste(nIter),main=
+qplot(meankl,meancov,data=nice(not,it,fw),shape=paste(useForward),color=paste(nIter),main=
         "meancov by nIter useForward ")
-qplot(meansq,meankl,data=nice(not,it,fw,dim),shape=paste(useForward),color=paste(nIter),main=
+qplot(meandiff,meankl-meancov-meandiff,data=nice(not,it,fw),shape=paste(useForward),color=paste(nIter),main=
+        "meancov by nIter useForward ")
+qplot(meankl,meansq,data=nice(n),shape=paste(useForward),color=paste(nIter),main=
         "sqerr by nIter useForward ")
-qplot(meansq,meankl,data=nice(not,it,fw,dim,alt),shape=paste(useForward),color=paste(nIter),main=
+qplot(meankl,meansq,data=nice(alt,n),shape=paste(useForward),color=paste(nIter),main=
         "sqerr by nIter useForward fewer")
-qplot(meandiff,meancov,data=nice(not,it,fw,dim),shape=paste(useForward),color=paste(nIter),main=
+qplot(meandiff,meancov,data=nice(),shape=paste(useForward),color=paste(nIter),main=
         "finkel by nIter useForward ")
 
 qplot(meansq,meancov,data=nice(not,it,fw,dim,d=runmeans),shape=paste(useForward),size=1,linetype=paste(useForward,nIter),group=paste(useForward,nIter),main=
@@ -158,7 +168,7 @@ qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,colo
 qplot(meankl,meansq,data=runmeans2[meankl<5&meankl>0&meansq<50,],shape=model,color=as.factor(mhType),
       main="finkel by mhType zoom")
 
-qplot(meankl,meansq,data=runmeans[meankl<5&meankl>0&meansq<50,],shape=model,color=paste(histPerLoc,nIter),
+qplot(meankl,meansq,data=nice(not,hpl),shape=model,color=paste(histPerLoc,nIter),
       main="finkel by histPerLoc zoom")
 qplot(meankl,meansq,data=runmeans2[meankl<5&meankl>0&meansq<50,],shape=model,color=paste(histPerLoc,nIter),
       main="finkel by histPerLoc zoom")
