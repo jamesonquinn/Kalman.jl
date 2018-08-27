@@ -3,11 +3,13 @@ library(data.table)
 
 pd = position_dodge(20)
 
+runs = fread("newtest6.csv")
 runs = fread("newtest1.csv")
 runs = rbind(runs,fread("newtest2.csv"))
 runs = rbind(runs,fread("newtest3.csv"))
 runs = rbind(runs,fread("newtest4.csv"))
-runs = rbind(runs,fread("newtesty.csv"))
+runs = rbind(runs,fread("newtest5.csv"))
+runs = rbind(runs,fread("newtest6.csv"))
 runs[,i:=.I]
 starts = runs[model=="truth"&steps==1,i]
 worldnum = Vectorize(function(i) {sum(i>=starts)})
@@ -142,7 +144,7 @@ qplot(meansq,meankl,data=nice(not,it,fw,dim),shape=paste(useForward),color=paste
         "sqerr by nIter useForward ")
 qplot(meansq,meankl,data=nice(not,it,fw,dim,alt),shape=paste(useForward),color=paste(nIter),main=
         "sqerr by nIter useForward fewer")
-qplot(meankl-meandiff,meankl,data=runmeans2[model=="finkel"&meankl<5&meankl>0&meansq<50,],shape=paste(useForward),color=paste(nIter),main=
+qplot(meandiff,meancov,data=nice(not,it,fw,dim),shape=paste(useForward),color=paste(nIter),main=
         "finkel by nIter useForward ")
 
 qplot(meansq,meancov,data=nice(not,it,fw,dim,d=runmeans),shape=paste(useForward),size=1,linetype=paste(useForward,nIter),group=paste(useForward,nIter),main=

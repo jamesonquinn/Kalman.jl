@@ -168,7 +168,7 @@ type FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
         #[space, particle]
     prev::AbstractFinkel
     historyTerms::Array{Int64,3} #tells which histories each particle was checked against
-        #[space, sample, particle]
+        #[space, particle, sample]
     stem::Array{Int64,2} #tells which base each tip comes from
         #[space, particle]
     ws::Vector{ProbabilityWeights} #selection probabilities at each point; p(y_l|z^i_l)
@@ -206,13 +206,13 @@ function FinkelParticles(prev::AbstractFinkel,
     tipVals = copy(base)
 
 
-    historyTerms = zeros(Int64,d,h,n)
+    historyTerms = zeros(Int64,d,n,h)
     stem = zeros(Int64,d,n)
     for j = 1:n
         for l = 1:d
             stem[l,j] = j
             for η = 1:h
-                historyTerms[l,η,j] = j
+                historyTerms[l,j,η] = j
             end
         end
     end
@@ -329,9 +329,8 @@ function replant!(fp::FinkelParticles)
           p = sample(fp.ws[l])
 
           fp.stem[l,i] = p
-          for h in 1:fparams(fp).mh.histPerLoc
-              fp.historyTerms[l,h,i] = p
-          end
+
+          fp.historyTerms[l,i,:] = histTerms(l, p, fp)
           fp.tip.particles[l,i] = fp.base[l,p]
       end
     end
@@ -458,7 +457,7 @@ function probSum(fp::FinkelParticles{},
 
     myneighborhood = prodNeighborhood( locn, fp, d, fp.params.mh.r)
     prob = 0.
-    for h in fp.historyTerms[lh,:,i]
+    for h in fp.historyTerms[lh,i,:]
         prob += probSum(fp, i, h, myneighborhood,
             lr, lstem
             ) / getSampProb(fp, i, locn, myneighborhood, lr, lstem)
@@ -478,7 +477,7 @@ function probSum(fp::FinkelParticles{},
     myneighborhood = prodNeighborhood( ln, fp, d, fp.params.mh.r)
     prob = 0.
     if lr == lh
-        lhist = Vector(fp.historyTerms[lh,:,i])
+        lhist = Vector(fp.historyTerms[lh,i,:])
     end
     for h in lhist
         prob += probSum(fp, i, h, myneighborhood,
@@ -662,7 +661,7 @@ function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
                 fp.numMhAccepts += 1
                 fp.totalProb[l,i] += 1
                 fp.stem[l,i] = p
-                fp.historyTerms[l,:,i] = newHistoryTerms
+                fp.historyTerms[l,i,:] = newHistoryTerms
 
                 fp.tip.particles[l,i] = fp.base[l,p]
                 clearOldProbs!(fp,i,l,d)

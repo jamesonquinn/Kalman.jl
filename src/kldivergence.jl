@@ -9,7 +9,7 @@ function kl2(dist::MvNormal,
     kl2(μ1,Σ1,μ2,Σ2, window)
 end
 
-function kl2(μ1,Σ1,μ2,Σ2, window = 3)
+function kl2(μ1,Σ1,μ2,Σ2, window = 12)
 
     d = length(μ1)
     nwind = div(d,window)
@@ -17,6 +17,9 @@ function kl2(μ1,Σ1,μ2,Σ2, window = 3)
     subtr = zeros(nwind)
     subdif = zeros(nwind)
     sublog = zeros(nwind)
+    #print("sig1 sig2\n")
+    #show(STDOUT, "text/plain", Σ1[1:5,1:5])
+    #show(STDOUT, "text/plain", Σ2[1:5,1:5])
     for w = 1:nwind
         r = ((w-1) * window + 1):(w * window)
         diff = (μ2[r] - μ1[r])

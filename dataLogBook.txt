@@ -149,3 +149,14 @@ graphone: (started after 47)
 6: non divergent
 
 7: 100 dimensions
+
+
+newtest:
+
+1, 2, 3, 4, 5: just run it
+
+6: window=12
+
+7: as 6, with 500 finkel particles and d=36
+
+8: as 7 but: d=36, M=200, histPerLoc=30

@@ -637,7 +637,7 @@ np = 1
                 print("donish ",r, " ... ",nfp,"\n")
                 ni, nhist, nIter, i = 1,1,1,2
             end
-            useforward, mhType, sampType, ni = [useForwards[1], mhTypes[1], sampTypes[1], 1]
+            useForward, mhType, sampType, ni = [useForwards[1], mhTypes[1], sampTypes[1], 1]
 
                             nIter = nIters[ni]
                             print("nIter ",nIter)
@@ -645,7 +645,7 @@ np = 1
                                 histPerLoc = histPerLocs[nhist]
 
                                 global fpf
-                                global useforward
+                                global useForward
                                 global mhType
                                 global sampType
                                 global ni
