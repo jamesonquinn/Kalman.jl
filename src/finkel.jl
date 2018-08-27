@@ -304,7 +304,7 @@ function reweight!(fp::FinkelParticles, y::Observation)
     d = size(fp.base,1)
     fp.ws = Vector{ProbabilityWeights}(d)
     diffs = fp.base - fp.tip.filter.z.r * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
-    vars = 1./diag(fp.tip.filter.z.h).^2 #assumes fp.tip.f.z.r is eye and ...h is diagonal
+    vars = diag(fp.tip.filter.z.h).^2 #assumes fp.tip.f.z.r is eye and ...h is diagonal
     for l = 1:d
         wvec = Vector{Float64}(fp.tip.n)
         for p = 1:fp.tip.n
