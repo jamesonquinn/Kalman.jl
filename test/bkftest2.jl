@@ -52,20 +52,20 @@ if testbkf
 
 
 
-    M = 1000
+    M = 100
     s = 100
     if true #redo with d=8 instead of d=2
-        d = 12
+        d = 15
         bleedl = .7#1
         bleedm = .8
         bleedr = .1#.25
         hijitter = 1.
         lojitter = .25
-        higap = 2
+        jitgap = 2
         temper = .8 #1/sqrt(2)
         basenoise = 1.
         lownoise = .16
-        lowgap = 3
+        lowgap = 5
         noisebleed = 0.
         mciter = 6
         initialvar = 1/(1-temper)
@@ -77,7 +77,7 @@ if testbkf
         #a = a * temper / det(a)^(1/d) #progression matrix - divergent
 
         jitvec = fill(lojitter,d)
-        jitvec[1:lowgap:d] = hijitter
+        jitvec[1:jitgap:d] = hijitter
         g = Diagonal(jitvec)
 
 
@@ -90,7 +90,7 @@ if testbkf
         noisevec[1:lowgap:d] = lownoise
         h = Diagonal(noisevec)
         #var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
-        z = bkf.LinearObservationModel(h)
+        z = bkf.LinearObservationModel(Array(h))
     end
     kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
@@ -117,6 +117,7 @@ if testbkf
     push!(observations, bkf.Observation(pf1,1))#zeros(d)))
     print(observations[1].y, " observation\n")
     observations[1].y[1:2] = [1, -1]
+    y = observations[1]
 
 
 
@@ -154,7 +155,34 @@ if testbkf
 
     bkf.kl2(kf1.x.x,kf1.x.p,mean(fra1k.tip.particles,2),cov(fra1k.tip.particles,2))
     bkf.kl2(kf1.x.x,kf1.x.p,mean(fra0.tip.particles,2),cov(fra0.tip.particles,2))
+
+
     pf = bkf.toParticleSet(kf0,M^2)
+    pf2 = bkf.ParticleStep(pf,y)
+    size(pf2.p.particles)
+    size(pf2.p.weights)
+    bkf.musig(pf2)[2]
+    cov(pf2.p.particles,pf2.p.weights,2,corrected=false)[vis,vis]
+
+    bkf.kl2(kf1.x.x,kf1.x.p,bkf.musig(pf2)...)
+    )
+
+    HOOD = 3
+    frap = bkf.toFrankenSet(kf0,div(M^2*d,HOOD),HOOD)
+    frap2 = bkf.FrankenStep(frap,y)
+    size(frap2.p.particles)
+    size(frap2.p.weights)
+    bkf.musig(frap2)[2]
+
+    bkf.kl2(kf1.x.x,kf1.x.p,bkf.musig(frap2)...
+    )
+
+
+
+
+
+
+
 
     finalDist = bkf.toDistribution(kf1)
     rsamps = rand(finalDist,1000)
@@ -222,7 +250,7 @@ end
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "fixedest2.csv"
+fname = "fixedest5.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -244,7 +272,8 @@ open( fname,  "a") do outfile
                         "useForward",
                         "neighborhoodsize",
                         "mvlmean",
-                        "mvlvar"
+                        "mvlvar",
+                        "klideal","covdivideal","meandivideal","entropydivideal",
                         ]))
 end
 @load bkf
@@ -255,44 +284,14 @@ IDEAL_SAMPLES = 1000
 histPerLocs = [15,30,9]
 nIters = [40,0,80,20,160]
 useForwards = [1.,.5,0.]
-nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (100, 10000,2000,3,5,10,4),
-              (200, 40000,8000,3,5,10,4),
-              (500,250000,50000,2,3,5,3),
-              (1000,    10,  10,2,3,3,3)]
-#
-nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (100, 10, 20,6,4,10,3),
-              (200, 40,  8,3,4,10,3),
-              (500,250, 50,2,3,10,2),
-              (1000,10, 10,1,3,10,2)]
-#
-nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (80,  80^2,div(80^2,5), 4,3,10,2),
-              (300,300^2,div(300^2,5),2,2,10,2),
-              (800,800^2,div(800^2,5),1,2,10,2)]
-#
-nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (800,800,div(800,5),10,2,10,2)]
-#
-
-nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (600,600^2,div(600^2,5),10,1,20,1),
-              (600,600,div(600,5)    ,40,1,20,1)]
-#
-nParticles = [ #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
-              (80,  80^2,div(80^2,5), 4,4,20,1),
-              (300,300^2,div(300^2,5),2,3,20,1),
-              (800,800^2,div(800^2,5),1,2,20,1),
-            (80,  80*2,div(80*2,5), 14,3,10,1),
-            (300,300*2,div(300*2,5),12,2,10,1),
-            (800,800*2,div(800*2,5),5,1,10,1)]
 #
 nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (30,400,40^2      ,div(40^2,5),3,5  ,10,1,1,1),
+              (30,40,40^2      ,div(40^2,5),3,5  ,10,1,1,1),
+              (30,40,400^2    ,div(400^2,5),5  ,1,10,1,1,1),
+              (30,400,400^2      ,div(400^2,5),3,5  ,10,1,1,1),
               (30,400,400^2    ,div(400^2,5),1,2,10,1,2  ,1),
               (30,400,400^2    ,div(400^2,5),1,2,10,3  ,1,1),
             (60  ,400,400^2    ,div(400^2,5),1,2,10,1,1,1),
@@ -407,6 +406,7 @@ for np in 1:lnParts
     global ps = bkf.ParticleStep(pf)
     #push!(pfs, ps)
     global fap = bkf.FrankenStep(fapf)
+    global fapSamps = bkf.ParticleSet(fap)
     #push!(faps, fap)
 
     push!(truth, pf1)
@@ -461,7 +461,8 @@ for np in 1:lnParts
                                 "none",
                                 "",
                                 "",
-                                bkf.meanvarlocs(truth[end],3:5)[1],0.]]))
+                                bkf.meanvarlocs(truth[end],3:5)[1],0.]
+                                ["","","",""]]))
             ##
             writecsv( outfile, trsp([["observed",
                                 d,#dimension
@@ -482,7 +483,8 @@ for np in 1:lnParts
                                 "none",
                                 "",
                                 "",
-                                bkf.meanvarlocs(observations[end],3:5)[1],0.]]))
+                                bkf.meanvarlocs(observations[end],3:5)[1],0.]
+                                ["","","",""]]))
             ##
             writecsv( outfile, trsp([["ideal",
                                 d,#dimension
@@ -503,10 +505,11 @@ for np in 1:lnParts
                                 "none",
                                 "",
                                 "",
-                                mvl[1], mvl[2]]]))
+                                mvl[1], mvl[2]]
+                                ["","","",""]]))
             ##
             print("\npart:")
-            kls = bkf.kl2(finalDist,ps.p.particles)
+            kls = bkf.kl2(params(finalDist)...,bkf.musig(ps)...)
             sqe = bkf.sqerr(truth[end].particles[:,1],ps)
             mvl = bkf.meanvarlocs(ps,3:5)
             partkl[np,width,r]  = kls[1]
@@ -530,10 +533,12 @@ for np in 1:lnParts
                                 "none",
                                 "",
                                 "",
-                                mvl[1], mvl[2]]]))
+                                mvl[1], mvl[2]]
+                                ["","","",""]]))
             print("\nfranken:")
-            kls = bkf.kl2(finalDist,fap.p.particles)
-            sqe = bkf.sqerr(truth[end].particles[:,1],fap)
+            klsideal = bkf.kl2(params(finalDist)...,bkf.musig(fap)...)
+            kls = bkf.kl2(finalDist,fapSamps.particles)
+            sqe = bkf.sqerr(truth[end].particles[:,1],fapSamps.particles)
             mvl = bkf.meanvarlocs(fap,3:5)
             frankenkl[np,width,r]  = kls[1]
             writecsv( outfile, trsp([["franken",
@@ -556,7 +561,8 @@ for np in 1:lnParts
                                 "none",
                                 "",
                                 NEIGHBORHOOD_SIZE,
-                                mvl[1], mvl[2]]]))
+                                mvl[1], mvl[2]]
+                                klsideal]))
             print("\nb14")
         end
         print("\nb15")
@@ -578,7 +584,10 @@ for np in 1:lnParts
                 parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
                 #push!(pfs, ps)
                 print("\nfranken:")
-                franktime = (@timed fap = bkf.FrankenStep(fap, observations[i]))[2]
+                franktime = (@timed begin
+                    fap = bkf.FrankenStep(fapSamps, fap, observations[i])
+                    fapSamps = ParticleSet(fap)
+                end)[2]
                 #push!(faps, fap)
 
                 print("\nwriting:")
@@ -614,7 +623,8 @@ for np in 1:lnParts
                                     "none",
                                     "",
                                     "",
-                                    bkf.meanvarlocs(truth[end],3:5)[1],0.]]))
+                                    bkf.meanvarlocs(truth[end],3:5)[1],0.]
+                                    ["","","",""]]))
                 ##
                 writecsv( outfile, trsp([["observed",
                                     d,#dimension
@@ -639,7 +649,8 @@ for np in 1:lnParts
                                     "",
                                     bkf.meanvarlocs(observations[end],3:5)[1],
                                     var35
-                                    ]]))
+                                    ]
+                                    ["","","",""]]))
                 ##
                 writecsv( outfile, trsp([["ideal",
                                     d,#dimension
@@ -660,9 +671,10 @@ for np in 1:lnParts
                                     "none",
                                     "",
                                     "",
-                                    mvl[1], mvl[2]]]))
+                                    mvl[1], mvl[2]]
+                                    ["","","",""]]))
                 #
-                kls = bkf.kl2(finalDist,ps.p.particles)
+                kls = bkf.kl2(params(finalDist)...,bkf.musig(ps)...)
                 sqe = bkf.sqerr(truth[end].particles[:,1],ps)
                 mvl = bkf.meanvarlocs(ps,3:5)
                 partkl[np,width,r]  = kls[1]
@@ -686,9 +698,10 @@ for np in 1:lnParts
                                     "none",
                                     "",
                                     "",
-                                    mvl[1], mvl[2]]]))
+                                    mvl[1], mvl[2]]
+                                    ["","","",""]]))
                 #
-                kls = bkf.kl2(finalDist,fap.p.particles)
+                kls = bkf.kl2(params(finalDist)...,bkf.musig(fap)...)
                 sqe = bkf.sqerr(truth[end].particles[:,1],fap)
                 mvl = bkf.meanvarlocs(fap,3:5)
                 frankenkl[np,width,r]  = kls[1]
@@ -712,7 +725,8 @@ for np in 1:lnParts
                                     "none",
                                     "",
                                     NEIGHBORHOOD_SIZE,
-                                    mvl[1], mvl[2]]]))
+                                    mvl[1], mvl[2]]
+                                    ["","","",""]]))
                 #
                 print("\na")
             end
@@ -795,7 +809,8 @@ for np in 1:lnParts
                                                                 string(mhType),
                                                                 string(useForward),
                                                                 ""]
-                                                                ]))
+
+                                                                ["","","",""]]))
                                         elseif isa(y, LinAlg.LAPACKException)
                                             writecsv( outfile, trsp([["finkel",
                                                                 d,#dimension
@@ -816,7 +831,8 @@ for np in 1:lnParts
                                                                 string(mhType),
                                                                 string(useForward),
                                                                 ""]
-                                                                ]))
+
+                                                                ["","","",""]]))
                                         elseif isa(y, DomainError)
                                             writecsv( outfile, trsp([["finkel",
                                                                 d,#dimension
@@ -837,7 +853,8 @@ for np in 1:lnParts
                                                                 string(mhType),
                                                                 string(useForward),
                                                                 ""]
-                                                                ]))
+
+                                                                ["","","",""]]))
                                             rethrow()
                                         else
                                             rethrow()

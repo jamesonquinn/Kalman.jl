@@ -9,8 +9,15 @@ function kl2(dist::MvNormal,
     kl2(μ1,Σ1,μ2,Σ2, window)
 end
 
-function kl2(μ1,Σ1,μ2,Σ2, window = 15)
+function kl2(μ1,Σ1raw,μ2,Σ2raw, window = 4)
 
+
+
+
+
+
+    Σ1 = full(Σ1raw)
+    Σ2 = full(Σ2raw)
     d = length(μ1)
     nwind = div(d,window)
     subdivs = zeros(nwind)
@@ -182,6 +189,6 @@ function musig(f::MvNormal)
 end
 
 function musig(f::ParticleStep)
-    (mean(f.p.particles,f.p.weights),
-      cov(f.p.particles,f.p.weights,corrected=false))
+    (mean(f.p.particles,f.p.weights,2),
+      cov(f.p.particles,f.p.weights,2,corrected=false))
 end

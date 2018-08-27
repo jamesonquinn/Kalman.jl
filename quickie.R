@@ -5,7 +5,8 @@ library(ggsci)
 source("theme_publication.R")
 pd = position_dodge(20)
 
-runs = fread("fixed.csv")
+runs = fread("fixedest4.csv")
+runs = rbind(runs,fread("fixedest2.csv"))
 #runs = fread("newtest1.csv")
 #runs = rbind(runs,fread("newtest2.csv"))
 #runs = rbind(runs,fread("newtest3.csv"))
@@ -22,26 +23,33 @@ runs[,worldid:=worldnum(i)]
 runs[model != "finkel",nIter:=0]
 unique(runs[,worldid])
 # tracks over time of everything
-wid = 2
+wid = 4
 runs[,step:=steps-1]
 #runs[model=="observed",step:=steps]
 runs[step==0,mvlmean:=0]
 runs[model=="observed"&step==0,mvlmean:=NA]
-(pp = ggplot(runs[worldid==wid&model %in% c("ideal", "observed", "truth"),],aes(y=mvlmean,x=step,color=model
+runs[model!="finkel",nIter:=NA]
+(pp = ggplot(runs[worldid==wid&model %in% c("ideal", "observed", "truth")
+                  &nIter %in% c(NA,80),],aes(y=mvlmean,x=factor(step),color=model,group=model,linetype=model,
      )) + geom_line() + ggtitle("Evolution of truth, observation, and ideal Kalman filter"
      ) + xlab("Time step") + ylab("sum of loci 3:5") 
      + geom_errorbar(aes(ymin=mvlmean-1.96*sqrt(mvlvar), ymax=mvlmean+1.96*sqrt(mvlvar)), width=.5, position=position_dodge(.2)) 
-)
-pp + theme_bw()
+) + theme_bw()
 
 # tracks over time of all 3 algorithms
-ggplot(runs[worldid==wid&model %in% c("ideal", "finkel", "franken")&nIter!=30,],aes(y=mvlmean,x=steps,color=paste(model,sampType,histPerLoc,nIter,useForward,mhType))) + geom_line() 
+(pp = ggplot(runs[worldid==wid&model %in% c("ideal", "finkel", "franken", "particle")
+                            &nIter %in% c(NA,80),],aes(y=mvlmean,x=factor(step),color=model,group=model,linetype=model,
+)) + geom_line() + ggtitle("Evolution of truth, observation, and ideal Kalman filter"
+) + xlab("Time step") + ylab("sum of loci 3:5") 
+  + geom_errorbar(aes(ymin=mvlmean-1.96*sqrt(mvlvar), ymax=mvlmean+1.96*sqrt(mvlvar)), width=.5, position=position_dodge(.2)) 
+) + theme_bw()
+#ggplot(runs[worldid==wid&model %in% c("ideal", "finkel", "franken")&nIter!=30,],aes(y=mvlmean,x=steps,color=paste(model,sampType,histPerLoc,nIter,useForward,mhType))) + geom_line() 
 
 # calculate differences
 #getidealmean = Vectorize(function(astep,wid) {runs[worldid==wid&model=="ideal"&steps==astep,mvlmean]})
 runs[,idealmean:=mvlmean[match(T,(model=="ideal"))],by=list(worldid,steps)]
 runs[,err:=mvlmean-idealmean]
-ggplot(runs[worldid==wid&model %in% c("finkel", "franken")],aes(y=err,x=steps,color=paste(model,sampType,histPerLoc,nIter))) + geom_line() 
+#ggplot(runs[worldid==wid&model %in% c("finkel", "franken")],aes(y=err,x=steps,color=paste(model,sampType,histPerLoc,nIter))) + geom_line() 
 runs[,sum(err^2),by=paste(model,sampType,histPerLoc,nIter)]
 
 runs = runs[model!="",]
@@ -89,11 +97,11 @@ rnf = runmeans2[model!="finkel",]
 nicepar = function(d=allrunmeans2) {d[sampType %in% c("none","bkf.SampleLog") & d[,mhType] %in% c("none","bkf.MhCompromise"),]}
 #nicedim = function(dim) {dim == 48}
 nicehpl = function(d=allrunmeans2) {d[histPerLoc %in% c(0,15),]}
-niceit = function(d=allrunmeans2) {d[nIter %in% c(0,40),]}
+niceit = function(d=allrunmeans2) {d[nIter %in% c(NA,40),]}
 nicen2 = function(d=allrunmeans2) {d[particles %in% c(200,40000,8000),]}
 nicen = function(d=allrunmeans2) {d[particles %in% c(400,160000,32000),]}
 nicefw = function(d=allrunmeans2) {d[useForward %in% c(NA,1.),]}
-nicedim = function(d=allrunmeans2) {d[dimension==36,]}
+nicedim = function(d=allrunmeans2) {d[dimension==30,]}
 niceval = function(d=allrunmeans2) {d[meankl<50&meansq<50,]}
 
 
@@ -301,12 +309,12 @@ ggplot(data=runmeans[order(model,steps),],aes(x=meankl,y=meansq,shape=model,
                                               group=paste(model,particles,sampType,mhType,nIter,histPerLoc))
 ) + geom_path(aes(linetype=model)) + geom_point(aes(color=steps))
 
-ggplot(data=runmeans[,],aes(x=sqrt(meankl),y=sqrt(meansq),shape=model,group=model)
+ggplot(data=runmeans[steps>4,],aes(x=sqrt(meankl),y=sqrt(meansq),shape=model,group=model)
 ) + geom_path(aes(linetype=model,color=model)
 ) + geom_point(
 ) 
 
-ggplot(data=runmeans[model=="finkel"&nIter>10,],aes(x=sqrt(meankl),y=sqrt(meansq),shape=params,group=params)
+ggplot(data=nice(d=arunmeans[model %in% c("finkel","franken")],not),aes(x=sqrt(meankl),y=sqrt(meansq),shape=params,group=params)
 ) + geom_path(aes(linetype=params,color=params)
 ) + geom_point(aes(color=params)
 ) 

@@ -31,12 +31,10 @@ end
   end
 
 
-  function ap(pset::FrankenSet, samp::Vector{Resample})
-    n = pset.n
-    w = length(samp)
-    ε=rand(noiseDistribution(pset.filter),n)
+  function resampleParticles(pset::FrankenSet, samp::Vector{Resample}, n)
     resampledParticles = Array{Float64}(size(pset.particles,1), n)
 
+    w = length(samp)
     for hood in 1:w
         for i in 1:n
             for j in 1:pset.hoodSize
@@ -45,6 +43,17 @@ end
             end
         end
     end
+    resampledParticles
+end
+
+  function ap(pset::FrankenSet, samp::Vector{Resample})
+    n = pset.n
+    resampledParticles = resampleParticles(pset,samp,n)
+    ap(pset, n, resampledParticles)
+end
+
+function ap(pset::FrankenSet, n::Int64, resampledParticles::Array{Float64})
+    ε=rand(noiseDistribution(pset.filter),n)
 
     #newParticleBases =
     #println(size(ε))
@@ -87,12 +96,29 @@ end
     FrankenStep(r, pset, o)
   end
 
+  function ParticleSet(pset::FrankenSet)
+      r = FResample(pset)
+      n = pset.n
+      resampledParticles = resampleParticles(pset,r,n)
+      ParticleSet(pset.filter, n, resampledParticles, ones(n))
+  end
+
+  function FrankenStep(pset::ParticleSet, fset::FrankenSet, y::Observation)
+      p = ap(fset, fset.n, pset.particles)
+      reweight!(p,y)
+      FrankenStep(Vector{Resample}(),p,y)
+  end
+
   function FrankenStep(pset::FrankenSet, y::Observation)
     r = FResample(pset)
     p = ap(pset,r)
     reweight!(p,y)
     FrankenStep(r,p,y) #NOTE: Resample happens at beginning, not end... so all my tests have been measuring wrong.
   end
+
+#Two ways to progress:
+#1: todayFrank = FrankenStep(yesterdayFrank, y)
+#2: yesterdaySet = ParticleSet(yesterdayFrank); todayFrank = FrankenStep(yeasterdaySet, yesterdayFrank, y)
 
   function FrankenStep(pstep::FrankenStep, y::Observation)
     FrankenStep(pstep.p,y)
