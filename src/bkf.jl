@@ -45,12 +45,12 @@ module bkf
 #  Base.convert(::Type{Observation},y) = Observation([y])
 
   type LinearObservationModel <: ObservationModel
-      h::Matrix #connects state to observations; hopefully diagonal
-      r::Matrix #observation covariance
+      h::Matrix #connects state to observations; hopefully eye
+      r::Matrix #observation covariance; hopefully diagonal, but not necessarily eye (?)
   end
 
   function LinearObservationModel(h::Matrix)
-      LinearObservationModel(h,eye(size(h,1)))
+      LinearObservationModel(eye(size(h,1)),h)
   end
 
 

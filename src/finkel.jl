@@ -12,10 +12,50 @@ type SparseKF <: AbstractSparseFilter
     neighbors::Vector{Vector{Int16}}
 end
 
+canDebug = false
+if canDebug
+
+    verbose = false
+    function debug(a...)
+        global verbose
+        if verbose
+            for i=a
+                print(i," ")
+            end
+            print("\n")
+        end
+    end
+    function setVerbose(v=true)
+        global verbose = v
+    end
+    debugDone = Dict{String,Bool}()
+    function debugOnce(a...)
+        global debugDone
+        if !get(debugDone,a[1],false)
+            debugDone[a[1]] = true
+            for i=a
+                print(i," ")
+            end
+            print("\n")
+        end
+    end
+
+    function resetOnce()
+        global debugDone = Dict{String,Bool}()
+    end
 
 
+else
 
+    #stubs
+    function debug(a...)
+    end
+    function debugOnce(a...)
+    end
+    function resetOnce()
+    end
 
+end
 
 @delegate SparseKF.f [ covs, toDistribution, noiseDistribution, obsNoiseDistribution ]
 
@@ -198,6 +238,11 @@ function FinkelParticles(prev::AbstractFinkel)
     FinkelParticles(prev,myparams)
 end
 
+function FinkelParticles(prev::AbstractFinkel, nosteps::Void)
+    myparams = fparams(prev)
+    FinkelParticles(prev,myparams,nosteps)
+end
+
 function FinkelParticles(prev::AbstractFinkel,
                          myparams::FinkelParams)
     d, n = size(particleMatrix(prev))
@@ -247,6 +292,7 @@ function FinkelParticles(prev::AbstractFinkel,
                       tipVals,
                       ProbabilityWeights(ones(n)) #dummy value, ignore
                       )
+    debugOnce("FinkelParticles", typeof(lps))
     fp = FinkelParticles(
                 tip,
                 base, #base
@@ -258,14 +304,60 @@ function FinkelParticles(prev::AbstractFinkel,
                 lps,
                 histSampProbs,
                 means, #means
-                Array{Nullable{Float64},2}(d,n), #prevProbs
+                fill(Nullable{Float64}(),d,n), #prevProbs
                 localDists, #localDists
                 zeros(d,n), #totalProb
                 myparams,
                 0 #numMhAccepts
                 )
     getDists!(fp, d, n)
-    calcPrevProbs!(fp, d, n)
+    #calcPrevProbs!(fp, d, n)
+    fp
+end
+
+
+function FinkelParticles(prev::AbstractFinkel,
+                         myparams::FinkelParams,
+                         nosteps::Void)
+    d, n = size(particleMatrix(prev))
+    h = myparams.mh.histPerLoc
+    base = ap(prev.tip).particles
+    tipVals = copy(base)
+
+
+    historyTerms = zeros(Int64,0,0,0)
+    stem = zeros(Int64,d,n)
+
+    filt = getbkf(prev)
+    means = filt.f.a * particleMatrix(prev)
+    histSampProbs = Array{ProbabilityWeights,2}(d,n)
+    localDists = Array{Distribution,2}(0,0)
+    logForwardDensities = Array{Float64,2}(0,0)
+
+    lps = Array{Float64,3}(0,0,0)
+    tip = ParticleSet(filt,
+                      n,
+                      tipVals,
+                      ProbabilityWeights(ones(n)) #dummy value, ignore
+                      )
+    debugOnce("FinkelParticles", typeof(lps))
+    fp = FinkelParticles(
+                tip,
+                base, #base
+                prev,
+                historyTerms, #historyTerms
+                stem,
+                Vector{ProbabilityWeights}(), #empty weights
+                logForwardDensities,
+                lps,
+                histSampProbs,
+                means, #means
+                fill(Nullable{Float64}(),d,n), #prevProbs
+                localDists, #localDists
+                zeros(d,n), #totalProb
+                myparams,
+                0 #numMhAccepts
+                )
     fp
 end
 
@@ -303,21 +395,18 @@ end
 function reweight!(fp::FinkelParticles, y::Observation)
     d = size(fp.base,1)
     fp.ws = Vector{ProbabilityWeights}(d)
-    diffs = fp.base - fp.tip.filter.z.r * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
-    vars = diag(fp.tip.filter.z.h).^2 #assumes fp.tip.f.z.r is eye and ...h is diagonal
+    diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
+    vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.h is eye and ...r is diagonal
     for l = 1:d
-        wvec = Vector{Float64}(fp.tip.n)
-        for p = 1:fp.tip.n
-            if false
-                forwardProb = 0.
-                for ph = 1:fp.tip.n
-                    forwardProb += exp(fp.lps[l,p,ph])
-                end
-            else
-                forwardProb = 1.
+        if false
+            forwardProb = zeros(d)
+            for ph = 1:fp.tip.n
+                forwardProb += exp.(fp.lps[l,:,ph])
             end
-            wvec[p] = exp(-diffs[l,p]^2 / vars[l] / 2 ) / forwardProb
+        else
+            forwardProb = 1. #ones(d)
         end
+        wvec = exp.(-diffs[l,:].^2 / vars[l] / 2 ) / forwardProb # ./ if forwardProb is vector
         fp.ws[l] = ProbabilityWeights(wvec)
     end
 end
@@ -330,7 +419,9 @@ function replant!(fp::FinkelParticles)
 
           fp.stem[l,i] = p
 
-          fp.historyTerms[l,i,:] = histTerms(l, p, fp)
+          if size(fp.historyTerms)[1] > 0
+              fp.historyTerms[l,i,:] = histTerms(l, p, fp)
+          end
           fp.tip.particles[l,i] = fp.base[l,p]
       end
     end
@@ -504,8 +595,12 @@ function probSum(
                                 T, F, S}
 
     if typeof(lstem) == Void
-        probSum(fp,i,d,l,l,lstem,lstem,lhist)
+        debugOnce("probSum for MhSampled1",l)
+        a = probSum(fp,i,d,l,l,lstem,lstem,lhist)
+        debugOnce("probSum for MhSampled2",a)
+        a
     else
+        debugOnce("probSum unVoid")
         probSum(fp,i,d,l,l,l,lstem,lhist)
     end
 end
@@ -600,6 +695,19 @@ function clearOldProbs!(
     end
 end
 
+function clearOldProbs!(
+    fp::FinkelParticles{T,F,FinkelParams{S,MhMultisampled}},
+    i::Int64,#current particle
+    l::Int64,
+    d::Int64) where {T, F, S}
+
+
+    myCenters = prodNeighborhood( l, fp, d, fp.params.mh.r)
+    for λ = myCenters
+        fp.prevProbs[l,i] = nothing
+    end
+end
+
 
 function calcPrevProbs!(fp::FinkelParticles, d, n)
 
@@ -639,46 +747,59 @@ function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
             p = sample(fp.ws[l])
             if fp.base[l,p] != fp.tip.particles[l,i]
                 oldProbNull = fp.prevProbs[l,i]
+                debugOnce("oldProbNull",oldProbNull)
                 if isnull(oldProbNull)
                     oldProb = probSum(i, d, l, fp)
+                    debugOnce("oldProb wasnull",oldProb,i,l,s)
                     fp.prevProbs[l,i] = Nullable(oldProb)
                 else
                     oldProb = get(oldProbNull)
+                    debugOnce("oldProb nonnull",oldProb,i,l,s)
                 end
                 newHistoryTerms = histTerms(l, p, fp)
-                newProb = probSum(i, d, l, fp, p, newHistoryTerms)
+                nProb = newProb = probSum(i, d, l, fp, p, newHistoryTerms)
+                debugOnce("newProb ",oldProb,i,l,newProb,s)
                 if fp.params.useForward != 0.
                     newProb = newProb / exp(fp.params.useForward * fp.logForwardDensities[l,p])
                     oldProb = oldProb / exp(fp.params.useForward * fp.logForwardDensities[l,fp.stem[l,i]])
+                    debugOnce("useForward ",oldProb,i,l,newProb,s)
                 end
 
                 if (newProb < oldProb) && (newProb < rand() * oldProb)
                     fp.totalProb[l,i] += newProb / oldProb
+                    debugOnce("reject totalProb ",oldProb,i,l,newProb,s)
                     continue #M-H rejection
                 end
                 #M-H accepted
 
                 fp.numMhAccepts += 1
                 fp.totalProb[l,i] += 1
+                debugOnce("accept totalProb ",oldProb,i,l,newProb,fp.totalProb[l,i],s)
                 fp.stem[l,i] = p
                 fp.historyTerms[l,i,:] = newHistoryTerms
 
                 fp.tip.particles[l,i] = fp.base[l,p]
                 clearOldProbs!(fp,i,l,d)
-                fp.prevProbs[l,i] = newProb
+                fp.prevProbs[l,i] = nProb
             end
         end
     end
 end
 
 function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=true)
-    fp = FinkelParticles(prev)
-    reweight!(fp, y) #set lps
+    if nIter>0
+        fp = FinkelParticles(prev)
+    else
+        fp = FinkelParticles(prev,nothing) #nosteps - save time
+    end
+    reweight!(fp, y) #set ws
     replant!(fp) #set tip from base
-    for i in 1:fp.tip.n
-        mcmc!(fp,i,nIter)
-        if debug & ((i % 40)==0)
-            print("Ran particle ", i, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")
+    if nIter>0
+        for i in 1:fp.tip.n
+            mcmc!(fp,i,nIter)
+            if debug & ((i % 40)==0)
+                print("Ran particle ", i, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")
+            end
         end
     end
     fp

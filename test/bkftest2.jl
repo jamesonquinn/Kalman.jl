@@ -53,41 +53,42 @@ if testbkf
 
 
     M = 1000
-    s = 500
+    s = 100
     if true #redo with d=8 instead of d=2
-        d = 2
-        bleedl = 1.#1
-        bleedm = .9
+        d = 12
+        bleedl = .7#1
+        bleedm = .8
         bleedr = .1#.25
-        jitter = .1
-        jitterbleed = 0. # ends up being like twice this, because hits on left and right, blech.
-        temper = 1.#.8 #1/sqrt(2)
-        basenoise = 1
-        lownoise = .04
+        hijitter = 1.
+        lojitter = .25
+        higap = 2
+        temper = .8 #1/sqrt(2)
+        basenoise = 1.
+        lownoise = .16
         lowgap = 3
         noisebleed = 0.
         mciter = 6
+        initialvar = 1/(1-temper)
 
-        x0 = bkf.State(zeros(d),eye(d))
+        x0 = bkf.State(zeros(d),initialvar*eye(d))
 
         a = Tridiagonal(bleedl * ones(d-1),bleedm * ones(d),bleedr * ones(d-1))
         a = a * temper / (bleedl+bleedm+bleedr) #progression matrix
         #a = a * temper / det(a)^(1/d) #progression matrix - divergent
 
-        b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
-        b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
-        g = inv(b)
-        g = jitter * g / det(g)^(1/d)
+        jitvec = fill(lojitter,d)
+        jitvec[1:lowgap:d] = hijitter
+        g = Diagonal(jitvec)
+
 
         q = eye(d)
 
         f = bkf.LinearModel(a,g,q)
 
 
-        h = eye(d) * basenoise
-        for i in 1:lowgap:d
-            h[i,i] = lownoise
-        end
+        noisevec = fill(basenoise,d)
+        noisevec[1:lowgap:d] = lownoise
+        h = Diagonal(noisevec)
         #var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
         z = bkf.LinearObservationModel(h)
     end
@@ -95,7 +96,8 @@ if testbkf
 
     pf = bkf.toParticleSet(kf0,M)
     pf1 = bkf.toParticleSet(kf0,1)
-    fap = bkf.FinkelToe(pf,bkf.FinkelParams(bkf.SampleLog(3.,3.), bkf.MhCompromise(1,18,1),1.))
+    pf1.particles[1:2,1] = [1, -1]
+    fap = bkf.FinkelToe(pf,bkf.FinkelParams(bkf.SampleLog(3.,3.), bkf.MhSampled(1,18),1.))
 
     t = collect(0:2)
 
@@ -112,7 +114,9 @@ if testbkf
     pf
 
     push!(truth, pf1)
-    push!(observations, bkf.Observation(zeros(d)))
+    push!(observations, bkf.Observation(pf1,1))#zeros(d)))
+    print(observations[1].y, " observation\n")
+    observations[1].y[1:2] = [1, -1]
 
 
 
@@ -123,26 +127,29 @@ if testbkf
 
 
     kf1 = bkf.predictupdate(kf,observations[1])
-    fra1 = bkf.FinkelParticles(fap,observations[1],1)
-    show(fra1.numMhAccepts/M)
+    #fra1 = bkf.FinkelParticles(fap,observations[1],1)
+    fra0 = bkf.FinkelParticles(fap,observations[1],0)
     fra1k = bkf.FinkelParticles(fap,observations[1],s)
-    show(fra1k.numMhAccepts/M/s)
+    print(fra1k.numMhAccepts/M/s/d,"\n")
 
-
+    i,l,fp = [1,1,fra1k]
 
     #
-    vis=1:min(5,d)
+    vis=2:min(6,d)
+    cov(fra1k.tip.particles,2)[vis,vis]
+
+
+
+
+
+
     kf1.x.p[vis,vis]
 
 
 
 
 
-
-
-    cov(fra1.tip.particles,2)[vis,vis]
-    cov(fra1k.tip.particles,2)[vis,vis]
-
+    cov(fra0.tip.particles,2)[vis,vis]
 
 
     finalDist = bkf.toDistribution(kf1)
@@ -281,22 +288,15 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
 
-              (48,150,150^2    *2,div(150^2,2),1,4,15,2,2,3),
-              (48,80,80^2      *2,div(80^2,2), 1,1,15,1,1,1),
-              (48,90,90^2      *2,div(90^2,2), 1,1,15,1,1,1),
-              (72,150,150^2    *2,div(150^2,2),1,3,15,2,2,3),
-              (36,150,150^2    *2,div(150^2,2),1,3,15,2,2,3),
-              (48,200,200^2    *2,div(200^2,2),1,1,15,1,1,1),
-              (48,110,110^2    *2,div(110^2,2),1,1,15,1,1,1),
-              (48,120,120^2    *2,div(120^2,2),1,1,15,1,1,1),
-              (48,130,130^2    *2,div(130^2,2),1,1,15,1,1,1)
-              ]
-##
-nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
-                    #max sampType/mhType, max useForward
-              #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
-
-              (36,200,15^2    *2,div(15^2,2),5,4,15,1,1,1)
+              (48,400,400^2    ,div(400^2,5),1,4,15,2,2,3),
+              (48,80,80^2      ,div(80^2,2), 1,1,15,1,1,1),
+              (48,90,90^2      ,div(90^2,2), 1,1,15,1,1,1),
+              (72,150,150^2    ,div(150^2,2),1,3,15,2,2,3),
+              (36,150,150^2    ,div(150^2,2),1,3,15,2,2,3),
+              (48,200,200^2    ,div(200^2,2),1,1,15,1,1,1),
+              (48,110,110^2    ,div(110^2,2),1,1,15,1,1,1),
+              (48,120,120^2    ,div(120^2,2),1,1,15,1,1,1),
+              (48,130,130^2    ,div(130^2,2),1,1,15,1,1,1)
               ]
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -334,18 +334,19 @@ sampType = sampTypes[1]
 
 
 
-
-bleedl = 1
-bleedm = .1
-bleedr = .25
-jitterbleed = .1 # ends up being like twice this, because hits on left and right, blech.
+bleedl = .7#1
+bleedm = .8
+bleedr = .1#.25
+hijitter = 1.
+lojitter = .25
+higap = 2
 temper = .8 #1/sqrt(2)
-basenoise = 1
-lownoise = .04
+basenoise = 1.
+lownoise = .16
 lowgap = 3
-noisebleed = .1
+noisebleed = 0.
 mciter = 6
-
+initialvar = 1/(1-temper)
 
 
 
@@ -356,34 +357,29 @@ for np in 1:lnParts
     d,nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc,lnParams,lnForward = nParticles[np]
 
 
-    x0 = bkf.State(zeros(d),eye(d))
+    x0 = bkf.State(zeros(d),initialvar*eye(d))
 
     a = Tridiagonal(bleedl * ones(d-1),bleedm * ones(d),bleedr * ones(d-1))
     a = a * temper / (bleedl+bleedm+bleedr) #progression matrix
     #a = a * temper / det(a)^(1/d) #progression matrix - divergent
 
-    b = SymTridiagonal(ones(d),-jitterbleed * ones(d-1))
-    b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
-    g = inv(b)
-    g = g / det(g)^(1/d)
+    jitvec = fill(lojitter,d)
+    jitvec[1:lowgap:d] = hijitter
+    g = Diagonal(jitvec)
+
 
     q = eye(d)
 
     f = bkf.LinearModel(a,g,q)
 
 
-    h = eye(d) * basenoise
-    for i in 1:lowgap:d
-        h[i,i] = lownoise
-    end
-    var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
+    noisevec = fill(basenoise,d)
+    noisevec[1:lowgap:d] = lownoise
+    r = Diagonal(noisevec)
+    #var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
+    z = bkf.LinearObservationModel(r)
+    var35 = bkf.meanvarlocs(zeros(d), inv(r), 3:5)[2]
 
-    # b = SymTridiagonal(ones(d),-noisebleed * ones(d-1))
-    # b[1,1] = b[d,d] = 1 - noisebleed^2 / (1-noisebleed^2)
-    # r = inv(b)
-    # r = r / det(r)^(1/d)
-
-    z = bkf.LinearObservationModel(h)
     kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
     r = 1
