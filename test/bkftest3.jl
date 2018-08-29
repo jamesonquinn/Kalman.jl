@@ -244,12 +244,11 @@ end
 
 
 
-valfname = "fixedest10.csv"
 
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "fixedest10.csv"
+fname = "fixedest8.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -288,8 +287,7 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (30,40,40^2      ,div(40^2,5),1,1,11,1,1,1),
-              (30,400,400^2      ,div(400^2,5),100,1,11,1,1,1),
+              (30,400,400^2      ,div(400^2,5),100,2,11,1,1,1),
               (60,600,600^2      ,div(600^2,5),1,2,11,1,1,1),
               (30,40,400^2    ,div(400^2,5),5  ,1,11,1,1,1),
               (30,400,400^2      ,div(400^2,5),3,5  ,11,1,1,1),
@@ -311,7 +309,6 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
 #             (100, 10000,2000,5,5,4)]
 sampTypes = [bkf.SampleLog(5.,5.), bkf.SampleUniform()]
 mhTypes = [bkf.MhSampled, bkf.MhCompromise]
-sampTypes = [bkf.SampleUniform()]
 mhTypes = [bkf.MhSampled]
 reps = max([np[4] for np in nParticles]...)#max of reps above
 lnIters = length(nIters)
@@ -409,9 +406,7 @@ for np in 1:lnParts
     global ps = bkf.ParticleStep(pf)
     #push!(pfs, ps)
     global fap = bkf.FrankenStep(fapf)
-    print(fap.p.particles[1:2,1:2], " fap\n")
-    print(bkf.musig(fap)[2][1:2,1:2], " fapμΣ\n")
-    global fapSamps = bkf.FrankenStep(fap) #null resample
+    global fapSamps = bkf.ParticleSet(fap)
     #push!(faps, fap)
 
     push!(truth, pf1)
@@ -541,35 +536,102 @@ for np in 1:lnParts
                                 mvl[1], mvl[2]]
                                 ["","","",""]]))
             print("\nfranken:")
-            print(bkf.musig(fap)[2][3:5,3:5]," fmat\n")
-            klsideal = bkf.kl2(params(finalDist)...,bkf.musig(fap)...)
-            kls = bkf.kl2(finalDist,fapSamps.p.particles)
-            sqe = bkf.sqerr(truth[end].particles[:,1],fapSamps.p.particles)
-            mvl = bkf.meanvarlocs(fap,3:5)
-            frankenkl[np,width,r]  = kls[1]
-            writecsv( outfile, trsp([["franken",
-                                d,#dimension
-                                r,#rep number
-                                1,#steps
-                                nfp,#finkel particles
-                                nfapf,#franken particles
-                                npf,#part particles
-                                nIter,#mcmc steps in finkel
-                                0
-                                ]
-                                 #note no comma - concatenate vector
-                                kls
-                                [0,#hpl
-                                "none",#samptype
-                                "",
-                                "",
-                                sqe,
-                                "none",
-                                "",
-                                NEIGHBORHOOD_SIZE,
-                                mvl[1], mvl[2]]
-                                klsideal]))
-            print("\nb14")
+                if true #WTFWTFWTF
+                    try
+                        klsideal = bkf.kl2(params(finalDist)...,bkf.musig(fap)...)
+                        kls = bkf.kl2(finalDist,fapSamps.particles)
+                        sqe = bkf.sqerr(truth[end].particles[:,1],fapSamps.particles)
+                        mvl = bkf.meanvarlocs(fap,3:5)
+                        frankenkl[np,width,r]  = kls[1]
+                        writecsv( outfile, trsp([["franken",
+                                            d,#dimension
+                                            r,#rep number
+                                            1,#steps
+                                            nfp,#finkel particles
+                                            nfapf,#franken particles
+                                            npf,#part particles
+                                            nIter,#mcmc steps in finkel
+                                            0
+                                            ]
+                                             #note no comma - concatenate vector
+                                            kls
+                                            [0,#hpl
+                                            "none",#samptype
+                                            "",
+                                            "",
+                                            sqe,
+                                            "none",
+                                            "",
+                                            NEIGHBORHOOD_SIZE,
+                                            mvl[1], mvl[2]]
+                                            klsideal]))
+
+                    catch y
+                        print("WTF\n")
+                        print("WTF\n")
+                        print("WTF\n")
+                        print("WTF\n")
+                        print("WTF\n")
+                        print("WTF\n")
+                        if isa(y, LinAlg.SingularException)
+                            kls = bkf.kl2(finalDist,fapSamps.particles)
+                            sqe = bkf.sqerr(truth[end].particles[:,1],fapSamps.particles)
+                            mvl = bkf.meanvarlocs(fap,3:5)
+                            frankenkl[np,width,r]  = kls[1]
+                            writecsv( outfile, trsp([["franken",
+                                                d,#dimension
+                                                r,#rep number
+                                                1,#steps
+                                                nfp,#finkel particles
+                                                nfapf,#franken particles
+                                                npf,#part particles
+                                                nIter,#mcmc steps in finkel
+                                                0
+                                                ]
+                                                 #note no comma - concatenate vector
+                                                kls
+                                                [0,#hpl
+                                                "none",#samptype
+                                                "",
+                                                "",
+                                                sqe,
+                                                "none",
+                                                "SingularException",
+                                                NEIGHBORHOOD_SIZE,
+                                                mvl[1], mvl[2]]
+                                                klsideal]))
+                        else
+                            kls = bkf.kl2(finalDist,fapSamps.particles)
+                            sqe = bkf.sqerr(truth[end].particles[:,1],fapSamps.particles)
+                            mvl = bkf.meanvarlocs(fap,3:5)
+                            frankenkl[np,width,r]  = kls[1]
+                            writecsv( outfile, trsp([["franken",
+                                                d,#dimension
+                                                r,#rep number
+                                                1,#steps
+                                                nfp,#finkel particles
+                                                nfapf,#franken particles
+                                                npf,#part particles
+                                                nIter,#mcmc steps in finkel
+                                                0
+                                                ]
+                                                 #note no comma - concatenate vector
+                                                kls
+                                                [0,#hpl
+                                                "none",#samptype
+                                                "",
+                                                "",
+                                                sqe,
+                                                "none",
+                                                "WTF",
+                                                NEIGHBORHOOD_SIZE,
+                                                mvl[1], mvl[2]]
+                                                klsideal]))
+                        end
+                    end
+                end
+                print("\nb14")
+            end
         end
         print("\nb15")
     ######
@@ -591,8 +653,8 @@ for np in 1:lnParts
                 #push!(pfs, ps)
                 print("\nfranken:")
                 franktime = (@timed begin
-                    fap = bkf.FrankenStep(fapSamps, observations[i])
-                    fapSamps = bkf.FrankenStep(fap)
+                    fap = bkf.FrankenStep(fapSamps, fap, observations[i])
+                    fapSamps = bkf.ParticleSet(fap)
                 end)[2]
                 #push!(faps, fap)
 
@@ -707,8 +769,11 @@ for np in 1:lnParts
                                     mvl[1], mvl[2]]
                                     ["","","",""]]))
                 #
-                print(bkf.musig(fap)[2][3:5,3:5]," ",fap.needsresample," fmat\n")
-                kls = bkf.kl2(params(finalDist)...,bkf.musig(fap)...)
+                mywindow = 1:5
+                ms = bkf.musig(fap)
+                print("musig:\n",ms[1][mywindow],"\n")
+                print("musig:\n",ms[2][mywindow,mywindow],"\n")
+                kls = bkf.kl2(params(finalDist)...,ms...)
                 sqe = bkf.sqerr(truth[end].particles[:,1],fap)
                 mvl = bkf.meanvarlocs(fap,3:5)
                 frankenkl[np,width,r]  = kls[1]

@@ -165,7 +165,6 @@ if testbkf
     cov(pf2.p.particles,pf2.p.weights,2,corrected=false)[vis,vis]
 
     bkf.kl2(kf1.x.x,kf1.x.p,bkf.musig(pf2)...)
-    )
 
     HOOD = 3
     frap = bkf.toFrankenSet(kf0,div(M^2*d,HOOD),HOOD)
@@ -174,8 +173,7 @@ if testbkf
     size(frap2.p.weights)
     bkf.musig(frap2)[2]
 
-    bkf.kl2(kf1.x.x,kf1.x.p,bkf.musig(frap2)...
-    )
+    bkf.kl2(kf1.x.x,kf1.x.p,bkf.musig(frap2)...)
 
 
 
@@ -246,11 +244,12 @@ end
 
 
 
+valfname = "fixedest10.csv"
 
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "fixedest5.csv"
+fname = "fixedest10.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -281,23 +280,24 @@ end
 NEIGHBORHOOD_SIZE = 3
 IDEAL_SAMPLES = 1000
 
-histPerLocs = [15,30,9]
-nIters = [40,0,80,20,160]
+histPerLocs = [45,30,9]
+nIters = [160,0,80,20,160]
 useForwards = [1.,.5,0.]
 #
 nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (30,40,40^2      ,div(40^2,5),3,5  ,10,1,1,1),
-              (30,40,400^2    ,div(400^2,5),5  ,1,10,1,1,1),
-              (30,400,400^2      ,div(400^2,5),3,5  ,10,1,1,1),
-              (30,400,400^2    ,div(400^2,5),1,2,10,1,2  ,1),
-              (30,400,400^2    ,div(400^2,5),1,2,10,3  ,1,1),
-            (60  ,400,400^2    ,div(400^2,5),1,2,10,1,1,1),
-               (30,400,400^2   ,div(400^2,5),1,2,10,1,1,3  ),
-            (30,200,200^2      ,div(200^2,5),1,2,10,1,1,1),
-            (30,200,40^2        ,div(40^2,5),5,3,10,3,2,3)
+              (30,400,400^2      ,div(400^2,5),100,1,11,1,1,1),
+              (60,600,600^2      ,div(600^2,5),1,2,11,1,1,1),
+              (30,40,400^2    ,div(400^2,5),5  ,1,11,1,1,1),
+              (30,400,400^2      ,div(400^2,5),3,5  ,11,1,1,1),
+              (30,400,400^2    ,div(400^2,5),1,2,11,1,2  ,1),
+              (30,400,400^2    ,div(400^2,5),1,2,11,3  ,1,1),
+            (60  ,400,400^2    ,div(400^2,5),1,2,11,1,1,1),
+               (30,400,400^2   ,div(400^2,5),1,2,11,1,1,3  ),
+            (30,200,200^2      ,div(200^2,5),3,5,  11,1,1,1),
+            (30,400,40^2        ,div(40^2,5),5,3,11,3,2,3)
               ]
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -309,7 +309,9 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
 # nParticles = [(5,25,5,5,5,4), #nfp,npf,nfapf,reps,max nIters slot, steps
 #             (100, 10000,2000,5,5,4)]
 sampTypes = [bkf.SampleLog(5.,5.), bkf.SampleUniform()]
-mhTypes = [bkf.MhCompromise, bkf.MhSampled]
+mhTypes = [bkf.MhSampled, bkf.MhCompromise]
+sampTypes = [bkf.SampleUniform()]
+mhTypes = [bkf.MhSampled]
 reps = max([np[4] for np in nParticles]...)#max of reps above
 lnIters = length(nIters)
 # finkelmeand = zeros(lnIters,ln,reps)
@@ -585,8 +587,8 @@ for np in 1:lnParts
                 #push!(pfs, ps)
                 print("\nfranken:")
                 franktime = (@timed begin
-                    fap = bkf.FrankenStep(fapSamps, fap, observations[i])
-                    fapSamps = ParticleSet(fap)
+                    fap = bkf.FrankenStep(fapSamps, observations[i])
+                    fapSamps = bkf.FrankenStep(fap)
                 end)[2]
                 #push!(faps, fap)
 
@@ -737,8 +739,8 @@ for np in 1:lnParts
         useforward, mhType, sampType, ni = [useForwards[1], mhTypes[1], sampTypes[1], 1]
         1
         for useForward in useForwards[1:lnForward]
-            for mhType in mhTypes[1:lnParams]
-                for sampType in sampTypes[1:lnParams]
+            for mhType in mhTypes[1:min(length(mhTypes),lnParams)]
+                for sampType in sampTypes[1:min(length(sampTypes),lnParams)]
                     for ni = 1:lnIters
                         nIter = nIters[ni]
                         print("nIter ",nIter)
@@ -787,7 +789,7 @@ for np in 1:lnParts
                                                             "",
                                                             mvl[1], mvl[2]
                                                             ]
-                                                            ]))
+                                                            ["","","",""]]))
                                     catch y
                                         if isa(y, LinAlg.SingularException)
                                             writecsv( outfile, trsp([["finkel",

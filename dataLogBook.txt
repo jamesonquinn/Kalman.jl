@@ -182,4 +182,8 @@ useForwards = [1.,.5,0.]
 
 4: fixed franken kl
 
-5: "fixed" franken kl (2 versions), franken sqerr 
+5: "fixed" franken kl (2 versions), franken sqerr. aborted in order to clean up false start headers.
+
+6: skipped, number of the beast
+
+7: like 5 but without false starts.

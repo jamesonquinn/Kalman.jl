@@ -176,7 +176,11 @@ function musig(f::FrankenSet, lim=999)
 end
 
 function musig(f::FrankenStep, lim=999)
-    musig(f.p, lim)
+    if f.needsresample
+        musig(f.p, lim)
+    else
+        musig(f.p.particles)
+    end
 end
 
 function musig(f::BasicKalmanFilter)
@@ -191,4 +195,9 @@ end
 function musig(f::ParticleStep)
     (mean(f.p.particles,f.p.weights,2),
       cov(f.p.particles,f.p.weights,2,corrected=false))
+end
+
+function musig(f::Array)
+    (mean(f,2),
+      cov(f,2,corrected=false))
 end

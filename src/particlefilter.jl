@@ -35,7 +35,7 @@ end
     length(r.s)
   end
 
-  function toParticleSet(kf::KalmanFilter, n::Int64)
+  function ParticleSet(kf::KalmanFilter, n::Int64)
     d = toDistribution(kf)
     ParticleSet(kf, n, rand(d,n), ProbabilityWeights(ones(n),n))
   end
@@ -80,7 +80,7 @@ type ParticleStep <: AbstractParticleFilter
 end
 
   function ParticleStep(pset::ParticleSet)
-    o = Observation([0.])
+    o = Observation(Float64[])
     r = Resample(pset.n)
     ParticleStep(r, pset, o)
   end
@@ -95,6 +95,10 @@ end
   function ParticleStep(pstep::ParticleStep, y::Observation)
     ParticleStep(pstep.p,y)
   end
+
+function ParticleStep(kf::KalmanFilter, n::Int64)
+  ParticleStep(ParticleSet(kf,n))
+end
 
 function particles(p::ParticleStep)
     p.particles

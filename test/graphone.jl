@@ -134,11 +134,11 @@ kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
 r = 1
 
-fpf = bkf.toParticleSet(kf0,nfp)
-pf = bkf.toParticleSet(kf0,npf)
-fapf = bkf.toFrankenSet(kf0,nfapf,NEIGHBORHOOD_SIZE)
+fpf = bkf.ParticleSet(kf0,nfp)
+pf = bkf.ParticleSet(kf0,npf)
+fapf = bkf.FrankenSet(kf0,nfapf,NEIGHBORHOOD_SIZE)
 
-pf1 = bkf.toParticleSet(kf0,1)
+pf1 = bkf.ParticleSet(kf0,1)
 
 t = collect(0:T)
 
@@ -674,8 +674,8 @@ if false
     z = bkf.LinearObservationModel(g2)
     kf0 = bkf.BasicKalmanFilter(x0,f,z)
 
-    pf = bkf.toParticleSet(kf0,300)
-    pf1 = bkf.toParticleSet(kf0,1)
+    pf = bkf.ParticleSet(kf0,300)
+    pf1 = bkf.ParticleSet(kf0,1)
     fap = bkf.FinkelToe(pf,bkf.FinkelParams(bkf.SampleLog(3.,3.), bkf.MhCompromise(3,5,3),true))
 
     dt = .1
