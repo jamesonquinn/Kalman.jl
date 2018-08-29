@@ -32,6 +32,7 @@ end
 
 
 function resampleParticles(pset::FrankenSet, samp::Vector{Resample}, n)
+  print("Resampling innerish...\n")
   FrankenSet(pset.filter,n,pset.hoodSize,
               rawResampleParticles(pset,samp,n),
               typeof(pset.weights)())
@@ -41,6 +42,8 @@ end
     resampledParticles = Array{Float64}(size(pset.particles,1), n)
 
     w = length(samp)
+
+    print("Resampling inner...",w,"\n")
     for hood in 1:w
         for i in 1:n
             for j in 1:pset.hoodSize
@@ -77,6 +80,7 @@ function ap(pset::FrankenSet, n::Int64, resampledParticles::Array{Float64})
         pset.weights = Vector{ProbabilityWeights{Float64,Float64,Array{Float64,1}}}(nHoods)
     end
 
+    print("Reweighting inner...",nHoods,"\n")
     for i in 1:nHoods
         toI = i*pset.hoodSize
         fromI = toI - pset.hoodSize + 1
@@ -109,6 +113,7 @@ function FrankenStep(r::Vector{Resample}, p::FrankenSet ,y::Observation)
 end
 
 function FrankenStep(p::FrankenSet, needsresample::Bool) #dummy values for r and y
+    print("ResamplingDummy...\n")
     FrankenStep(Vector{Resample}(),
                 p,
                 Observation(Float64[]),
@@ -123,20 +128,26 @@ end
 function FrankenStep(pset::FrankenSet) #do resample
     o = Observation(Float64[])
     r = FResample(pset.n, size(pset.weights,1))
+    print("Resampling4...\n")
     FrankenStep(r, pset, o)
 end
 
 function FrankenStep(pset::FrankenStep) #do resample if needed
     if pset.needsresample
+        print("Resampling3...\n")
         FrankenStep(pset.p) #do resample
     else
+        print("not Resampling...\n")
         FrankenStep(pset.p, false) #just build object with dummies
     end
 end
 
 function FrankenStep(pset::FrankenSet) #do resample
+
+        print("Resampling2 pre...\n")
       r = FResample(pset)
       n = pset.n
+          print("Resampling2...\n")
       FrankenStep(resampleParticles(pset,r,n),false)
 end
 

@@ -75,6 +75,6 @@ else
 end
 
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
-outcomefile = "outcomes"*string(MEquiv)*".csv"
+outcomefile = "outcomes_"*string(MEquiv)*".csv"
 
 bkf.runAlgos(mod, obs, algos, 30, outcomefile)

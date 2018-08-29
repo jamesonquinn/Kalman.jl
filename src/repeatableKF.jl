@@ -17,6 +17,7 @@ function resample(state, algo::Algo)
         print("Resampled\n")
     catch y
         print("Couldn't resample: ",typeof(y),"\n")
+        rethrow()
     end
     print(g)
     s
@@ -298,12 +299,14 @@ function runAlgos(model, obs, algos, reps, saveFileName)
             state = init(algo, model)
             for i = 2:length(truth)
                 print("Step ",i-1,":     ",basedatavec,"\n")
-                putime = (@timed state = predictupdate(state, observations[i], algo))[2]
+                putime = (@timed statew = predictupdate(state, observations[i], algo))[2]
                 #measure something here? maybe TODO later
-                samptime = (@timed state = resample(state, algo))[2]
+                samptime = (@timed state = resample(statew, algo))[2]
                 (μ2,Σ2) = musig(state)
+                (μ3,Σ3) = musig(statew)
                 (μ1,Σ1) = musig(kfs[i])
                 μ = μ2 - μ1
+                print("Meansqs: resampled:",mean(μ.^2)," .... unresampled:",mean((μ3 - μ1).^2),"\n")
 
                 datavec = copy(basedatavec)
                 push!(datavec,i-1) #step
