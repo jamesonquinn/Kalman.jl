@@ -27,6 +27,7 @@ end
 
 using Distributions
 
+@load bkf
 
 
 testbkf = false

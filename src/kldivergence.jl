@@ -201,3 +201,7 @@ function musig(f::Array)
     (mean(f,2),
       cov(f,2,corrected=false))
 end
+
+function musig(f::FinkelParticles)
+    musig(f.tip.particles)
+end

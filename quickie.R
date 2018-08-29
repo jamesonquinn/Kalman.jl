@@ -6,9 +6,14 @@ library(plyr)
 source("theme_publication.R")
 pd = position_dodge(20)
 
-runs = fread("fixedest5.2.csv")
-runs = rbind(runs,fread("fixedest7.2.csv"))
-runs = rbind(runs,fread("fixedest8.csv"))
+runs = fread("fixedest9.csv")
+runs = rbind(runs,fread("fixedest10.csv"))
+runs = rbind(runs,fread("fixedest11.csv"))
+if (F) { #temporarily commenting out
+        runs = fread("fixedest5.2.csv")
+        runs = rbind(runs,fread("fixedest7.2.csv"))
+        runs = rbind(runs,fread("fixedest8.csv"))
+}
 if (F) { #peek at old runs
   runs = fread("fixedest4.csv")
 }
@@ -195,20 +200,51 @@ nice = function(...,d=allrunmeans2) {
 somenice = arunmeans[model %in% c("finkel","franken")&
                        #dimension==30 &
                        useForward %in% c(NA,1)&
-                       nIter %in% c(0,NA,120)&
-                       histPerLoc %in% c(0,NA,30)&
-                       particles %in% c(400,32000),]
+                       nIter %in% c(NA,160)
+                       &abs(meankl)<100
+                       #&histPerLoc %in% c(0,NA,30)
+                       #&particles %in% c(400,32000)
+                     ,]
+somenice2 = runs[model %in% c("finkel","franken")&
+                       #dimension==30 &
+                       useForward %in% c(NA,1)&
+                       nIter %in% c(NA,160)&steps>5
+                    &abs(kl)<100
+                     #&histPerLoc %in% c(0,NA,30)
+                     #&particles %in% c(400,32000)
+                     ,]
+somenice3 = somenice2[,list(meankl=mean(kl),sdkl=sd(kl),
+                            meancov=mean(covdiv),sdcov=sd(covdiv),
+                            meandiff=mean(meandiv),sddiff=sd(meandiv),
+                            meantime=mean(runtime),meansq=mean(sqerr,na.rm=T),
+                            cases=.N),by=list(model,params,worldid)]
+if (F) {
 somenice = arunmeans[model %in% c("finkel","franken")&
                        dimension==60 &
                        nIter %in% c(NA,120)&
                        particles %in% c(600,72000),]
+}
 
-somenice = somenice[steps>2,]
+somenice = somenice[steps>5,]
 dim(somenice)
-sn = somenice[steps==3,]
+sn = somenice[steps==8,]
 dim(sn)
 ggplot(data=somenice,aes(x=meankl,y=meansq,shape=model)
 ) + geom_path(aes(linetype=params,color=params)
+) + geom_point(aes(color=params)
+) 
+
+ggplot(data=somenice,aes(x=meankl-meandiff,y=meandiff,shape=model)
+) + geom_path(aes(linetype=params,color=params)
+) + geom_point(aes(color=params)
+) 
+
+ggplot(data=somenice3,aes(x=meankl,y=meansq,shape=model)
+) + geom_point(aes(color=params)
+) 
+
+ggplot(data=somenice2,aes(x=kl,y=sqerr,shape=model,group=paste(model,worldid))
+) + geom_path(aes(linetype=factor(worldid),color=params)
 ) + geom_point(aes(color=params)
 ) 
 

@@ -85,6 +85,10 @@ type SampleLog <: SampleType
     factor::Float64 #how much probability slope bends
 end
 
+function SampleLog()
+    SampleLog(5., 5.) #defaluts
+end
+
 type SampleLogM <: SampleType
     inflectionPoint::Float64 #Distance below max log prob where probability slope bends
     factor::Float64 #how much probability slope bends
@@ -144,6 +148,10 @@ abstract type AbstractFinkel <: AbstractParticleFilter end
 type FinkelToe{T,F<:KalmanFilter} <: AbstractFinkel
     tip::ParticleSet{T,F}
     params::FinkelParams
+end
+
+function FinkelToe(model::KalmanFilter, n, params)
+    FinkelToe(ParticleSet(model,n),params)
 end
 
 function particleMatrix(fp::AbstractFinkel)
@@ -806,4 +814,12 @@ function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=t
         end
     end
     fp
+end
+
+function predictupdate(prev::AbstractFinkel, y::Observation, nIter::Int64)
+    FinkelParticles(prev,y,nIter)
+end
+
+function resample(state::AbstractFinkel)
+    state #do nothing
 end

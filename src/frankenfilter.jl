@@ -140,7 +140,8 @@ function FrankenStep(pset::FrankenSet) #do resample
       FrankenStep(resampleParticles(pset,r,n),false)
 end
 
-function resample(pset::FrankenSet) #alias
+function resample(pset::FrankenStep) #alias
+    print("Resampling...\n")
     FrankenStep(pset)
 end
 
@@ -151,6 +152,7 @@ function FrankenStep(fset::FrankenStep, y::Observation) #ap and reweight
 end
 
 function predictupdate(fset::FrankenStep, y::Observation) #alias
+    print("Franken ",fset.p.n,"\n")
     FrankenStep(fset, y)
 end
 

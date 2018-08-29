@@ -128,5 +128,6 @@ include("finkel.jl")
   include("filter.jl")
   include("unscented.jl")
   include("kldivergence.jl")
+  include("repeatableKF.jl")
   #include("kldivergencedtsgsdtg.jl")
 end
