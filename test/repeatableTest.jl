@@ -33,7 +33,7 @@ using Distributions, DataStructures
 
 d = 30
 s = 10
-MEquiv = 400
+MEquiv = 40
 
 mod = bkf.createModel(d)
 
@@ -75,6 +75,6 @@ else
 end
 
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
-outcomefile = "outcomes_"*string(MEquiv)*".csv"
+outcomefile = "outcomes__"*string(MEquiv)*".csv"
 
 bkf.runAlgos(mod, obs, algos, 30, outcomefile)

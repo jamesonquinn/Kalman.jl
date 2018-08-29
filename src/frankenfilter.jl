@@ -11,7 +11,7 @@ type FrankenSet{T,F<:KalmanFilter} <: AbstractParticleFilter
 end
 
 
-  function FrankenSet(kf::KalmanFilter, n::Int64, hoodSize::Int64)
+  function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
     d = toDistribution(kf)
     width = size(kf.f.a, 1)
     nHoods = div(width, hoodSize)
@@ -31,19 +31,10 @@ end
   end
 
 
-function resampleParticles(pset::FrankenSet, samp::Vector{Resample}, n)
-  print("Resampling innerish...\n")
-  FrankenSet(pset.filter,n,pset.hoodSize,
-              rawResampleParticles(pset,samp,n),
-              typeof(pset.weights)())
-end
-
-  function rawResampleParticles(pset::FrankenSet, samp::Vector{Resample}, n)
+  function resampleParticles(pset::FrankenSet, samp::Vector{Resample}, n)
     resampledParticles = Array{Float64}(size(pset.particles,1), n)
 
     w = length(samp)
-
-    print("Resampling inner...",w,"\n")
     for hood in 1:w
         for i in 1:n
             for j in 1:pset.hoodSize
@@ -57,7 +48,7 @@ end
 
   function ap(pset::FrankenSet, samp::Vector{Resample})
     n = pset.n
-    resampledParticles = rawResampleParticles(pset,samp,n)
+    resampledParticles = resampleParticles(pset,samp,n)
     ap(pset, n, resampledParticles)
 end
 
@@ -73,15 +64,7 @@ function ap(pset::FrankenSet, n::Int64, resampledParticles::Array{Float64})
   end
 
   function reweight!(pset::FrankenSet, y::Observation)
-    nHoods = size(pset.weights,1)
-    if nHoods == 0
-        width = size(pset.filter.f.a, 1)
-        nHoods = div(width,pset.hoodSize)
-        pset.weights = Vector{ProbabilityWeights{Float64,Float64,Array{Float64,1}}}(nHoods)
-    end
-
-    print("Reweighting inner...",nHoods,"\n")
-    for i in 1:nHoods
+    for i in 1:size(pset.weights,1)
         toI = i*pset.hoodSize
         fromI = toI - pset.hoodSize + 1
         pset.weights[i] = ProbabilityWeights(
@@ -105,97 +88,55 @@ type FrankenStep <: AbstractParticleFilter
     r::Vector{Resample}
     p::FrankenSet
     y::Observation
-    needsresample::Bool
 end
 
-function FrankenStep(r::Vector{Resample}, p::FrankenSet ,y::Observation)
-    FrankenStep(r,p,y,true)
-end
-
-function FrankenStep(p::FrankenSet, needsresample::Bool) #dummy values for r and y
-    print("ResamplingDummy...\n")
-    FrankenStep(Vector{Resample}(),
-                p,
-                Observation(Float64[]),
-                needsresample)
-end
-
-function FrankenStep(kf::KalmanFilter, n::Int64, hoodSize::Int64) #build initial state from model
-    p = FrankenSet(kf,n,hoodSize)
-    FrankenStep(p, false)
-end
-
-function FrankenStep(pset::FrankenSet) #do resample
-    o = Observation(Float64[])
+  function FrankenStep(pset::FrankenSet)
+    o = Observation([0.])
     r = FResample(pset.n, size(pset.weights,1))
-    print("Resampling4...\n")
     FrankenStep(r, pset, o)
-end
+  end
 
-function FrankenStep(pset::FrankenStep) #do resample if needed
-    if pset.needsresample
-        print("Resampling3...\n")
-        FrankenStep(pset.p) #do resample
-    else
-        print("not Resampling...\n")
-        FrankenStep(pset.p, false) #just build object with dummies
-    end
-end
-
-function FrankenStep(pset::FrankenSet) #do resample
-
-        print("Resampling2 pre...\n")
+  function ParticleSet(pset::FrankenSet)
       r = FResample(pset)
       n = pset.n
-          print("Resampling2...\n")
-      FrankenStep(resampleParticles(pset,r,n),false)
-end
+      resampledParticles = resampleParticles(pset,r,n)
+      ParticleSet(pset.filter, n, resampledParticles, ProbabilityWeights(ones(n)))
+  end
 
-function resample(pset::FrankenStep) #alias
-    print("Resampling...\n")
-    FrankenStep(pset)
-end
-
-function FrankenStep(fset::FrankenStep, y::Observation) #ap and reweight
-      p = ap(fset.p, fset.p.n, fset.particles)
+  function doFrankenStep(pset::ParticleSet, fset::FrankenSet, y::Observation)
+      p = ap(fset, fset.n, pset.particles)
       reweight!(p,y)
       FrankenStep(Vector{Resample}(),p,y)
-end
+  end
 
-function predictupdate(fset::FrankenStep, y::Observation) #alias
-    print("Franken ",fset.p.n,"\n")
-    FrankenStep(fset, y)
-end
-
-function FrankenStep(pset::FrankenSet, y::Observation) #call (resample if needed, ap, reweight)
-    FrankenStep(pset, y, true)
-end
-
-Base.copy(pset::FrankenSet) = deepcopy(pset)
-
-function FrankenStep(pset::FrankenSet, y::Observation, needsresample::Bool) #resample if needed, ap, reweight
-    if needsresample
-        r = FResample(pset)
-        p = ap(pset,r)
-    else
-        r = Vector{Resample}()
-        p = copy(pset)
-    end
+  function FrankenStep(pset::FrankenSet, y::Observation)
+    r = FResample(pset)
+    p = ap(pset,r)
     reweight!(p,y)
     FrankenStep(r,p,y) #NOTE: Resample happens at beginning, not end... so all my tests have been measuring wrong.
-end
+  end
 
 #Two ways to progress:
 #1: todayFrank = FrankenStep(yesterdayFrank, y)
-#2: yesterdaySet = FrankenStep(yesterdayFrank); todayFrank = FrankenStep(yeasterdaySet, y)
+#2: yesterdaySet = ParticleSet(yesterdayFrank.p); todayFrank = FrankenStep(yesterdaySet, yesterdayFrank, y)
 
+#need to implement #2 as resample, predictupdate
 
-
-
-
-function FrankenStep(pstep::FrankenStep, y::Observation)
-    FrankenStep(pstep.p, y, pstep.needsresample)
+function resample(unresampled::FrankenStep) #returns tuple (yesterdaySet, yesterdayFrank)
+    (ParticleSet(unresampled.p), unresampled)
 end
+
+function predictupdate(stuff::Tuple, y::Observation)
+    (yesterdaySet, yesterdayFrank) = stuff
+    if isa(yesterdayFrank,FrankenStep)
+        yesterdayFrank = yesterdayFrank.p
+    end
+    doFrankenStep(yesterdaySet, yesterdayFrank, y)
+end
+
+  function FrankenStep(pstep::FrankenStep, y::Observation)
+    FrankenStep(pstep.p,y)
+  end
 
 function particles(p::FrankenStep)
     p.particles

@@ -176,11 +176,11 @@ function musig(f::FrankenSet, lim=999)
 end
 
 function musig(f::FrankenStep, lim=999)
-    if f.needsresample
+    #if f.needsresample
         musig(f.p, lim)
-    else
-        musig(f.p.particles)
-    end
+    #else
+    #    musig(f.p.particles)
+    #end
 end
 
 function musig(f::BasicKalmanFilter)
@@ -204,4 +204,9 @@ end
 
 function musig(f::FinkelParticles)
     musig(f.tip.particles)
+end
+
+function musig(stuff::Tuple)
+    (resampledParticleSet, yesterdayFrank) = stuff
+    musig(resampledParticleSet.particles)
 end

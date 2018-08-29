@@ -8,20 +8,6 @@ function predictupdate(state, obs, algo::Algo) #override if you need to pass in 
     predictupdate(state, obs)
 end
 
-function resample(state, algo::Algo)
-    s = state
-    g = "(no)\n"
-    try
-        s = resample(state)
-        g = "(yes)\n"
-        print("Resampled\n")
-    catch y
-        print("Couldn't resample: ",typeof(y),"\n")
-        rethrow()
-    end
-    print(g)
-    s
-end
 
 type KfAlgo <: Algo
 end
@@ -75,7 +61,7 @@ function putParams!(algo::BlockAlgo,row::OrderedDict)
 end
 
 function init(algo::BlockAlgo, model::KalmanFilter)
-    FrankenStep(model, getM(algo), algo.r)
+    (ParticleSet(model, getM(algo)), toFrankenSet(model, getM(algo), algo.r)) #wow that's a hack!!!!!!
 end
 
 type FinkelAlgo <: Algo
