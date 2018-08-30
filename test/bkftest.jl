@@ -250,7 +250,7 @@ valfname = "fixedest10.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "fixedest10.csv"
+fname = "last minute.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -289,17 +289,7 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (30,40,40^2      ,div(40^2,5),1,1,11,1,1,1),
-              (30,400,400^2      ,div(400^2,5),100,1,11,1,1,1),
-              (60,600,600^2      ,div(600^2,5),1,2,11,1,1,1),
-              (30,40,400^2    ,div(400^2,5),5  ,1,11,1,1,1),
-              (30,400,400^2      ,div(400^2,5),3,5  ,11,1,1,1),
-              (30,400,400^2    ,div(400^2,5),1,2,11,1,2  ,1),
-              (30,400,400^2    ,div(400^2,5),1,2,11,3  ,1,1),
-            (60  ,400,400^2    ,div(400^2,5),1,2,11,1,1,1),
-               (30,400,400^2   ,div(400^2,5),1,2,11,1,1,3  ),
-            (30,200,200^2      ,div(200^2,5),3,5,  11,1,1,1),
-            (30,400,40^2        ,div(40^2,5),5,3,11,3,2,3)
+              (30,400,40^2      ,div(400^2,5),100,1,31,1,2,1),
               ]
 
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -312,7 +302,7 @@ nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
 #             (100, 10000,2000,5,5,4)]
 sampTypes = [bkf.SampleLog(5.,5.), bkf.SampleUniform()]
 mhTypes = [bkf.MhSampled, bkf.MhCompromise]
-sampTypes = [bkf.SampleUniform()]
+sampTypes = [bkf.SampleUniform(), bkf.SampleLog(5.,5.)]
 mhTypes = [bkf.MhSampled]
 reps = max([np[4] for np in nParticles]...)#max of reps above
 lnIters = length(nIters)
@@ -392,7 +382,7 @@ for np in 1:lnParts
 
     fpf = bkf.ParticleSet(kf0,nfp)
     pf = bkf.ParticleSet(kf0,npf)
-    fapf = bkf.FrankenSet(kf0,nfapf,NEIGHBORHOOD_SIZE)
+    fapf = bkf.toFrankenSet(kf0,nfapf,NEIGHBORHOOD_SIZE)
 
     pf1 = bkf.ParticleSet(kf0,1)
 
@@ -708,7 +698,6 @@ for np in 1:lnParts
                                     mvl[1], mvl[2]]
                                     ["","","",""]]))
                 #
-                print(bkf.musig(fap)[2][3:5,3:5]," ",fap.needsresample," fmat\n")
                 kls = bkf.kl2(params(finalDist)...,bkf.musig(fap)...)
                 sqe = bkf.sqerr(truth[end].particles[:,1],fap)
                 mvl = bkf.meanvarlocs(fap,3:5)
