@@ -31,9 +31,9 @@ using Distributions, DataStructures
 
 
 
-d = 30
+d = 66
 s = 10
-MEquiv = 40
+MEquiv = 400
 
 mod = bkf.createModel(d)
 
@@ -64,7 +64,7 @@ bkf.saveObservations(obs, testfname, true)
 obs2 = bkf.loadObservations(testfname)
 obs2[3][6].x.x .- obs[3][6].x.x #should be zeros(mydict)
 
-fname = "myworld.csv"
+fname = "myworld2.csv"
 obs = 0
 if false
     obs = bkf.createObservations(mod, s)
@@ -75,6 +75,6 @@ else
 end
 
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
-outcomefile = "outcomes__"*string(MEquiv)*".csv"
+outcomefile = "outcomes_big_"*string(MEquiv)*".csv"
 
 bkf.runAlgos(mod, obs, algos, 30, outcomefile)

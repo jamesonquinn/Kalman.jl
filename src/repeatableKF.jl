@@ -61,7 +61,7 @@ function putParams!(algo::BlockAlgo,row::OrderedDict)
 end
 
 function init(algo::BlockAlgo, model::KalmanFilter)
-    (ParticleSet(model, getM(algo)), toFrankenSet(model, getM(algo), algo.r)) #wow that's a hack!!!!!!
+    toFrankenSet(model, getM(algo), algo.r) #kinda a hack
 end
 
 type FinkelAlgo <: Algo
@@ -285,20 +285,18 @@ function runAlgos(model, obs, algos, reps, saveFileName)
             state = init(algo, model)
             for i = 2:length(truth)
                 print("Step ",i-1,":     ",basedatavec,"\n")
-                putime = (@timed statew = predictupdate(state, observations[i], algo))[2]
+                putime = (@timed state = predictupdate(state, observations[i], algo))[2]
                 #measure something here? maybe TODO later
-                samptime = (@timed state = resample(statew, algo))[2]
                 (μ2,Σ2) = musig(state)
-                (μ3,Σ3) = musig(statew)
                 (μ1,Σ1) = musig(kfs[i])
                 μ = μ2 - μ1
-                print("Meansqs: resampled:",mean(μ.^2)," .... unresampled:",mean((μ3 - μ1).^2),"\n")
+                print("Meansqs: resampled:",mean(μ.^2),"\n")
 
                 datavec = copy(basedatavec)
                 push!(datavec,i-1) #step
                 push!(datavec,kfs[i].x.x[d]) #checksum
                 push!(datavec,putime) #putime
-                push!(datavec,samptime) #samptime
+                push!(datavec,0) #samptime
                 try
                     kl = kl2(μ1,Σ1,μ2,Σ2)
                     push!(datavec,"") #no error
