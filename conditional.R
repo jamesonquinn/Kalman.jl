@@ -95,15 +95,19 @@ bcomb[,list(bias=mean(bias^2),variance=mean(variance),sqerr=mean(bias^2)+mean(va
 toPlotWide = bcomb[,list(bias=mean(bias^2),variance=mean(variance),sqerr=mean(bias^2)+mean(variance),estvar=mean(estvar)),by=list(model,border) ][order(model),]
 #biases[,mean(bias^2),by=list(model,border,neighborhood) ][order(model),]
 #biases[,mean(bias^2),by=list(loc,model)][order(model),]
+toPlot3wide= bcomb[,list(bias=mean(bias^2),variance=mean(variance),sqerr=mean(bias^2)+mean(variance),estvar=mean(estvar)),by=list(model) ][order(model),]
+toPlot3wide[,border:="All loci"]
+toPlotWide = rbind(toPlotWide, toPlot3wide)
 toPlot = data.table(gather(toPlotWide,model:border,sqerr,bias:estvar,factor_key=T))
 names(toPlot)[3] = "component"
 toPlot[,component:=relevel(component,"variance")]
-toPlot[,position:=factor(border,levels=c(F,T),labels=c("central loci","peripheral loci"))]
+toPlot[,position:=factor(border,levels=c("All loci","FALSE","TRUE"),labels=c("All loci","Central loci","Peripheral loci"))]
 toPlot2 = toPlot[component %in% c("bias","variance"),]
-toPlot2[,component:=factor(component,levels=c("bias","variance"),labels=c("bias²","variance"))]
+toPlot2[,component:=factor(component,levels=c("variance","bias"),labels=c("variance","bias²"))]
+
 ggplot(data=toPlot2,
        aes(y=sqerr,x=model,fill=component)) +
   geom_col()+
   facet_wrap(~position)+
-  labs(x="Algorithm",y="Squared error\nof distribution mean")+
-  
+  labs(x="Algorithm",y="Average squared error per locus\nof estimated filtering distribution mean")+
+  theme_bw() + scale_fill_uchicago()
