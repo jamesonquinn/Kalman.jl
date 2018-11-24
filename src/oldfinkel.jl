@@ -78,7 +78,7 @@ function OldfinkelParticles(prev::AbstractOldfinkel)
                 prev,
                 stem,
                 Vector{ProbabilityWeights}(), #empty weights
-                filt.f.a * particleMatrix(prev),
+                newCenters(filt, particleMatrix(prev)),
                 Array{Nullable{Float64},2}(d,n),
                 Array{Distribution,2}(d,n),
                 zeros(d,n),

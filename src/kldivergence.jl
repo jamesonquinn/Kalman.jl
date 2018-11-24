@@ -30,7 +30,11 @@ function kl2(μ1,Σ1raw,μ2,Σ2raw, window = 4)
     for w = 1:nwind
         r = ((w-1) * window + 1):(w * window)
         diff = (μ2[r] - μ1[r])
-        subtr[w] = (trace(inv(Σ2[r,r]) * Σ1[r,r]) - window) / 2
+        try
+            subtr[w] = (trace(inv(Σ2[r,r]) * Σ1[r,r]) - window) / 2
+        catch
+            subtr[w] = 1e6 + (sum(Σ1[i,i] / Σ2[i,i] for i in r) - window) / 2
+        end
         subdif[w] = diff' * Σ2[r,r] * diff / 2
         d2, d1 = det(Σ2[r,r]), det(Σ1[r,r])
         if (d2 <= 0)
@@ -127,7 +131,7 @@ function meanvarlocs(f::FinkelParticles, r::Range)
 end
 
 
-function meanvarlocs(f::Union{BasicKalmanFilter, FrankenStep}, r::Range)
+function meanvarlocs(f::Union{KalmanFilter, FrankenStep}, r::Range)
     p=musig(f)
     meanvarlocs(p...,r)
 end
@@ -183,7 +187,7 @@ function musig(f::FrankenStep, lim=999)
     #end
 end
 
-function musig(f::BasicKalmanFilter)
+function musig(f::KalmanFilter)
     musig(toDistribution(f))
 end
 

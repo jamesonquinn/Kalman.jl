@@ -3,6 +3,8 @@ module bkf
   using StatsBase
   using Memoize
   using Compat
+  using ForwardDiff
+  
   import Base.length
 
   abstract type KalmanFilter end
@@ -27,6 +29,9 @@ module bkf
       g::Matrix #process noise to state
       q::Matrix #process noise covariance (hopefully diagonal)
   end
+    function dimOf(lm::LinearModel)
+        size(lm.a,1)
+    end
 
   ## This is the first function a Kalman filter needs to
   # implement: Apply its model to its state to generate a
@@ -67,7 +72,7 @@ module bkf
   # 1. The residual (y-Hx) (`res`)
   # 2. The cross-covariance between state and measurement (`ph`)
   # 3. The innovation covariance matrix
-  function covs(kf::BasicKalmanFilter,y::Observation)
+  function covs(kf::KalmanFilter,y::Observation)
       res = y.y - kf.z.h * kf.x.x
       ph = kf.x.p * kf.z.h'
       s = kf.z.h * ph + kf.z.r
@@ -120,7 +125,13 @@ module bkf
       MvNormal(kf.z.r[fromI:toI,fromI:toI])
     end
 
+function newCenters(kf::BasicKalmanFilter, oldState)
+    kf.f.a * oldState
+end
 
+
+
+include("lorenz.jl")
 include("particlefilter.jl")
 include("frankenfilter.jl")
 include("finkel.jl")

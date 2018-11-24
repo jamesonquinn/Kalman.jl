@@ -115,7 +115,7 @@ function MhSampled(histPerLoc)
 end
 
 type MhMultilocus <: MhType #Variable neighborhood product, sum using histories sampled for each center
-    r::Int64 #neighborhood size for product. radius of 1 = magnitude 3.
+    neighbors::Int64 #neighborhood size for product.
     histPerLoc::Int64 #history samples per locus
 end
 
@@ -274,7 +274,7 @@ function FinkelParticles(prev::AbstractFinkel,
     end
 
     filt = getbkf(prev)
-    means = filt.f.a * particleMatrix(prev)
+    means = newCenters(filt, particleMatrix(prev))
     histSampProbs = Array{ProbabilityWeights,2}(d,n)
     localDists = Array{Distribution,2}(d,n)
     logForwardDensities = Array{Float64,2}(d,n)
@@ -340,7 +340,7 @@ function FinkelParticles(prev::AbstractFinkel,
     stem = zeros(Int64,d,n)
 
     filt = getbkf(prev)
-    means = filt.f.a * particleMatrix(prev)
+    means = newCenters(filt, particleMatrix(prev))
     histSampProbs = Array{ProbabilityWeights,2}(d,n)
     localDists = Array{Distribution,2}(0,0)
     logForwardDensities = Array{Float64,2}(0,0)
@@ -467,7 +467,7 @@ end
 function probSum(fp::FinkelParticles,
         i::Int64, #current particle
         h::Int64, #history
-        neighborhood::Range,
+        neighborhood::Vector,
         l::Void,
         lstem::Void)
     lp = 0.
@@ -480,7 +480,7 @@ end
 function probSum(fp::FinkelParticles,
         i::Int64, #current particle
         h::Int64, #history
-        neighborhood::Range,
+        neighborhood::Vector,
         l::Int64, #optional: location to replace
         lstem::Int64)
     lp = 0.
@@ -527,7 +527,7 @@ end
 function getSampProb(fp::FinkelParticles     ,#{T,F,FinkelParams{S,MhMultisampled}},
         i::Int64,#current particle
         ln::Int64, #location for neighborhood center
-        myneighborhood::UnitRange{Int64},
+        myneighborhood::Vector,## was UnitRange{Int64},
         lr::Union{Int64,Void}, #location to replace
         lstem::Union{Int64,Void}) #where {T,F,S}
 
@@ -745,8 +745,9 @@ end
 function prodNeighborhood(l::Int64, #neighborhood over which we use historyTerms
                     fp::FinkelParticles,
                     d::Int64, #dimension/number of loci
-                    w=2)
-    max(l-w,1):min(l+w,d)
+                    neighbors=4)
+    [mod1(i,d) for i in (l-div(neighbors,2)):(l-div(neighbors,2)+neighbors-1)]
+    #[max(l-w,1):min(l+w,d)]
 end
 
 

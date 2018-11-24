@@ -1,3 +1,5 @@
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
 library(ggplot2)
 library(data.table)
 library(gridExtra)
@@ -7,7 +9,7 @@ source("theme_publication.R")
 pd = position_dodge(20)
 
 
-runs = fread("fixedest8.csv")
+runs = fread("lorenz.csv")
 if (F) { #temporarily commenting out
       runs = rbind(runs,fread("fixedest10.csv"))
       runs = rbind(runs,fread("fixedest11.csv"))

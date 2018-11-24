@@ -1,0 +1,26 @@
+Using lorenz96.py and changing the third argument to np.arrange, I looked into what time-step would be a good balance between too large (discretization error) and too small (nonlinear dynamics take too many time steps to appear). This python script uses odeint, which may not be the simple forward difference method I'm using in my own script, thus biasing me to pick a longer time step than I should. By eyeballing it, I think that 0.1 is a decent tradeoff.
+
+If I really wanted to do this in a "realistic" way, I could run multiple smaller (deterministic) time steps for each filter step. This would essentially remove the discretization error issue, at the cost of processing. I don't think this would actually change the performance of my algorithms, though, as long as the "true" dynamics that I'm approximating has the exact same discretization issues as the models that I'm using. So, for now, 0.1 it is.
+
+....
+
+I did a quick-and-dirty jacobian for the pseudo-kalman version of l96. That could probably be improved with ad; I'll do that later.
+
+...
+
+Thinking about how many particles I need to do a good job. With neighborhood size of 4, the simple calculation would be (desired resolution in number of samples)^(neighborhood size). For instance, 8^4=4096. But the diffeq for time n+1 is actually merely linear in ego locus, while the other loci are multiplied by factors which should have average magnitude of roughly 5-10 (maybe 8???). Thus, the "effective number of dimensions" from time t-1 that matter at time t is roughly 3.2 or something (this is obviously very handwavy). 8^3.2≡780. I think I'll do 800 particles as "good enough"
+
+
+2, first: truth goes crazy. Maybe forcing constant of 8 with processNoise SD of .1 is too much??
+forcingF = 8.
+#d is set by nParticles above
+timeStep = 0.1
+processNoiseVar = 0.01 #Is this good? Needs testing.
+measurementNoiseVar = 0.1 #Again, ???
+initialvar = 0.4 #leaves room for early progress
+
+
+
+basenoise = .05
+highnoise = .5
+highgap = 5

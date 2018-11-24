@@ -46,7 +46,7 @@ end
 
   function ap(pset::ParticleSet)
     ε=rand(noiseDistribution(pset.filter),pset.n)
-    ParticleSet(pset.filter, pset.n, pset.filter.f.a * pset.particles + ε, pset.weights)
+    ParticleSet(pset.filter, pset.n, newCenters(pset.filter, pset.particles) + ε, pset.weights)
   end
 
 
@@ -58,7 +58,7 @@ end
     #println(size(newParticles))
     for i in 1:n
 
-      newParticleBases[:,i] = pset.filter.f.a * pset.particles[:,samp.s[i]]
+      newParticleBases[:,i] = newCenters(pset.filter, pset.particles[:,samp.s[i]])
     end
     ParticleSet(pset.filter, n, newParticleBases + ε, ProbabilityWeights(ones(n),n))
   end

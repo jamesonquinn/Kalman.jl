@@ -13,7 +13,7 @@ end
 
   function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
     d = toDistribution(kf)
-    width = size(kf.f.a, 1)
+    width = dimOf(kf.f)
     nHoods = div(width, hoodSize)
     FrankenSet(kf, n, hoodSize, rand(d,n),
                     [ProbabilityWeights(ones(n),Float64(n)) for i in 1:nHoods])
@@ -27,7 +27,7 @@ end
 
   function ap(pset::FrankenSet)
     ε=rand(noiseDistribution(pset.filter),pset.n)
-    FrankenSet(pset.filter, pset.n, pset.hoodSize, pset.filter.f.a * pset.particles + ε, pset.weights)
+    FrankenSet(pset.filter, pset.n, pset.hoodSize, newCenters(pset.filter, pset.particles) + ε, pset.weights)
   end
 
 
@@ -50,7 +50,7 @@ end
     #println(size(ε))
     #println(size(newParticles))
     FrankenSet(pset.filter, n, pset.hoodSize,
-                pset.filter.f.a * resampledParticles + ε,
+                newCenters(pset.filter, resampledParticles) + ε,
                 [ProbabilityWeights(ones(n),Float64(n)) for i in 1:size(pset.weights,1)])
   end
 
