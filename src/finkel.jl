@@ -258,7 +258,15 @@ function FinkelParticles(prev::AbstractFinkel,
                          myparams::FinkelParams)
     d, n = size(particleMatrix(prev))
     h = myparams.mh.histPerLoc
-    base = ap(prev.tip).particles
+
+    #get new centers
+    filt = getbkf(prev)
+    prevParts = particleMatrix(prev)
+    means = newCenters(filt, prevParts)
+
+
+    base = ap(prev.tip).particles #TODO: should use means instead of recalculating them
+    fuzz = getNextFuzz(filt, prevParts, prev.params.mh.r)
     tipVals = copy(base)
 
 
@@ -273,8 +281,6 @@ function FinkelParticles(prev::AbstractFinkel,
         end
     end
 
-    filt = getbkf(prev)
-    means = newCenters(filt, particleMatrix(prev))
     histSampProbs = Array{ProbabilityWeights,2}(d,n)
     localDists = Array{Distribution,2}(d,n)
     logForwardDensities = Array{Float64,2}(d,n)
@@ -282,6 +288,7 @@ function FinkelParticles(prev::AbstractFinkel,
         for l = 1:d #Ideally we could somehow call forwardDistribution just once but meh
             localDists[l,ph] = forwardDistribution(filt.f,
                                     means[:,ph],
+                                    fuzz,
                                     l)
         end
     end

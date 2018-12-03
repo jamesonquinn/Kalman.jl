@@ -7,6 +7,8 @@ function ppath(p)
   end
 end
 
+cd(joinpath(splitdir(@__FILE__)[1],"../output"))
+
 ppath("/Users/chema/Dropbox/Kalman.jl/src")
 ppath("/Users/chema/Dropbox/")
 ppath("/Users/chema/mydev/Gadfly.jl/src")
@@ -46,7 +48,7 @@ valfname = "lr96fixedest10.2.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "lorenz2.csv"
+fname = "lorenz5.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -81,17 +83,25 @@ histPerLocs = [45,30,9]
 nIters = [160,0,80,20,160]
 useForwards = [1.,.5,0.]
 #
-nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
+if false #false for quickie test
+    nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
               (9,800,40^2      ,div(800^2,5),20,1,20,1,1,1),
               ]
-
+else
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 #             (100, 100,20,10,5,10,3),
 #             (500,250,10,7,3,5,2),
 #             (1000,10,10,4,3,3,2)]
+    nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
+                    #max sampType/mhType, max useForward
+              #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
+              #
+              (9,80,4^2      ,div(80^2,5),20,1,20,1,1,1),
+              ]
+end
 
 #Small numbers for quicker test
 # nParticles = [(5,25,5,5,5,4), #nfp,npf,nfapf,reps,max nIters slot, steps
@@ -100,6 +110,7 @@ sampTypes = [bkf.SampleLog(5.,5.), bkf.SampleUniform()]
 mhTypes = [bkf.MhSampled, bkf.MhCompromise]
 sampTypes = [bkf.SampleUniform(), bkf.SampleLog(5.,5.)]
 mhTypes = [bkf.MhSampled]
+#mhTypes = []
 reps = max([np[4] for np in nParticles]...)#max of reps above
 lnIters = length(nIters)
 # finkelmeand = zeros(lnIters,ln,reps)
@@ -115,7 +126,11 @@ idealkl = zeros(lnParts,1,reps)
 np = 1
 nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc = nParticles[np]
 width = 1
-mhType = mhTypes[1]
+try
+    mhType = mhTypes[1]
+catch
+    mhTypes = bkf.MhSampled
+end
 sampType = sampTypes[1]
 
 
@@ -124,9 +139,9 @@ sampType = sampTypes[1]
 
 
 
-forcingF = 6.
+forcingF = 8.
 #d is set by nParticles above
-timeStep = 0.1
+timeStep = 0.01
 processNoiseVar = 0.01 #Is this good? Needs testing.
 measurementNoiseVar = 0.1 #Again, ???
 initialvar = 0.4 #leaves room for early progress
@@ -252,7 +267,7 @@ for np in 1:lnParts
                                 "",
                                 bkf.meanvarlocs(truth[end],3:5)[1],0.]
                                 ["","","",""]]))
-            print("")
+            print("meanvarlocs(truth  ",bkf.meanvarlocs(truth[end],3:5)[1],"\n")
             writecsv( outfile, trsp([["observed",
                                 d,#dimension
                                 r,#rep number
@@ -275,6 +290,7 @@ for np in 1:lnParts
                                 bkf.meanvarlocs(observations[end],3:5)[1],0.]
                                 ["","","",""]]))
             ##
+            print("meanvarlocs(observations[end]  ",bkf.meanvarlocs(observations[end],3:5)[1],"\n")
             writecsv( outfile, trsp([["ideal",
                                 d,#dimension
                                 r,#rep number
@@ -415,6 +431,7 @@ for np in 1:lnParts
                                     "",
                                     bkf.meanvarlocs(truth[end],3:5)[1],0.]
                                     ["","","",""]]))
+                print("meanvarlocs(truth  ",bkf.meanvarlocs(truth[end],3:5)[1],"\n")
                 ##
                 writecsv( outfile, trsp([["observed",
                                     d,#dimension
@@ -442,6 +459,7 @@ for np in 1:lnParts
                                     ]
                                     ["","","",""]]))
                 ##
+                print("meanvarlocs(observations[end]  ",bkf.meanvarlocs(observations[end],3:5)[1],"\n")
                 writecsv( outfile, trsp([["ideal",
                                     d,#dimension
                                     r,#rep number
