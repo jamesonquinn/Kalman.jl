@@ -76,6 +76,41 @@ function toDistribution(kf::BasicLorenzFilter)
     end
 end
 
+
+function getNextFuzz(filt::BasicKalmanFilter, prevParts, r)
+    nothing #Tells forwardDistribution to ignore this
+end
+
+function getNextFuzz(filt::BasicLorenzFilter, prevParts, r)
+    recentered = prevParts .- mean(prevParts,2)
+    correlations = recentered * recentered'
+    d = size(correlations)[1]
+    p = size(prevParts)[1]
+    for i in 1:(d-r)
+        for j in (i+r):d
+            correlations[i,j] = 0.
+            correlations[j,i] = 0.
+        end
+    end
+    fuzzPerDim = (det(correlations)/p) ^ (1/d)
+    fuzz = diagm(ones(d))
+
+    #Make sure fuzz variance is not larger than full covariance in any main dimension
+    factor = 1
+    for i in 1:d #This is a quick-and-dirty algorithm; good enough I hope
+        if fuzz[i,i] > correlations[i,i]
+            factor = sqrt(fuzz[i,i]/correlations[i,i])
+            for j in [mod1(i-1,d),mod1(i+1,d)]
+                fuzz[j,j] *= factor
+            end
+            fuzz[i,i] = correlations[i,i]
+        end
+    end
+
+    fuzz
+end
+
+
 function forwardDistribution(m,x,fuzz::Void,r)
     forwardDistribution(m,x,r)
 end
@@ -141,11 +176,7 @@ function noiseDistribution(kf::BasicLorenzFilter,m::LorenzModel)
   MvNormal(noiseMatrix(kf.f))
 end
 
-function noiseDistribution(kf::BasicLorenzFilter,m::LorenzModel)
-  MvNormal(noiseMatrix(kf.f))
-end
-
-function noiseDistribution(kf::BasicLorenzFilter,m::LorenzModel)
+function noiseDistribution(kf::BasicLorenzFilter)
   MvNormal(noiseMatrix(kf.f))
 end
 
