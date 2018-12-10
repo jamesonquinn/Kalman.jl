@@ -48,7 +48,7 @@ valfname = "lr96fixedest10.2.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "lorenz6.csv"
+fname = "lorenz10.csv"
 open( fname,  "a") do outfile
 
     writecsv( outfile, trsp(["model",
@@ -83,7 +83,7 @@ histPerLocs = [45,30,9]
 nIters = [160,0,80,20,160]
 useForwards = [1.,.5,0.]
 #
-if true #false for quickie test
+if false #false for quickie test
     nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
@@ -142,6 +142,7 @@ sampType = sampTypes[1]
 forcingF = 8.
 #d is set by nParticles above
 timeStep = 0.01
+numSteps = 20
 processNoiseVar = 0.001 #Is this good? Needs testing.
 measurementNoiseVar = 0.1 #Again, ???
 useMeasurementNoiseVar = false #So ignore above line.
@@ -168,7 +169,7 @@ for np in 1:lnParts
 
     q = eye(d)
 
-    f = bkf.LorenzModel(forcingF,d,timeStep,g,q)
+    f = bkf.LorenzModel(forcingF,d,timeStep,numSteps,g,q)
 
     if useMeasurementNoiseVar
         #Uniform noise

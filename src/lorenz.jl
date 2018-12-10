@@ -3,7 +3,8 @@ abstract type AbstractLorenz <: Model end
   type LorenzModel <: AbstractLorenz
       F::Float64 #forcing constant
       d::Int64 #Dimension
-      s::Float64 #time step
+      s::Float64 #time step (substep)
+      ss::Int64 #how many substeps per external step
       g::Matrix #process noise to state
       q::Matrix #process noise covariance (hopefully diagonal)
   end
@@ -46,22 +47,23 @@ function ap(f::EkfishLorenzModel,x::State)
 end
 
 
-  function propagateUncertainty(f::AbstractLorenz,x::Matrix,u) #u is a matrix of uncertainty
-      J = ForwardDiff.jacobian(v -> newCenters(f,v), x)
+function propagateUncertainty(f::AbstractLorenz,x::Matrix,u) #u is a matrix of uncertainty
+  #If ForwardDiff is working correctly, it magically does the looping over f.ss for us! Magic is good!
+  J = ForwardDiff.jacobian(v -> newCenters(f,v), x)
 
-      p1 = J*u*J' #+ f.g*f.q*f.g' #"diagm(diag(" :don't allow off-diagonals to build up over multiple steps
-      p1
-  end
+  p1 = J*u*J' #+ f.g*f.q*f.g' #"diagm(diag(" :don't allow off-diagonals to build up over multiple steps
+  p1
+end
 
-  function propagateUncertainty(s) #s::ParticleSet
-      propagateUncertainty(s.filter.f,s.particles,s.filter.z.r)
-  end
+function propagateUncertainty(s) #s::ParticleSet
+  propagateUncertainty(s.filter.f,s.particles,s.filter.z.r)
+end
 
-  type BasicLorenzFilter <: KalmanFilter
-      x::State
-      f::AbstractLorenz
-      z::LinearObservationModel
-  end
+type BasicLorenzFilter <: KalmanFilter
+  x::State
+  f::AbstractLorenz
+  z::LinearObservationModel
+end
 
 
 function toDistribution(kf::BasicLorenzFilter)
@@ -82,7 +84,8 @@ function getNextFuzz(filt::BasicKalmanFilter, prevParts, r)
 end
 
 function getNextFuzz(filt::BasicLorenzFilter, prevParts, r)
-    recentered = prevParts .- mean(prevParts,2)
+    center = mean(prevParts,2)
+    recentered = prevParts .- center
     correlations = recentered * recentered'
     d = size(correlations)[1]
     p = size(prevParts)[1]
@@ -107,7 +110,7 @@ function getNextFuzz(filt::BasicLorenzFilter, prevParts, r)
         end
     end
 
-    fuzz
+    propagateUncertainty(filt.f,center,fuzz)
 end
 
 
@@ -121,7 +124,7 @@ function forwardDistribution(m::AbstractLorenz,x::Vector,fuzz::Matrix,r::Range)
   #print("ccc",x[1:2],"\n")
   #print("ddd",x[r],"\n")
 
-  MvNormal(x[r],(noiseMatrix(m)+fuzz)[r,r])
+  MvNormal(x[r],Matrix(Hermitian((noiseMatrix(m)+fuzz)[r,r])))
 end
 
 function forwardDistribution(m::AbstractLorenz,x::Vector,r::Range)
@@ -193,38 +196,44 @@ function newCenters(kf::BasicLorenzFilter, oldState)
 end
 
 function newCenters(lm::LorenzModel, oldState)
-    newState = copy(oldState)
-    for i in 1:lm.d
-        newState[i,:] += lm.s * (
-            (oldState[mod1(i+1, lm.d),:] - oldState[mod1(i-2, lm.d),:])
-                .* oldState[mod1(i-1, lm.d),:]
-            - oldState[i,:] + lm.F
-            )
-        if abs(newState[i,1]) > 100
-            print("too big ",i,oldState,newState[i],"x\n",
-                            oldState[mod1(i+1, lm.d),:],"y\n",
-                            oldState[mod1(i-2, lm.d),:],"z\n",
-                            oldState[mod1(i-1, lm.d),:],"a\n",
-                            oldState[i,:],
-                            lm.s * (
-                                (oldState[mod1(i+1, lm.d),:] - oldState[mod1(i-2, lm.d),:])
-                                    .* oldState[mod1(i-1, lm.d),:]
-                                - oldState[i,:] + lm.F
-                                ),
-                            "\n")
+    newState = oldState
+    for n in 1:lm.ss
+      oldState = copy(newState) #ideally, would be destructive each time except the first, to avoid reallocating memory
+      for i in 1:lm.d
+          newState[i,:] += lm.s * (
+              (oldState[mod1(i+1, lm.d),:] - oldState[mod1(i-2, lm.d),:])
+                  .* oldState[mod1(i-1, lm.d),:]
+              - oldState[i,:] + lm.F
+              )
+          if abs(newState[i,1]) > 100
+              print("too big ",i,oldState,newState[i],"x\n",
+                              oldState[mod1(i+1, lm.d),:],"y\n",
+                              oldState[mod1(i-2, lm.d),:],"z\n",
+                              oldState[mod1(i-1, lm.d),:],"a\n",
+                              oldState[i,:],
+                              lm.s * (
+                                  (oldState[mod1(i+1, lm.d),:] - oldState[mod1(i-2, lm.d),:])
+                                      .* oldState[mod1(i-1, lm.d),:]
+                                  - oldState[i,:] + lm.F
+                                  ),
+                              "\n")
         end
+      end
     end
     newState
 end
 
 function newCenters(lm::LorenzModel, oldState::Vector)
-    newState = copy(oldState)
-    for i in 1:lm.d
+    newState = oldState
+    for n in 1:lm.ss
+      oldState = copy(newState)
+      for i in 1:lm.d
         newState[i] += lm.s * (
             (oldState[mod1(i+1, lm.d)] - oldState[mod1(i-2, lm.d)])
                 * oldState[mod1(i-1, lm.d)]
             - oldState[i] + lm.F
             )
+      end
     end
     #print("newState", newState, "\n")
     newState

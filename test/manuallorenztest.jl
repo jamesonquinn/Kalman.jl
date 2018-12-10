@@ -116,6 +116,7 @@ sampType = sampTypes[1]
 forcingF = 8.
 #d is set by nParticles above
 timeStep = 0.01
+numSteps = 20
 processNoiseVar = 0.0001 #Is this good? Needs testing.
 measurementNoiseVar = 0.0001 #Again, ???
 initialvar = 0.0001 #leaves room for early progress
@@ -141,7 +142,7 @@ np = 1
 
     q = eye(d)
 
-    f = bkf.LorenzModel(forcingF,d,timeStep,g,q)
+    f = bkf.LorenzModel(forcingF,d,timeStep,numSteps,g,q)
 
     if false
         #Uniform noise
