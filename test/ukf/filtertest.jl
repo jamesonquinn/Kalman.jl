@@ -12,7 +12,7 @@ predict!(kf)
 y = Observation([1.01])
 
 kf2 = update(kf,y)
-update!(kf,y)
+doUpdate!(kf,y)
 
 @test kf2.x.x == kf.x.x
 @test kf2.x.p == kf.x.p

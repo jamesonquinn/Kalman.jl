@@ -1,5 +1,5 @@
 
-macro delegate(source, targets)
+macro mydelegate(source, targets)
     typename = esc(source.args[1])
     fieldname = source.args[2].args[1]
     funcnames = targets.args

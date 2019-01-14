@@ -71,7 +71,8 @@ if false
     bkf.saveObservations(obs, fname, false)
 else
     obs = bkf.loadObservations(fname)
-    print(obs[3][3].x.x[3])
+    print(obs[3][3].x.x[3]); print("
+","""print(obs[3][3].x.x[3])""")
 end
 
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))

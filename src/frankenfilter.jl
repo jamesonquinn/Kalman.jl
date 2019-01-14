@@ -2,14 +2,13 @@
 
   abstract type AbstractParticleFilter end
 
-type FrankenSet{T,F<:KalmanFilter} <: AbstractParticleFilter
+mutable struct FrankenSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     filter::F
     n::Int64
     hoodSize::Int64
     particles::Array{T,2} #[location, particle]
     weights::Vector{ProbabilityWeights{Float64,Float64,Array{Float64,1}}}
 end
-
 
   function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
     d = toDistribution(kf)
@@ -35,7 +34,7 @@ end
     n = pset.n
     w = length(samp)
     ε=rand(noiseDistribution(pset.filter),n)
-    resampledParticles = Array{Float64}(size(pset.particles,1), n)
+    resampledParticles = Array{Float64}(undef,size(pset.particles,1), n)
 
     for hood in 1:w
         for i in 1:n
@@ -75,23 +74,36 @@ end
         for hood in 1:hoods]
     end
 
-type FrankenStep <: AbstractParticleFilter
+mutable struct FrankenStep <: AbstractParticleFilter
     r::Vector{Resample}
     p::FrankenSet
     y::Observation
 end
 
+Base.copy(f::FrankenStep) = FrankenStep(f.r, f.p, f.y)
+
+
   function FrankenStep(pset::FrankenSet)
     o = Observation([0.])
+    #print("\n In FrankenStep3 \n")
     r = FResample(pset.n, size(pset.weights,1))
-    FrankenStep(r, pset, o)
+    #print("\n In FrankenStep4 \n")
+    res= FrankenStep(r, pset, o)
+    #print("\n In FrankenStep5 \n")
+    res
   end
 
   function FrankenStep(pset::FrankenSet, y::Observation)
+    #print("\n In FrankenStep-2 \n")
     r = FResample(pset)
+    #print("\n In FrankenStep-1 \n")
     p = ap(pset,r)
+    #print("\n In FrankenStep0 \n")
     reweight!(p,y)
-    FrankenStep(r,p,y) #NOTE: Resample happens at beginning, not end... so all my tests have been measuring wrong.
+    #print("\n In FrankenStep1 \n")
+    res = FrankenStep(r,p,y) #NOTE: Resample happens at beginning, not end... so all my tests have been measuring wrong.
+    #print("\n In FrankenStep2 \n")
+    res
   end
 
   function FrankenStep(pstep::FrankenStep, y::Observation)
@@ -110,6 +122,6 @@ function nlocs(f::FrankenStep)
     nlocs(f.p)
 end
 
-function predictupdate(f::Union{FrankenSet,FrankenStep}, y::Observation)
+function predictUpdate(f::Union{FrankenSet,FrankenStep}, y::Observation)
     FrankenStep(f,y)
 end

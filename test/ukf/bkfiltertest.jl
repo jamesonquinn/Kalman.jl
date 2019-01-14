@@ -2,8 +2,8 @@ include("filtertest.jl")
 
 a = [1.0 0.01;
      -0.01 1]
-q = 1e-10*eye(2)
-g = eye(2)
+q = 1e-10*Matrix(1.0I,2,2)
+g = Matrix(1.0I,2,2)
 
 bfm = LinearModel(a,g,q)
 
@@ -12,7 +12,7 @@ r = [0.1]'
 
 bzm = LinearObservationModel(hz,r)
 
-bkf = BasicKalmanFilter(State([1.0,0.0],4.0*eye(2)),bfm,bzm)
+bkf = BasicKalmanFilter(State([1.0,0.0],4.0*Matrix(1.0I,2,2)),bfm,bzm)
 
 bkf1 = predict(bkf)
 bkf2 = update(bkf1,y)

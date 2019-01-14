@@ -8,57 +8,17 @@ DEFAULT_PRODUCT_RADIUS = 1
 DEFAULT_RADIUS_FRINGE = 0
 DEFAULT_HISTPERLOC = 7
 
-type SparseKF <: AbstractSparseFilter
+mutable struct SparseKF <: AbstractSparseFilter
     f::BasicKalmanFilter
     neighbors::Vector{Vector{Int16}}
 end
 
-canDebug = false
-if canDebug
-
-    verbose = false
-    function debug(a...)
-        global verbose
-        if verbose
-            for i=a
-                print(i," ")
-            end
-            print("\n")
-        end
-    end
-    function setVerbose(v=true)
-        global verbose = v
-    end
-    debugDone = Dict{String,Bool}()
-    function debugOnce(a...)
-        global debugDone
-        if !get(debugDone,a[1],false)
-            debugDone[a[1]] = true
-            for i=a
-                print(i," ")
-            end
-            print("\n")
-        end
-    end
-
-    function resetOnce()
-        global debugDone = Dict{String,Bool}()
-    end
-
-
-else
-
-    #stubs
-    function debug(a...)
-    end
-    function debugOnce(a...)
-    end
-    function resetOnce()
-    end
-
+#@mydelegate SparseKF.f [ covs, toDistribution, noiseDistribution, obsNoiseDistribution ]
+function covs(skf::SparseKF,x...)
+    covs(skf.f,x...)
 end
 
-@delegate SparseKF.f [ covs, toDistribution, noiseDistribution, obsNoiseDistribution ]
+
 
 function SparseKF(f::BasicKalmanFilter) #assumes neighborliness is symmetric
     neighbors = Vector{Vector{Int16}}()
@@ -77,10 +37,10 @@ end
 
 abstract type SampleType end #how to sample particle histories
 
-type SampleUniform <: SampleType
+mutable struct SampleUniform <: SampleType
 end
 
-type SampleLog <: SampleType
+mutable struct SampleLog <: SampleType
     inflectionPoint::Float64 #Distance below max log prob where probability slope bends
     factor::Float64 #how much probability slope bends
 end
@@ -89,7 +49,7 @@ function SampleLog()
     SampleLog(5., 5.) #defaluts
 end
 
-type SampleLogM <: SampleType
+mutable struct SampleLogM <: SampleType
     inflectionPoint::Float64 #Distance below max log prob where probability slope bends
     factor::Float64 #how much probability slope bends
     minSpan::Float64 #minimum distance from max to min
@@ -101,11 +61,11 @@ end
 
 abstract type MhType end #how to calculate MH acceptance probability
 
-type MhLocal <: MhType #Restricted product, unrestricted sum
+mutable struct MhLocal <: MhType #Restricted product, unrestricted sum
     r::Int64 #neighborhood size for product. radius of 1 = magnitude 3.
 end
 
-type MhSampled <: MhType #Neighborhood product, sum using locally sampled history
+mutable struct MhSampled <: MhType #Neighborhood product, sum using locally sampled history
     r::Int64 #neighborhood size for product. radius of 1 = magnitude 3.
     histPerLoc::Int64 #history samples
 end
@@ -114,17 +74,17 @@ function MhSampled(histPerLoc)
     MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc)
 end
 
-type MhMultilocus <: MhType #Variable neighborhood product, sum using histories sampled for each center
+mutable struct MhMultilocus <: MhType #Variable neighborhood product, sum using histories sampled for each center
     neighbors::Int64 #neighborhood size for product.
     histPerLoc::Int64 #history samples per locus
 end
 
-type MhMultisampled <: MhType #Fixed neighborhood product, sum using histories sampled for each locus
+mutable struct MhMultisampled <: MhType #Fixed neighborhood product, sum using histories sampled for each locus
     r::Int64 #neighborhood size for product. radius of 1 = magnitude 3.
     histPerLoc::Int64 #history samples per locus
 end
 
-type MhCompromise <: MhType #Fixed neighborhood product, sum using histories sampled for each locus in core subset
+mutable struct MhCompromise <: MhType #Fixed neighborhood product, sum using histories sampled for each locus in core subset
     r::Int64 #neighborhood size for product. radius of 1 = magnitude 3.
     histPerLoc::Int64 #history samples per locus
     rSub::Int64 #neighborhood size for history samples
@@ -136,22 +96,28 @@ function MhCompromise(histPerLoc) #actually, total histories per attempt, rounde
                 DEFAULT_PRODUCT_RADIUS - DEFAULT_RADIUS_FRINGE)
 end
 
-type FinkelParams{S<:SampleType,MH<:MhType}
+mutable struct FinkelParams{S<:SampleType,MH<:MhType}
     s::S
     mh::MH
     useForward::Float64
+    overlap::Float64 #overlap factor for fuzz
+    algo::Type
 end
 
 
 abstract type AbstractFinkel <: AbstractParticleFilter end
 
-type FinkelToe{T,F<:KalmanFilter} <: AbstractFinkel
+mutable struct FinkelToe{T,F<:KalmanFilter} <: AbstractFinkel
     tip::ParticleSet{T,F}
     params::FinkelParams
 end
+#
+# function params(ft::FinkelToe)
+#   ft.params
+# end
 
-function FinkelToe(model::KalmanFilter, n, params)
-    FinkelToe(ParticleSet(model,n),params)
+function FinkelToe(model::KalmanFilter, n, params, algo=FinkelParticles)
+    FinkelToe(ParticleSet(model,n),params,algo)
 end
 
 function particleMatrix(fp::AbstractFinkel)
@@ -165,9 +131,11 @@ end
 #uniform, sampled
 function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
             radius::Int64 = DEFAULT_PRODUCT_RADIUS,
-            useForward::Float64=1.)
+            useForward::Float64=1.,
+            overlap::Float64=2.,
+            algo::Type=FinkelParticles)
     FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc),
-                useForward)
+                useForward, overlap, algo)
 end
 
 #uniform, compromise
@@ -175,20 +143,24 @@ function fparams(
             radius::Int64 ,
             histPerLoc::Int64 ,
             rSub::Int64,
-            useForward::Float64=1.
+            useForward::Float64=1.,
+            overlap::Float64=2.,
+            algo::Type=FinkelParticles
             )
     FinkelParams(SampleUniform(),
                 MhCompromise(radius, histPerLoc, rSub),
-                useForward)
+                useForward, overlap, algo)
 end
 
 #log, sampled
 function fparams(histPerLoc::Int64,
             inflectionPoint::Float64,
             factor::Float64,
-            useForward::Float64=1.)
+            useForward::Float64=1.,
+            overlap::Float64=2.,
+            algo::Type=FinkelParticles)
     FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc),
-                useForward)
+                useForward, overlap, algo)
 end
 
 #log, compromise
@@ -198,11 +170,13 @@ function fparams(inflectionPoint::Float64,
             radius::Int64 ,
             histPerLoc::Int64 ,
             rSub::Int64,
-            useForward::Float64=1.
+            useForward::Float64=1.,
+            overlap::Float64=2.,
+            algo::Type=FinkelParticles
             )
     FinkelParams(SampleLog(inflectionPoint,factor),
                 MhCompromise(radius, histPerLoc, rSub),
-                useForward)
+                useForward, overlap, algo)
 end
 
 
@@ -212,7 +186,7 @@ function fparams(basedOn::Any)
     fparams()
 end
 
-type FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
+mutable struct FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
     tip::ParticleSet{T,F} #This is where we do MCMC and get the answer. Also holds the filter. It's got extra stuff; ignore.
     base::Array{T,2} #This is the raw 1-step progression from last time.
                 #As with all similar arrays, size is [d,n]; that is, first index is space and second is particle.
@@ -225,6 +199,7 @@ type FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
     ws::Vector{ProbabilityWeights} #selection probabilities at each point; p(y_l|z^i_l)
         #[space][particle]
     logForwardDensities::Array{Float64,2} #forward densities at each point; p(z_l|x^{1..M}_l)
+        #sum of lps
         #[space, particle]
     lps::Array{Float64,3} #log probabilities from hist to fut; size [d, n, n]
         #[space, pfuture, phistory]
@@ -232,7 +207,7 @@ type FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
         #[space, pfuture][phistory]
     means::Array{T,2} #base, progressed, without adding noise.
         #[space, particle]
-    prevProbs::Array{Nullable{Float64},2} #sum over neighborhood history of local probability - avoid double calculation
+    prevProbs::Array{Union{Float64,Nothing},2} #sum over neighborhood history of local probability - avoid double calculation
     localDists::Array{Distribution,2} #for calculating probs
         #[space, phistory]
     totalProb::Array{Float64,2} #convergence diagnostic
@@ -249,7 +224,7 @@ function FinkelParticles(prev::AbstractFinkel)
     FinkelParticles(prev,myparams)
 end
 
-function FinkelParticles(prev::AbstractFinkel, nosteps::Void)
+function FinkelParticles(prev::AbstractFinkel, nosteps::Nothing)
     myparams = fparams(prev)
     FinkelParticles(prev,myparams,nosteps)
 end
@@ -281,9 +256,9 @@ function FinkelParticles(prev::AbstractFinkel,
         end
     end
 
-    histSampProbs = Array{ProbabilityWeights,2}(d,n)
-    localDists = Array{Distribution,2}(d,n)
-    logForwardDensities = Array{Float64,2}(d,n)
+    histSampProbs = Array{ProbabilityWeights,2}(undef,d,n)
+    localDists = Array{Distribution,2}(undef,d,n)
+    logForwardDensities = Array{Float64,2}(undef,d,n)
     for ph = 1:n
         for l = 1:d #Ideally we could somehow call forwardDistribution just once but meh
             localDists[l,ph] = forwardDistribution(filt.f,
@@ -293,7 +268,7 @@ function FinkelParticles(prev::AbstractFinkel,
         end
     end
 
-    lps = Array{Float64,3}(d,n,n)
+    lps = Array{Float64,3}(undef,d,n,n)
     for pf = 1:n
         for l = 1:d
 
@@ -322,13 +297,13 @@ function FinkelParticles(prev::AbstractFinkel,
                 lps,
                 histSampProbs,
                 means, #means
-                fill(Nullable{Float64}(),d,n), #prevProbs
+                Array{Union{Nothing, Float64},2}(nothing,d,n), #prevProbs
                 localDists, #localDists
                 zeros(d,n), #totalProb
                 myparams,
                 0 #numMhAccepts
                 )
-    getDists!(fp, d, n)
+    #getDists!(fp, d, n)
     #calcPrevProbs!(fp, d, n)
     fp
 end
@@ -336,7 +311,7 @@ end
 
 function FinkelParticles(prev::AbstractFinkel,
                          myparams::FinkelParams,
-                         nosteps::Void)
+                         nosteps::Nothing)
     d, n = size(particleMatrix(prev))
     h = myparams.mh.histPerLoc
     base = ap(prev.tip).particles
@@ -382,7 +357,7 @@ end
 function getSampProbs(logpdfs,
                     pf::Int64,
                     s::SampleUniform)
-    ProbabilityWeights(ones(logpdfs))
+    ProbabilityWeights(fill(1.,size(logpdfs)))
 end
 
 function getSampProbs(lpdfs,
@@ -406,13 +381,13 @@ function getSampProbs(lpdfs,
     end
 end
 
-function particles(fp::FinkelParticles)
+function particles(fp::AbstractFinkel)
     fp.tip.particles
 end
 
-function reweight!(fp::FinkelParticles, y::Observation)
+function reweight!(fp::AbstractFinkel, y::Observation)
     d = size(fp.base,1)
-    fp.ws = Vector{ProbabilityWeights}(d)
+    fp.ws = Vector{ProbabilityWeights}(undef, d)
     diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
     vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.h is eye and ...r is diagonal
     for l = 1:d
@@ -429,7 +404,7 @@ function reweight!(fp::FinkelParticles, y::Observation)
     end
 end
 
-function replant!(fp::FinkelParticles)
+function replant!(fp::AbstractFinkel)
     d = size(fp.base,1)
     for i in 1:fp.tip.n
       for l in 1:d
@@ -444,15 +419,15 @@ function replant!(fp::FinkelParticles)
       end
     end
 end
-
-function getDists!(fp::FinkelParticles, d, n)
-    for i in 1:n
-        x = Vector(fp.means[:,i])
-        for l in 1:d
-            fp.localDists[l,i] = forwardDistribution(getbkf(fp).f,x,max(l-1,1):min(l+1,d))
-        end
-    end
-end
+#
+# function getDists!(fp::FinkelParticles, d, n)
+#     for i in 1:n
+#         x = Vector(fp.means[:,i])
+#         for l in 1:d
+#             fp.localDists[l,i] = forwardDistribution(getbkf(fp).f,x,max(l-1,1):min(l+1,d))
+#         end
+#     end
+# end
 
 function histTerms(l,
                     p,
@@ -475,8 +450,8 @@ function probSum(fp::FinkelParticles,
         i::Int64, #current particle
         h::Int64, #history
         neighborhood::Vector,
-        l::Void,
-        lstem::Void)
+        l::Nothing,
+        lstem::Nothing)
     lp = 0.
     for λ in neighborhood
         lp += fp.lps[λ,fp.stem[λ,i],h]
@@ -501,7 +476,7 @@ function probSum(fp::FinkelParticles,
     exp(lp)
 end
 
-function getSampProb(fp::FinkelParticles,
+function getSampProb(fp::AbstractFinkel,
         i::Int64,#current particle
         l::Int64, #location for neighborhood center
         lstem::Int64)
@@ -509,13 +484,14 @@ function getSampProb(fp::FinkelParticles,
     fp.histSampProbs[l,i][lstem] / sum(fp.histSampProbs[l,i])
 end
 
-function getSampProb(fp::FinkelParticles,
+function getSampProb(fp::AbstractFinkel,
         i::Int64,#current particle
         ln::Int64, #location for neighborhood center
-        lr::Void = nothing, #location to replace
-        lstem::Void = nothing)
+        lr::Nothing = nothing, #location to replace
+        lstem::Nothing = nothing)
     getSampProb(fp,i,ln,fp.stem[ln,i])
 end
+
 
 function getSampProb(fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
         i::Int64,#current particle
@@ -531,12 +507,12 @@ function getSampProb(fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
     end
 end
 
-function getSampProb(fp::FinkelParticles     ,#{T,F,FinkelParams{S,MhMultisampled}},
+function getSampProb(fp::AbstractFinkel     ,#{T,F,FinkelParams{S,MhMultisampled}},
         i::Int64,#current particle
         ln::Int64, #location for neighborhood center
         myneighborhood::Vector,## was UnitRange{Int64},
-        lr::Union{Int64,Void}, #location to replace
-        lstem::Union{Int64,Void}) #where {T,F,S}
+        lr::Union{Int64,Nothing}, #location to replace
+        lstem::Union{Int64,Nothing}) #where {T,F,S}
 
     result = 0.
     for l in myneighborhood
@@ -555,16 +531,16 @@ end
     multiply likelihood from history samples for locus lh to neighborhood of particle i.
     If 0<l<=d, use lstem instead of current value at location l.
 """
-function probSum(fp::FinkelParticles{},
+function probSum(fp::AbstractFinkel,
     i::Int64,#current particle
     d::Int64,
     locn::Int64, #location for neighborhood center
     lh::Int64, #location for history samples
     lr::T = nothing, #location to replace
     lstem::T = nothing,
-    lhist::Void = nothing) where T <: Union{Void,Int64}
+    lhist::Nothing = nothing) where T <: Union{Nothing,Int64}
 
-    myneighborhood = prodNeighborhood( locn, fp, d, fp.params.mh.r)
+    myneighborhood = prodNeighborhood( locn, d, fp.params.mh.r)
     prob = 0.
     for h in fp.historyTerms[lh,i,:]
         prob += probSum(fp, i, h, myneighborhood,
@@ -574,16 +550,16 @@ function probSum(fp::FinkelParticles{},
     prob
 end
 
-function probSum(fp::FinkelParticles{},
+function probSum(fp::AbstractFinkel,
     i::Int64,#current particle
     d::Int64,
     ln::Int64, #location for neighborhood center
     lh::Int64, #location for history samples
     lr::T, #location to replace
     lstem::T,
-    lhist::Vector{Int64}) where T <: Union{Void,Int64}
+    lhist::Vector{Int64}) where T <: Union{Nothing,Int64}
 
-    myneighborhood = prodNeighborhood( ln, fp, d, fp.params.mh.r)
+    myneighborhood = prodNeighborhood( ln, d, fp.params.mh.r)
     prob = 0.
     if lr == lh
         lhist = Vector(fp.historyTerms[lh,i,:])
@@ -596,6 +572,18 @@ function probSum(fp::FinkelParticles{},
     prob
 end
 
+function probSum(
+    i::Int64,#current particle
+    d::Int64,
+    l::Int64,
+    fp::AbstractFinkel,
+    lstem::XT = nothing,
+    lhist::XT2 = nothing) where {XT <: Union{Nothing,Int64}, #lhist is the newly proposed history samples
+                                XT2 <: Union{Nothing,Vector{Int64}},
+                                T, F, S}
+    probSum(fp.params,i,d,l,fp,lstem,lhist)
+end
+
 """
     probSum for MhSampled
 
@@ -603,16 +591,17 @@ end
     If 0<l<=d, use lstem instead of current value at location l.
 """
 function probSum(
+    p::FinkelParams{S,MhSampled},
     i::Int64,#current particle
     d::Int64,
     l::Int64,
-    fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
+    fp::AbstractFinkel,
     lstem::XT = nothing,
-    lhist::XT2 = nothing) where {XT <: Union{Void,Int64}, #lhist is the newly proposed history samples
-                                XT2 <: Union{Void,Vector{Int64}},
+    lhist::XT2 = nothing) where {XT <: Union{Nothing,Int64}, #lhist is the newly proposed history samples
+                                XT2 <: Union{Nothing,Vector{Int64}},
                                 T, F, S}
 
-    if typeof(lstem) == Void
+    if typeof(lstem) == Nothing
         debugOnce("probSum for MhSampled1",l)
         a = probSum(fp,i,d,l,l,lstem,lstem,lhist)
         debugOnce("probSum for MhSampled2",a)
@@ -623,7 +612,7 @@ function probSum(
     end
 end
 
-function  probSumWeight(fp::FinkelParticles{},
+function  probSumWeight(fp::AbstractFinkel,
             ln::Int64) #location for neighborhood center
     1 #stub; in future, look at distribution of forward weights...
 end
@@ -635,18 +624,19 @@ end
     If 0<l<=d, use lstem instead of current value at location l.
 """
 function probSum(
+    p::FinkelParams{S,MhCompromise},
     i::Int64,#current particle
     d::Int64,
     l::Int64,
-    fp::FinkelParticles{T,F,FinkelParams{S,MhCompromise}},
+    fp::AbstractFinkel,
     lstem::XT = nothing,
-    lhist::XT2 = nothing) where {XT <: Union{Void,Int64},
-                                XT2 <: Union{Void,Vector{Int64}},
+    lhist::XT2 = nothing) where {XT <: Union{Nothing,Int64},
+                                XT2 <: Union{Nothing,Vector{Int64}},
                                 T, F, S}
 
-    myCenters = prodNeighborhood( l, fp, d, fp.params.mh.rSub)
+    myCenters = prodNeighborhood( l, d, fp.params.mh.rSub)
     result = 0.
-    if typeof(lstem) == Void
+    if typeof(lstem) == Nothing
         for c = myCenters
             result += probSum(fp,i,d,c,c,nothing,nothing,nothing) * probSumWeight(fp,c)
         end
@@ -666,18 +656,19 @@ end
     If 0<l<=d, use lstem instead of current value at location l.
 """
 function probSum(
+    p::FinkelParams{S,MhMultisampled},
     i::Int64,#current particle
     d::Int64,
     l::Int64,
-    fp::FinkelParticles{T,F,FinkelParams{S,MhMultisampled}},
+    fp::AbstractFinkel,
     lstem::XT = nothing,
-    lhist::XT2 = nothing) where {XT <: Union{Void,Int64},
-                                XT2 <: Union{Void,Vector{Int64}},
+    lhist::XT2 = nothing) where {XT <: Union{Nothing,Int64},
+                                XT2 <: Union{Nothing,Vector{Int64}},
                                 T, F, S}
 
-    myCenters = prodNeighborhood( l, fp, d, fp.params.mh.rSub)
+    myCenters = prodNeighborhood( l, d, fp.params.mh.rSub)
     result = 0.
-    if typeof(lstem) == Void
+    if typeof(lstem) == Nothing
         for c = myCenters
             result += probSum(fp,i,d,c,c,nothing,nothing,nothing) * probSumWeight(fp,c)
         end
@@ -692,32 +683,44 @@ end
 
 
 function clearOldProbs!(
-    fp::FinkelParticles{T,F,FinkelParams{S,MhSampled}},
+    fp::AbstractFinkel,
     i::Int64,#current particle
     l::Int64,
-    d::Int64) where {T, F, S}
+    d::Int64)
+
+    clearOldProbs!(fp,i,l,d,fp.params)#do nothing - mhsampled means it's just local
+end
+
+function clearOldProbs!(
+    fp::AbstractFinkel,
+    i::Int64,#current particle
+    l::Int64,
+    d::Int64,
+    p::FinkelParams{S,MhSampled}) where {S}
 
     #do nothing - mhsampled means it's just local
 end
 
 function clearOldProbs!(
-    fp::FinkelParticles{T,F,FinkelParams{S,MhCompromise}},
+    fp::AbstractFinkel,
     i::Int64,#current particle
     l::Int64,
-    d::Int64) where {T, F, S}
+    d::Int64,
+    p::FinkelParams{S,MhCompromise}) where {S}
 
 
-    myCenters = prodNeighborhood( l, fp, d, fp.params.mh.rSub)
+    myCenters = prodNeighborhood( l, d, fp.params.mh.rSub)
     for λ = myCenters
         fp.prevProbs[l,i] = nothing
     end
 end
 
 function clearOldProbs!(
-    fp::FinkelParticles{T,F,FinkelParams{S,MhMultisampled}},
+    fp::AbstractFinkel,
     i::Int64,#current particle
     l::Int64,
-    d::Int64) where {T, F, S}
+    d::Int64,
+    p::FinkelParams{S,MhMultisampled}) where {S}
 
 
     myCenters = prodNeighborhood( l, fp, d, fp.params.mh.r)
@@ -736,21 +739,7 @@ function calcPrevProbs!(fp::FinkelParticles, d, n)
     end
 end
 
-function hNeighborsOf(l::Int64, #neighborhood over which we use historyTerms
-                    fp::FinkelParticles,
-                    d::Int64 #dimension/number of loci
-                    )
-    if l == 1
-        Set(2)
-    elseif l == d
-        Set(l-1)
-    else
-        Set(l-1,l+1)
-    end
-end
-
 function prodNeighborhood(l::Int64, #neighborhood over which we use historyTerms
-                    fp::FinkelParticles,
                     d::Int64, #dimension/number of loci
                     neighbors=4)
     [mod1(i,d) for i in (l-div(neighbors,2)):(l-div(neighbors,2)+neighbors-1)]
@@ -758,7 +747,7 @@ function prodNeighborhood(l::Int64, #neighborhood over which we use historyTerms
 end
 
 
-function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
+function mcmc!(fp::AbstractFinkel,i::Int64,steps::Int64)
     d = size(fp.base,1)
     for s in 1:steps
         order = randperm(d)
@@ -767,12 +756,12 @@ function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
             if fp.base[l,p] != fp.tip.particles[l,i]
                 oldProbNull = fp.prevProbs[l,i]
                 debugOnce("oldProbNull",oldProbNull)
-                if isnull(oldProbNull)
+                if oldProbNull == nothing
                     oldProb = probSum(i, d, l, fp)
                     debugOnce("oldProb wasnull",oldProb,i,l,s)
-                    fp.prevProbs[l,i] = Nullable(oldProb)
+                    fp.prevProbs[l,i] = oldProb
                 else
-                    oldProb = get(oldProbNull)
+                    oldProb = oldProbNull
                     debugOnce("oldProb nonnull",oldProb,i,l,s)
                 end
                 newHistoryTerms = histTerms(l, p, fp)
@@ -805,11 +794,12 @@ function mcmc!(fp::FinkelParticles,i::Int64,steps::Int64)
     end
 end
 
-function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=true)
+function predictUpdate(prev::AbstractFinkel, y::Observation, nIter=15, debug=true)
+    T = prev.params.algo
     if nIter>0
-        fp = FinkelParticles(prev)
+        fp = T(prev)
     else
-        fp = FinkelParticles(prev,nothing) #nosteps - save time
+        fp = T(prev,nothing) #nosteps - save time
     end
     reweight!(fp, y) #set ws
     replant!(fp) #set tip from base
@@ -822,10 +812,6 @@ function FinkelParticles(prev::AbstractFinkel, y::Observation, nIter=15, debug=t
         end
     end
     fp
-end
-
-function predictupdate(prev::AbstractFinkel, y::Observation, nIter::Int64)
-    FinkelParticles(prev,y,nIter)
 end
 
 function resample(state::AbstractFinkel)

@@ -1,9 +1,9 @@
 include("bkfiltertest.jl")
 
-x1,p1 = augment(s,1e-10*eye(2))
+x1,p1 = augment(s,1e-10*Matrix(1.0I,2,2))
 @test x1 == [1.0,0.0,0.0,0.0]
-@test p1 == [4*eye(2,2) zeros(2,2);
-             zeros(2,2) 1e-10*eye(2)]
+@test p1 == [4*Matrix(1.0I,2,2,2,2) zeros(2,2);
+             zeros(2,2) 1e-10*Matrix(1.0I,2,2)]
 
 function fa(x::Vector)
     x1 = zeros(2)
@@ -12,7 +12,7 @@ function fa(x::Vector)
     x1
 end
 
-fam = AugmentedUnscentedModel(fa,1e-10*eye(2))
+fam = AugmentedUnscentedModel(fa,1e-10*Matrix(1.0I,2,2))
 
 function ha(x)
     x1 = zeros(1)

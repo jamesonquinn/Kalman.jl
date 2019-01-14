@@ -2,7 +2,7 @@ using ForwardDiff
 
 abstract ExtendedKalmanFilter <: KalmanFilter
 
-type NonlinearModel <: Model
+mutable struct NonlinearModel <: Model
     f::Function
     j::Function
     g::Function
@@ -21,7 +21,7 @@ function ap(f::NonlinearModel,x::State)
     State(x1,p1)
 end
 
-type NonlinearObservationModel <: ObservationModel
+mutable struct NonlinearObservationModel <: ObservationModel
     h::Function
     j::Function
     r::Matrix
@@ -31,7 +31,7 @@ type NonlinearObservationModel <: ObservationModel
     end
 end
 
-type BasicExtendedKalmanFilter <: ExtendedKalmanFilter
+mutable struct BasicExtendedKalmanFilter <: ExtendedKalmanFilter
     x::State
     f::NonlinearModel
     z::NonlinearObservationModel

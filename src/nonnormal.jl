@@ -50,7 +50,7 @@ module bkf
   end
 
   function LinearObservationModel(h::Matrix)
-      LinearObservationModel(h,eye(size(h,1)))
+      LinearObservationModel(h,Matrix(1.0I,size(h,1),size(h,1)))
   end
 
 
@@ -78,7 +78,7 @@ module bkf
     MvNormal(kf.x.x,((kf.x.p + kf.x.p') / 2))
   end
 
-    function forwardDistribution(m::LinearModel,x::Vector,r::Range)
+    function forwardDistribution(m::LinearModel,x::Vector,r::AbstractRange)
         #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")
         #print("bbb",noiseMatrix(m)[r,r],"\n")
         #print("ccc",x[1:2],"\n")

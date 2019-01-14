@@ -25,20 +25,20 @@ predict!(kf1)
 
 @test kf1.x == kf.x
 
-update!(kf,Observation([0.95]))
-update!(kf1,Nullable([0.95]))
+doUpdate!(kf,Observation([0.95]))
+doUpdate!(kf1,Nullable([0.95]))
 
 @test kf1.x == kf.x
 
 predict!(kf)
 predict!(kf1)
 
-update!(kf,Observation([0.98]))
-update!(kf1,Nullable{Vector{Float64}}())
+doUpdate!(kf,Observation([0.98]))
+doUpdate!(kf1,Union{Nothing,Vector{Float64}}())
 
 @test kf1.x != kf.x
 
-update!(kf1,Nullable([0.98]))
+doUpdate!(kf1,Nullable([0.98]))
 
 @test kf1.x == kf.x
 
@@ -59,7 +59,7 @@ function an(x,k,r,deltaT)
 end
 
 fekf(x) = an(x,k,x[1],dt)
-gekf(x) = eye(2)
+gekf(x) = Matrix(1.0I,2,2)
 hekf(x) = x[2]
 
 Q = [1e-10 0.0; 0.0 1e-10]
@@ -80,19 +80,19 @@ predict!(kf1)
 
 @test kf1.x == kf.x
 
-update!(kf,Observation([0.1]))
-update!(kf1,Nullable([0.1]))
+doUpdate!(kf,Observation([0.1]))
+doUpdate!(kf1,Nullable([0.1]))
 
 @test kf1.x == kf.x
 
 predict!(kf)
 predict!(kf1)
 
-update!(kf,Observation([0.09]))
-update!(kf1,Nullable{Vector{Float64}}())
+doUpdate!(kf,Observation([0.09]))
+doUpdate!(kf1,Union{Nothing,Vector{Float64}}())
 
 @test kf1.x != kf.x
 
-update!(kf1,Nullable([0.09]))
+doUpdate!(kf1,Nullable([0.09]))
 
 @test kf1.x == kf.x

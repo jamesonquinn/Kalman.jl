@@ -14,7 +14,7 @@ function an(x,k,r,deltaT)
 end
 
 fekf(x) = an(x,k,x[1],deltaT)
-gekf(x) = eye(2)
+gekf(x) = Matrix(1.0I,2,2)
 hekf(x) = x[2]
 
 Q = [1e-10 0.0; 0.0 1e-10]
@@ -35,12 +35,12 @@ ys = z.+R[1]*randn(301)
 ps = zeros(t)
 rs = zeros(t)
 
-kf1 = predictupdate(kf,Observation([ys[1]]))
-predictupdate!(kf,Observation([ys[1]]))
+kf1 = predictUpdate(kf,Observation([ys[1]]))
+predictdoUpdate!(kf,Observation([ys[1]]))
 @test kf1.x == kf.x
 
 for i in 2:length(t)
-    kf = predictupdate(kf,Observation([ys[i]]))
+    kf = predictUpdate(kf,Observation([ys[i]]))
     ps[i] = kf.x.x[2]
     rs[i] = kf.x.x[1]
 end

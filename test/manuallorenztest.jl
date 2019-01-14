@@ -136,17 +136,17 @@ np = 1
     d,nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc,lnParams,lnForward = nParticles[np]
 
 
-    x0 = bkf.State(ones(d)*forcingF,initialvar*eye(d))
+    x0 = bkf.State(ones(d)*forcingF,initialvar*Matrix(1.0I,d,d))
 
-    g = eye(d) * processNoiseVar
+    g = Matrix(1.0I,d,d) * processNoiseVar
 
-    q = eye(d)
+    q = Matrix(1.0I,d,d)
 
     f = bkf.LorenzModel(forcingF,d,timeStep,numSteps,g,q)
 
     if false
         #Uniform noise
-        r = eye(d)*measurementNoiseVar
+        r = Matrix(1.0I,d,d)*measurementNoiseVar
     else
         #low noise, with exceptions
         noisevec = fill(basenoise,d)
@@ -184,7 +184,7 @@ np = 1
     #push!(pfs, ps)
     global fap = bkf.FrankenStep(fapf)
     print(fap.p.particles[1:2,1:2], " fap\n")
-    print(bkf.musig(fap)[2][1:2,1:2], " fapμΣ\n")
+    print(bkf.musig(fap)[2][1:2,1:2], " fapμΣ\n"); print("\n","""print(bkf.musig(fap)[2][1:2,1:2], " fapμΣ\n")""")
     global fapSamps = bkf.FrankenStep(fap) #null resample
     #push!(faps, fap)
 
@@ -213,7 +213,7 @@ np = 1
 
         push!(truth, bkf.ap(truth[i-1]))
         print(truth[i].particles,"\n")
-        print("   ",bkf.propagateUncertainty(truth[i])[1:2,1:5],"\n")
+        print("   ",bkf.propagateUncertainty(truth[i])[1:2,1:5],"\n"); print("\n","""print("   ",bkf.propagateUncertainty(truth[i])[1:2,1:5],"\n")""")
     end
 
 
@@ -242,7 +242,7 @@ if false
             sqe = bkf.sqerr(truth[end].particles[:,1],fapSamps.p.particles)
             mvl = bkf.meanvarlocs(fap,3:5)
             frankenkl[np,width,r]  = kls[1]
-            print("\nb14")
+            print("\nb14"); print("\n","""print("\nb14")""")
         #end
         print("\nb15")
 
@@ -258,17 +258,17 @@ if false
                 kf = bkf.update(kf2,observations[i])
                 push!(kfs, kf)
 
-                print("\npart:")
+                print("\npart:"); print("\n","""print("\npart:")""")
                 parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
                 #push!(pfs, ps)
-                print("\nfranken:")
+                print("\nfranken:"); print("\n","""print("\nfranken:")""")
                 franktime = (@timed begin
                     fap = bkf.FrankenStep(fapSamps, observations[i])
                     fapSamps = bkf.FrankenStep(fap)
                 end)[2]
                 #push!(faps, fap)
 
-                print("\nwriting:")
+                print("\nwriting:"); print("\n","""print("\nwriting:")""")
                 dif = kfs[end].x.p - kfs[end].x.p'
                 mean(dif)
                 mean(kfs[end].x.p)
@@ -283,7 +283,7 @@ if false
                 sqe = bkf.sqerr(truth[i].particles[:,1],rsamps)
                 mvl = bkf.meanvarlocs(kfs[end],3:5)
                 idealkl[np,width,r] = kls[1]
-                print("meanvarlocs(truth  ",bkf.meanvarlocs(truth[end],3:5)[1],"\n")
+                print("meanvarlocs(truth  ",bkf.meanvarlocs(truth[end],3:5)[1],"\n"); print("\n","""print("meanvarlocs(truth  ",bkf.meanvarlocs(truth[end],3:5)[1],"\n")""")
                 ##
                 print("meanvarlocs(observations[end]  ",bkf.meanvarlocs(observations[end],3:5)[1],"\n")
                 kls = bkf.kl2(params(finalDist)...,bkf.musig(ps)...)
@@ -299,7 +299,7 @@ if false
                 print("\na")
             end
             print("\nb")
-            print("Finkel ",r, " ... ",nfp)
+            print("Finkel ",r, " ... ",nfp); print("\n","""print("Finkel ",r, " ... ",nfp)""")
             ni, nhist, nIter, i = 1,1,1,2
         end
         useforward, mhType, sampType, ni = [useForwards[1], mhTypes[1], sampTypes[1], 1]
@@ -310,7 +310,7 @@ if false
                     for sampType in sampTypes[1:min(length(sampTypes),lnParams)]
                         for ni = 1:lnIters
                             nIter = nIters[ni]
-                            print("nIter ",nIter)
+                            print("nIter ",nIter); print("\n","""print("nIter ",nIter)""")
                             for nhist = 1:lnHistPerLoc
                                 histPerLoc = histPerLocs[nhist]
 
@@ -319,7 +319,7 @@ if false
                                 #sampType = "sampled..uniform"
                                 #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                                 #push!(fps, fp)
-                                print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
+                                print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n"); print("\n","""print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")""")
                                 kls = bkf.kl2(finalDist,fp.tip.particles)
                                 sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)
                                 finkelkl[np,width,r]  = kls[1]
@@ -329,7 +329,7 @@ if false
                                         finalDist = bkf.toDistribution(kfs[i])
                                         finktime = (@timed fp = bkf.FinkelParticles(fp, observations[i], nIter))[2]
                                         #push!(fps, fp)
-                                        print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
+                                        print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n"); print("\n","""print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")""")
                                         try
                                             kls = bkf.kl2(finalDist,fp.tip.particles)
                                             sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)

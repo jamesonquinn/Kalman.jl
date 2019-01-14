@@ -1,7 +1,7 @@
 using Kalman
 using Base.Test
 
-s = UnscentedState([1.0, 0.0],4*eye(2),0.1,2.0,0.0)
+s = UnscentedState([1.0, 0.0],4*Matrix(1.0I,2,2),0.1,2.0,0.0)
 su,wm,wc = sigma(s)
 
 @test s.x == [1.0,0.0]
@@ -28,7 +28,7 @@ function fu(x)
     x1
 end
 
-fm = AdditiveUnscentedModel(fu,1e-10*eye(2))
+fm = AdditiveUnscentedModel(fu,1e-10*Matrix(1.0I,2,2))
 
 hu(x) = [x[1]]
 

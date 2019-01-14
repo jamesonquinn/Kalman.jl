@@ -2,10 +2,10 @@ function kl2(dist::MvNormal,
             samps::Array{Float64,2},window = 3)
     p = params(dist)
     μ1 = p[1]
-    μ2 = vec(mean(samps,2))
+    μ2 = vec(mean(samps,dims=2))
     d = length(μ1)
-    Σ1 = p[2] * eye(d)
-    Σ2 = cov(samps,2)
+    Σ1 = p[2] * Matrix(1.0I,d,d)
+    Σ2 = cov(samps;dims=2)
     kl2(μ1,Σ1,μ2,Σ2, window)
 end
 
@@ -16,8 +16,8 @@ function kl2(μ1,Σ1raw,μ2,Σ2raw, window = 4)
 
 
 
-    Σ1 = full(Σ1raw)
-    Σ2 = full(Σ2raw)
+    Σ1 = Matrix(Σ1raw)
+    Σ2 = Matrix(Σ2raw)
     d = length(μ1)
     nwind = div(d,window)
     subdivs = zeros(nwind)
@@ -31,16 +31,16 @@ function kl2(μ1,Σ1raw,μ2,Σ2raw, window = 4)
         r = ((w-1) * window + 1):(w * window)
         diff = (μ2[r] - μ1[r])
         try
-            subtr[w] = (trace(inv(Σ2[r,r]) * Σ1[r,r]) - window) / 2
+            subtr[w] = (tr(inv(Σ2[r,r]) * Σ1[r,r]) - window) / 2
         catch
             subtr[w] = 1e6 + (sum(Σ1[i,i] / Σ2[i,i] for i in r) - window) / 2
         end
         subdif[w] = diff' * Σ2[r,r] * diff / 2
         d2, d1 = det(Σ2[r,r]), det(Σ1[r,r])
         if (d2 <= 0)
-            print("kl2 non-positive determinant", d1, " ", d2, " ")
-            print(Σ1[r,r])
-            print(Σ2[r,r])
+            print("kl2 non-positive determinant", d1, " ", d2, " "); print("\n","""print("kl2 non-positive determinant", d1, " ", d2, " ")""")
+            #print(Σ1[r,r])
+            #print(Σ2[r,r])
             d2 = d1
         end
         sublog[w] = (log(d2/d1)) / 2
@@ -99,7 +99,7 @@ end
 #http://www.nowozin.net/sebastian/blog/streaming-log-sum-exp-computation.html
 function logsumexp_batch(X)
     alpha = maximum(X)  # Find maximum value in X
-    log(sum(exp.(X-alpha))) + alpha
+    log(sum(exp.(X .- alpha))) + alpha
 end
 
 #http://www.nowozin.net/sebastian/blog/streaming-log-sum-exp-computation.html
@@ -120,44 +120,44 @@ end
 
 logsumexp = logsumexp_batch
 
-function meanvarlocs(f::ParticleStep, r::Range)
-    locs = vec(sum(f.p.particles[r,:],1))
+function meanvarlocs(f::ParticleStep, r::AbstractRange)
+    locs = vec(sum(f.p.particles[r,:],dims=1))
     (mean(locs, f.p.weights),
-        var(locs, f.p.weights))
+        var(locs, f.p.weights, corrected=false))
 end
 
-function meanvarlocs(f::FinkelParticles, r::Range)
+function meanvarlocs(f::FinkelParticles, r::AbstractRange)
     meanvarlocs(f.tip,r)
 end
 
 
-function meanvarlocs(f::Union{KalmanFilter, FrankenStep}, r::Range)
+function meanvarlocs(f::Union{KalmanFilter, FrankenStep}, r::AbstractRange)
     p=musig(f)
     meanvarlocs(p...,r)
 end
 
-function meanvarlocs(f::Observation, r::Range)
+function meanvarlocs(f::Observation, r::AbstractRange)
     (sum(f.y[r]),0.)
 end
 
-function meanvarlocs(f::ParticleSet, r::Range)
+function meanvarlocs(f::ParticleSet, r::AbstractRange)
     if f.n == 1
         (sum(f.particles[r,1]),0.)
     else
-        locs = vec(sum(f.particles[r,:],1))
+        locs = vec(sum(f.particles[r,:],dims=1))
         (mean(locs),
             var(locs))
     end
 end
 
-function meanvarlocs(f::FrankenSet, r::Range)
+function meanvarlocs(f::FrankenSet, r::AbstractRange)
     (sum(f.particles[r,1]),0.)
 end
 
-function meanvarlocs(μ,Σ,r::Range)
+function meanvarlocs(μ,Σ,r::AbstractRange)
     d = length(μ)
     v = zeros(d)
-    v[r] = 1.
+    v[r] .= 1.
 
     (sum(v .* μ), v⋅(Σ*v))
 end
@@ -193,7 +193,7 @@ end
 
 function musig(f::MvNormal)
     p = params(f)
-    (p[1],full(p[2]))
+    (p[1],p[2]) #full(p[2]))
 end
 
 function musig(f::ParticleStep)

@@ -38,12 +38,12 @@ if testbkf
     @load bkf
 
     x0 = bkf.State([2.,1],[1. -.99; -.99 1])
-    a = eye(2)#[1. .5; -.5 1]
+    a = Matrix(1.0I,2,2)#[1. .5; -.5 1]
     a = a / det(a)
     g = [0.05 0; 0 .05]
-    q = eye(2)
+    q = Matrix(1.0I,2,2)
     f = bkf.LinearModel(a,g,q)
-    h = eye(2)
+    h = Matrix(1.0I,2,2)
     g2 = [1. 0; 0 .8]
     z = bkf.LinearObservationModel(g2)
     kf0 = bkf.BasicKalmanFilter(x0,f,z)
@@ -78,7 +78,7 @@ if testbkf
 
 
 
-    kf1 = bkf.predictupdate(kf,observations[1])
+    kf1 = bkf.predictUpdate(kf,observations[1])
     fra1 = bkf.FinkelParticles(fap,observations[1],1)
     fra100 = bkf.FinkelParticles(fap,observations[1],100)
     fra1k = bkf.FinkelParticles(fap,observations[1],1000)
@@ -257,7 +257,7 @@ noisebleed = .1
 mciter = 6
 
 
-x0 = bkf.State(zeros(d),eye(d))
+x0 = bkf.State(zeros(d),Matrix(1.0I,d,d))
 
 a = SymTridiagonal(ones(d),bleed * ones(d-1))
 a = a * temper / (1+2*bleed) #progression matrix
@@ -268,12 +268,12 @@ b[1,1] = b[d,d] = 1 - jitterbleed^2 / (1-jitterbleed^2)
 g = inv(b)
 g = g / det(g)^(1/d)
 
-q = eye(d)
+q = Matrix(1.0I,d,d)
 
 f = bkf.LinearModel(a,g,q)
 
 
-h = eye(d) * basenoise
+h = Matrix(1.0I,d,d) * basenoise
 for i in 1:lowgap:d
     h[i,i] = lownoise
 end
@@ -291,7 +291,8 @@ r = 1
 
 print("asdt")
 var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
-print("asdt")
+print("asdt"); print("
+","""print("asdt")""")
 
 
 np = 1
@@ -342,7 +343,8 @@ np = 1
         global mvl = bkf.meanvarlocs(kfs[end],3:5)
         global idealkl[np,width,r] = kls[1]
 
-        print("mvl: ",mvl,"\n")
+        print("mvl: ",mvl,"\n"); print("
+","""print("mvl: ",mvl,"\n")""")
 
 
 
@@ -356,7 +358,8 @@ np = 1
             open( fname,  "a") do outfile
                 #
                 global mvl
-                print("2mvl: ",mvl,"\n")
+                print("2mvl: ",mvl,"\n"); print("
+","""print("2mvl: ",mvl,"\n")""")
                 writecsv( outfile, trsp([["truth",
                                     d,#dimension
                                     r,#rep number
@@ -419,7 +422,8 @@ np = 1
                                     "",
                                     mvl[1], mvl[2]]]))
                 ##
-                print("\npart:")
+                print("\npart:"); print("
+","""print("\npart:")""")
                 kls = bkf.kl2(finalDist,ps.p.particles)
                 global sqe = bkf.sqerr(truth[end].particles[:,1],ps)
                 mvl = bkf.meanvarlocs(ps,3:5)
@@ -445,7 +449,8 @@ np = 1
                                     "",
                                     "",
                                     mvl[1], mvl[2]]]))
-                print("\nfranken:")
+                print("\nfranken:"); print("
+","""print("\nfranken:")""")
                 kls = bkf.kl2(finalDist,fap.p.particles)
                 sqe = bkf.sqerr(truth[end].particles[:,1],fap)
                 mvl = bkf.meanvarlocs(fap,3:5)
@@ -473,7 +478,8 @@ np = 1
                                     mvl[1], mvl[2]]]))
                 print("\nb14")
             end
-            print("\nb15")
+            print("\nb15"); print("
+","""print("\nb15")""")
         ######
 
             i = 2
@@ -489,16 +495,19 @@ np = 1
                     kf = bkf.update(kf2,observations[i])
                     push!(kfs, kf)
 
-                    print("\npart:")
+                    print("\npart:"); print("
+","""print("\npart:")""")
                     global ps
                     parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
                     #push!(pfs, ps)
-                    print("\nfranken:")
+                    print("\nfranken:"); print("
+","""print("\nfranken:")""")
                     global fap
                     franktime = (@timed fap = bkf.FrankenStep(fap, observations[i]))[2]
                     #push!(faps, fap)
 
-                    print("\nwriting:")
+                    print("\nwriting:"); print("
+","""print("\nwriting:")""")
                     dif = kfs[end].x.p - kfs[end].x.p'
                     mean(dif)
                     mean(kfs[end].x.p)
@@ -640,7 +649,8 @@ np = 1
             useForward, mhType, sampType, ni = [useForwards[1], mhTypes[1], sampTypes[1], 1]
 
                             nIter = nIters[ni]
-                            print("nIter ",nIter)
+                            print("nIter ",nIter); print("
+","""print("nIter ",nIter)""")
                             for nhist = 1:lnHistPerLoc
                                 histPerLoc = histPerLocs[nhist]
 
@@ -653,7 +663,8 @@ np = 1
                                 #sampType = "sampled..uniform"
                                 #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                                 #push!(fps, fp)
-                                print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
+                                print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n"); print("
+","""print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")""")
                                 kls = bkf.kl2(finalDist,fp.tip.particles)
                                 sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)
                                 finkelkl[np,width,r]  = kls[1]
@@ -663,7 +674,8 @@ np = 1
                                         finalDist = bkf.toDistribution(kfs[i])
                                         finktime = (@timed fp = bkf.FinkelParticles(fp, observations[i], nIter))[2]
                                         #push!(fps, fp)
-                                        print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
+                                        print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n"); print("
+","""print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")""")
                                         try
                                             kls = bkf.kl2(finalDist,fp.tip.particles)
                                             sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)

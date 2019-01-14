@@ -1,10 +1,14 @@
 module bkf
+    using Statistics
+    using StatsBase
   using Distributions
-  using StatsBase
   using Memoize
   using Compat
   using ForwardDiff
-  
+  using LinearAlgebra
+  using DelimitedFiles
+  using Random
+
   import Base.length
 
   abstract type KalmanFilter end
@@ -17,14 +21,14 @@ module bkf
 
   abstract type AbstractState end
 
-  type State{T} <: AbstractState
+  mutable struct State{T} <: AbstractState
       x::Vector{T}
       p::Matrix  #covariance
   end
 
   Base.:(==)(x1::State,x2::State) = x1.x==x2.x && x1.p == x2.p
 
-  type LinearModel <: Model
+  mutable struct LinearModel <: Model
       a::Matrix #state transition matrix
       g::Matrix #process noise to state
       q::Matrix #process noise covariance (hopefully diagonal)
@@ -43,23 +47,23 @@ module bkf
       State(x1,p1)
   end
 
-  type Observation{T}
+  mutable struct Observation{T}
       y::Vector{T}
   end
 
 #  Base.convert(::Type{Observation},y) = Observation([y])
 
-  type LinearObservationModel <: ObservationModel
+  mutable struct LinearObservationModel <: ObservationModel
       h::Matrix #connects state to observations; hopefully eye
       r::Matrix #observation covariance; hopefully diagonal, but not necessarily eye (?)
   end
 
   function LinearObservationModel(h::Matrix)
-      LinearObservationModel(eye(size(h,1)),h)
+      LinearObservationModel(Matrix(1.0I,size(h,1),size(h,1)),h)
   end
 
 
-  type BasicKalmanFilter <: LinearKalmanFilter
+  mutable struct BasicKalmanFilter <: LinearKalmanFilter
       x::State
       f::LinearModel
       z::LinearObservationModel
@@ -83,7 +87,7 @@ module bkf
     MvNormal(kf.x.x,((kf.x.p + kf.x.p') / 2))
   end
 
-      function forwardDistribution(m::LinearModel,x::Vector,r::Range)
+      function forwardDistribution(m::LinearModel,x::Vector,r::AbstractRange)
           #print("aaa",noiseMatrix(m)[1:2,1:2],"\n")
           #print("bbb",noiseMatrix(m)[r,r],"\n")
           #print("ccc",x[1:2],"\n")
@@ -130,11 +134,12 @@ function newCenters(kf::BasicKalmanFilter, oldState)
 end
 
 
-
+include("debug.jl")
 include("lorenz.jl")
 include("particlefilter.jl")
 include("frankenfilter.jl")
 include("finkel.jl")
+include("fuzzfinkel.jl")
 
   include("filter.jl")
   include("unscented.jl")

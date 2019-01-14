@@ -1,17 +1,17 @@
 #### 
 # We need different models from the UKF for dispatch
 
-type AugmentedUnscentedModel <: Model
+mutable struct AugmentedUnscentedModel <: Model
     f::Function
     q::Matrix
 end
 
-type AugmentedUnscentedObservationModel <: Model
+mutable struct AugmentedUnscentedObservationModel <: Model
     h::Function
     r::Matrix
 end
 
-type AugmentedUnscentedKalmanFilter <: KalmanFilter
+mutable struct AugmentedUnscentedKalmanFilter <: KalmanFilter
     x::UnscentedState
     f::AugmentedUnscentedModel
     z::AugmentedUnscentedObservationModel

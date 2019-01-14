@@ -4,12 +4,12 @@ using DataFrames, CSV, DataStructures
 
 abstract type Algo end #filtering algorithms
 
-function predictupdate(state, obs, algo::Algo) #override if you need to pass in extra params - ie, nIter
-    predictupdate(state, obs)
+function predictUpdate(state, obs, algo::Algo) #override if you need to pass in extra params - ie, nIter
+    predictUpdate(state, obs)
 end
 
 
-type KfAlgo <: Algo
+mutable struct KfAlgo <: Algo
 end
 
 function putParams!(algo::KfAlgo,row::OrderedDict)
@@ -22,7 +22,7 @@ function init(algo::KfAlgo, model::KalmanFilter)
     model
 end
 
-type PfAlgo <: Algo
+mutable struct PfAlgo <: Algo
     MEquiv::Int64
 end
 
@@ -42,7 +42,7 @@ function init(algo::PfAlgo, model::KalmanFilter)
     ParticleStep(model,getM(algo))
 end
 
-type BlockAlgo <: Algo
+mutable struct BlockAlgo <: Algo
     MEquiv::Int64
     r::Int64
 end
@@ -64,7 +64,7 @@ function init(algo::BlockAlgo, model::KalmanFilter)
     toFrankenSet(model, getM(algo), algo.r) #kinda a hack
 end
 
-type FinkelAlgo <: Algo
+mutable struct FinkelAlgo <: Algo
     MEquiv::Int64
     r::Int64
     sampType::Type #for now, fixed subparams
@@ -75,8 +75,8 @@ type FinkelAlgo <: Algo
     useForward::Float64
 end
 
-function predictupdate(state, obs, algo::FinkelAlgo) #override if you need to pass in extra params - ie, nIter
-    predictupdate(state, obs, algo.nIter)
+function predictUpdate(state, obs, algo::FinkelAlgo) #override if you need to pass in extra params - ie, nIter
+    predictUpdate(state, obs, algo.nIter)
 end
 
 function getM(algo::FinkelAlgo)
@@ -121,7 +121,7 @@ function createModel(d)
     mciter = 6
     initialvar = 1/(1-temper)
 
-    x0 = State(zeros(d),initialvar*eye(d))
+    x0 = State(zeros(d),initialvar*Matrix(1.0I,d,d))
 
     a = Tridiagonal(bleedl * ones(d-1),bleedm * ones(d),bleedr * ones(d-1))
     a = a * temper / (bleedl+bleedm+bleedr) #progression matrix
@@ -132,7 +132,7 @@ function createModel(d)
     g = Diagonal(jitvec)
 
 
-    q = eye(d)
+    q = Matrix(1.0I,d,d)
 
     f = LinearModel(a,g,q)
 
@@ -245,7 +245,7 @@ function runAlgos(model, obs, algos, reps, saveFileName)
     end
 
     if isfile(saveFileName)
-        print("Appending to existing save file! \n")
+        print("Appending to existing save file! \n"); print("\n","""print("Appending to existing save file! \n")""")
         #check file validity
     else
         print("Writing column headers\n")
@@ -277,20 +277,20 @@ function runAlgos(model, obs, algos, reps, saveFileName)
             paramDict = deepcopy(blankParams)
             putParams!(algo,paramDict)
             basedatavec = [get(paramDict,k,"") for k in keys(paramDict)]
-            print("\n\nAlgo: ",basedatavec,"\n")
+            print("\n\nAlgo: ",basedatavec,"\n"); print("\n","""print("\n\nAlgo: ",basedatavec,"\n")""")
             push!(basedatavec,d) #dimension
             push!(basedatavec,rep) #rep
             push!(basedatavec,runstarttime) #time
 
             state = init(algo, model)
             for i = 2:length(truth)
-                print("Step ",i-1,":     ",basedatavec,"\n")
-                putime = (@timed state = predictupdate(state, observations[i], algo))[2]
+                print("Step ",i-1,":     ",basedatavec,"\n"); print("\n","""print("Step ",i-1,":     ",basedatavec,"\n")""")
+                putime = (@timed state = predictUpdate(state, observations[i], algo))[2]
                 #measure something here? maybe TODO later
                 (μ2,Σ2) = musig(state)
                 (μ1,Σ1) = musig(kfs[i])
                 μ = μ2 - μ1
-                print("Meansqs: resampled:",mean(μ.^2),"\n")
+                print("Meansqs: resampled:",mean(μ.^2),"\n"); print("\n","""print("Meansqs: resampled:",mean(μ.^2),"\n")""")
 
                 datavec = copy(basedatavec)
                 push!(datavec,i-1) #step

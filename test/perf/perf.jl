@@ -11,9 +11,9 @@ a = [1 0.01;
 
 h = [1.0 0]
 
-g = eye(2)
+g = Matrix(1.0I,2,2)
 
-q = 1e-10*eye(2)
+q = 1e-10*Matrix(1.0I,2,2)
 
 r = [0.1]'
 
@@ -39,7 +39,7 @@ for i = 2:1000
 end
 
 for i = 2:1000
-    predictupdate!(kf,Observation([ys[i]]))
+    predictdoUpdate!(kf,Observation([ys[i]]))
     xp[i] = kf.x.x
     pp[i] = kf.x.p
 end
@@ -52,7 +52,7 @@ for i = 2:1000
 end
 
 for i = 2:1000
-    predictupdate!(kf,Observation([ys[i]]))
+    predictdoUpdate!(kf,Observation([ys[i]]))
     xp[i] = kf.x.x
     pp[i] = kf.x.p
 end

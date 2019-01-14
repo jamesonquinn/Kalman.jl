@@ -39,12 +39,12 @@ if testbkf
 
 
     x0 = bkf.State([2.,1],[1. -.99; -.99 1])
-    a = eye(2)#[1. .5; -.5 1]
+    a = Matrix(1.0I,2,2)#[1. .5; -.5 1]
     a = a / det(a)
     g = [0.05 0; 0 .05]
-    q = eye(2)
+    q = Matrix(1.0I,2,2)
     f = bkf.LinearModel(a,g,q)
-    h = eye(2)
+    h = Matrix(1.0I,2,2)
     g2 = [1. 0; 0 .8]
     z = bkf.LinearObservationModel(g2)
     d = 2
@@ -70,7 +70,7 @@ if testbkf
         mciter = 6
         initialvar = 1/(1-temper)
 
-        x0 = bkf.State(zeros(d),initialvar*eye(d))
+        x0 = bkf.State(zeros(d),initialvar*Matrix(1.0I,d,d))
 
         a = Tridiagonal(bleedl * ones(d-1),bleedm * ones(d),bleedr * ones(d-1))
         a = a * temper / (bleedl+bleedm+bleedr) #progression matrix
@@ -81,7 +81,7 @@ if testbkf
         g = Diagonal(jitvec)
 
 
-        q = eye(d)
+        q = Matrix(1.0I,d,d)
 
         f = bkf.LinearModel(a,g,q)
 
@@ -115,7 +115,8 @@ if testbkf
 
     push!(truth, pf1)
     push!(observations, bkf.Observation(pf1,1))#zeros(d)))
-    print(observations[1].y, " observation\n")
+    print(observations[1].y, " observation\n"); print("
+","""print(observations[1].y, " observation\n")""")
     observations[1].y[1:2] = [1, -1]
     y = observations[1]
 
@@ -127,11 +128,12 @@ if testbkf
 
 
 
-    kf1 = bkf.predictupdate(kf,observations[1])
+    kf1 = bkf.predictUpdate(kf,observations[1])
     #fra1 = bkf.FinkelParticles(fap,observations[1],1)
     fra0 = bkf.FinkelParticles(fap,observations[1],0)
     fra1k = bkf.FinkelParticles(fap,observations[1],s)
-    print(fra1k.numMhAccepts/M/s/d,"\n")
+    print(fra1k.numMhAccepts/M/s/d,"\n"); print("
+","""print(fra1k.numMhAccepts/M/s/d,"\n")""")
 
     i,l,fp = [1,1,fra1k]
 
@@ -360,7 +362,7 @@ for np in 1:lnParts
     d,nfp,npf,nfapf,reps,lnIters,T,lnHistPerLoc,lnParams,lnForward = nParticles[np]
 
 
-    x0 = bkf.State(zeros(d),initialvar*eye(d))
+    x0 = bkf.State(zeros(d),initialvar*Matrix(1.0I,d,d))
 
     a = Tridiagonal(bleedl * ones(d-1),bleedm * ones(d),bleedr * ones(d-1))
     a = a * temper / (bleedl+bleedm+bleedr) #progression matrix
@@ -371,7 +373,7 @@ for np in 1:lnParts
     g = Diagonal(jitvec)
 
 
-    q = eye(d)
+    q = Matrix(1.0I,d,d)
 
     f = bkf.LinearModel(a,g,q)
 
@@ -423,7 +425,8 @@ for np in 1:lnParts
     # frankenmeand[width,r] = mean(log.(bkf.pdf(finalDist,faps[end].p.particles)))/d
     # idealmeand[width,r] = mean(log.(bkf.pdf(finalDist,rand(finalDist,50))))/d
 
-    print("\nideal:")
+    print("\nideal:"); print("
+","""print("\nideal:")""")
     global rsamps = rand(finalDist,IDEAL_SAMPLES)
 
     global kls = bkf.kl2(finalDist,rsamps)
@@ -510,7 +513,8 @@ for np in 1:lnParts
                                 mvl[1], mvl[2]]
                                 ["","","",""]]))
             ##
-            print("\npart:")
+            print("\npart:"); print("
+","""print("\npart:")""")
             kls = bkf.kl2(params(finalDist)...,bkf.musig(ps)...)
             sqe = bkf.sqerr(truth[end].particles[:,1],ps)
             mvl = bkf.meanvarlocs(ps,3:5)
@@ -537,7 +541,8 @@ for np in 1:lnParts
                                 "",
                                 mvl[1], mvl[2]]
                                 ["","","",""]]))
-            print("\nfranken:")
+            print("\nfranken:"); print("
+","""print("\nfranken:")""")
             klsideal = bkf.kl2(params(finalDist)...,bkf.musig(fap)...)
             kls = bkf.kl2(finalDist,fapSamps.particles)
             sqe = bkf.sqerr(truth[end].particles[:,1],fapSamps.particles)
@@ -567,7 +572,8 @@ for np in 1:lnParts
                                 klsideal]))
             print("\nb14")
         end
-        print("\nb15")
+        print("\nb15"); print("
+","""print("\nb15")""")
     ######
 
         i = 2
@@ -582,17 +588,20 @@ for np in 1:lnParts
                 kf = bkf.update(kf2,observations[i])
                 push!(kfs, kf)
 
-                print("\npart:")
+                print("\npart:"); print("
+","""print("\npart:")""")
                 parttime = (@timed ps = bkf.ParticleStep(ps,observations[i]))[2]
                 #push!(pfs, ps)
-                print("\nfranken:")
+                print("\nfranken:"); print("
+","""print("\nfranken:")""")
                 franktime = (@timed begin
                     fap = bkf.FrankenStep(fapSamps, observations[i])
                     fapSamps = bkf.FrankenStep(fap)
                 end)[2]
                 #push!(faps, fap)
 
-                print("\nwriting:")
+                print("\nwriting:"); print("
+","""print("\nwriting:")""")
                 dif = kfs[end].x.p - kfs[end].x.p'
                 mean(dif)
                 mean(kfs[end].x.p)
@@ -743,7 +752,8 @@ for np in 1:lnParts
                 for sampType in sampTypes[1:min(length(sampTypes),lnParams)]
                     for ni = 1:lnIters
                         nIter = nIters[ni]
-                        print("nIter ",nIter)
+                        print("nIter ",nIter); print("
+","""print("nIter ",nIter)""")
                         for nhist = 1:lnHistPerLoc
                             histPerLoc = histPerLocs[nhist]
 
@@ -752,7 +762,8 @@ for np in 1:lnParts
                             #sampType = "sampled..uniform"
                             #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                             #push!(fps, fp)
-                            print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
+                            print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n"); print("
+","""print("\nFinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")""")
                             kls = bkf.kl2(finalDist,fp.tip.particles)
                             sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)
                             finkelkl[np,width,r]  = kls[1]
@@ -762,7 +773,8 @@ for np in 1:lnParts
                                     finalDist = bkf.toDistribution(kfs[i])
                                     finktime = (@timed fp = bkf.FinkelParticles(fp, observations[i], nIter))[2]
                                     #push!(fps, fp)
-                                    print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
+                                    print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n"); print("
+","""print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")""")
                                     try
                                         kls = bkf.kl2(finalDist,fp.tip.particles)
                                         sqe = bkf.sqerr(truth[i].particles[:,1],fp.tip.particles)

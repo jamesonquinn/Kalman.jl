@@ -4,7 +4,7 @@
 abstract type UnscentedKalmanFilter <: KalmanFilter end
 abstract type AbstractUnscentedState <: AbstractState end
 
-type UnscentedState{T} <: AbstractUnscentedState
+mutable struct UnscentedState{T} <: AbstractUnscentedState
     x::Vector{T}
     p::Matrix
     α::Real
@@ -12,12 +12,12 @@ type UnscentedState{T} <: AbstractUnscentedState
     κ::Real
 end
 
-type AdditiveUnscentedObservationModel <: ObservationModel
+mutable struct AdditiveUnscentedObservationModel <: ObservationModel
     h::Function
     r::Matrix
 end
 
-type AdditiveUnscentedModel <: Model
+mutable struct AdditiveUnscentedModel <: Model
     f::Function
     q::Matrix
 end
@@ -40,7 +40,7 @@ function ap(f::AdditiveUnscentedModel,s::UnscentedState)
     UnscentedState(xn,pn,s.α,s.β,s.κ)
 end
 
-type AdditiveUnscentedKalmanFilter <: UnscentedKalmanFilter
+mutable struct AdditiveUnscentedKalmanFilter <: UnscentedKalmanFilter
     x::UnscentedState
     f::AdditiveUnscentedModel
     z::AdditiveUnscentedObservationModel

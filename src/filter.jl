@@ -13,10 +13,10 @@ function predict(kf::KalmanFilter)
 end
 
 function update(kf::KalmanFilter,y::Observation)
-    update!(copy(kf),y)
+    doUpdate!(copy(kf),y)
 end
 
-function update!(kf::KalmanFilter,y::Observation)
+function doUpdate!(kf::KalmanFilter,y::Observation)
     #println()
     (res,ph,s) = covs(kf,y)
 
@@ -36,10 +36,10 @@ function update!(kf::KalmanFilter,y::Observation)
     kf
 end
 
-function predictupdate(kf::KalmanFilter,y::Observation)
+function predictUpdate(kf::KalmanFilter,y::Observation)
     update(predict(kf),y)
 end
 
-function predictupdate!(kf::KalmanFilter,y::Observation)
-    update!(predict!(kf),y)
+function predictdoUpdate!(kf::KalmanFilter,y::Observation)
+    doUpdate!(predict!(kf),y)
 end
