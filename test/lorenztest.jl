@@ -709,10 +709,3 @@ end
 [idealkl,finkelkl,frankenkl,partkl
 
 ]
-
-
-
-
-
-
-#room for atom error display

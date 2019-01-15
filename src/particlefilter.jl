@@ -44,6 +44,20 @@ end
   #don't force constructing a pset
 #end
 
+function rejuvenate(pset::ParticleSet,newPortion = .5)
+  L,M = size(pset.particles)
+  Σ = cov(pset.particles;dims=2, weights=pset.weights) #Technically, I should restrict this to banded part, but meh.
+  μ = mean(pset.particles;dims=2, weights=pset.weights)
+  nOld = floor(Int, (1-newPortion) * M)
+  wmean = mean(pset.weights[1:nOld])
+  newParticles = typeof(pset.particles)(undef,L,M)
+  newParticles[:,1:nOld] = pset.particles[:,1:nOld]
+  newParticles[:,(nOld+1):M] = rand(MvNormal(μ,Σ),M-nOld)
+
+  ParticleSet(pset.fliter,pset.n,newParticles,
+            ProbabilityWeights([pset.weights[1:nOld];Vector(wmean,M-nOld)]))
+end
+
 function ap(pset::ParticleSet)
   ε=rand(noiseDistribution(pset.filter),pset.n)
   ParticleSet(pset.filter, pset.n, newCenters(pset.filter, pset.particles) + ε, pset.weights)
@@ -79,22 +93,22 @@ mutable struct ParticleStep <: AbstractParticleFilter
     y::Observation
 end
 
-  function ParticleStep(pset::ParticleSet)
-    o = Observation(Float64[])
-    r = Resample(pset.n)
-    ParticleStep(r, pset, o)
-  end
+function ParticleStep(pset::ParticleSet)
+  o = Observation(Float64[])
+  r = Resample(pset.n)
+  ParticleStep(r, pset, o)
+end
 
-  function ParticleStep(pset::ParticleSet, y::Observation)
-    r = Resample(pset)
-    p = ap(pset,r)
-    reweight!(p,y)
-    ParticleStep(r,p,y)
-  end
+function ParticleStep(pset::ParticleSet, y::Observation)
+  r = Resample(pset)
+  p = ap(pset,r)
+  reweight!(p,y)
+  ParticleStep(r,p,y)
+end
 
-  function ParticleStep(pstep::ParticleStep, y::Observation)
-    ParticleStep(pstep.p,y)
-  end
+function ParticleStep(pstep::ParticleStep, y::Observation)
+  ParticleStep(pstep.p,y)
+end
 
 function ParticleStep(kf::KalmanFilter, n::Int64)
   ParticleStep(ParticleSet(kf,n))
