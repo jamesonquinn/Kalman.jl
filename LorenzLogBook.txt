@@ -24,3 +24,19 @@ initialvar = 0.4 #leaves room for early progress
 basenoise = .05
 highnoise = .5
 highgap = 5
+
+
+....
+
+Somewhat later:
+
+lorenz_1 is the first one I think might work with fuzz propagation code in
+but "rejuvenate" is not actually being called yet. Gonna look at how it's doing.
+(9,200,40^2      ,div(200^2,5),20,1,20,1,1,1),
+
+Using combinedevol.R, the first pair of graphs shows KF doing very well (too well),
+block PF going off the rails at step 5 and not existing after that, bootstrap PF not
+existing after step 2, and finkel not existing at all. Rerun,
+changing from 160 nIters to 80:
+
+lorenz_2:

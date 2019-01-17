@@ -54,7 +54,7 @@ function rejuvenate(pset::ParticleSet,newPortion = .5)
   newParticles[:,1:nOld] = pset.particles[:,1:nOld]
   newParticles[:,(nOld+1):M] = rand(MvNormal(μ,Σ),M-nOld)
 
-  ParticleSet(pset.fliter,pset.n,newParticles,
+  ParticleSet(pset.filter,pset.n,newParticles,
             ProbabilityWeights([pset.weights[1:nOld];Vector(wmean,M-nOld)]))
 end
 
@@ -83,8 +83,30 @@ function reweight!(pset::ParticleSet, y::Observation)
                                 ))
 end
 
+function mysample(::Val{:systematic}, set, w::ProbabilityWeights, n)
+  if 0<sum(w)<Inf
+    inc=sum(w)/n
+    basecut = rand() * inc
+    j = 0
+    results = Vector{Float64}(undef,n)
+    for (i, cursum) in enumerate(cumsum(w))
+      while (basecut + inc * j) < cursum
+        j += 1
+        if j>n
+          debug("mysample overflow", i,j,cursum,n,sum(w), inc)
+          break
+        end
+        results[j] = i
+      end
+    end
+    results
+  else
+    sample(set,n)
+  end
+end
+
 function Resample(pset::ParticleSet)
-  Resample([sample(pset.weights) for i in 1:pset.n])
+  Resample(mysample(Val(:systematic),1:pset.n,pset.weights,pset.n)) #TODO: systematic (low-variance) resampling; Thrun/burgard/fox
 end
 
 mutable struct ParticleStep <: AbstractParticleFilter
@@ -99,7 +121,10 @@ function ParticleStep(pset::ParticleSet)
   ParticleStep(r, pset, o)
 end
 
-function ParticleStep(pset::ParticleSet, y::Observation)
+function ParticleStep(pset::ParticleSet, y::Observation, rejuv=false)
+  if rejuv
+    pset = rejuvenate(pset)
+  end
   r = Resample(pset)
   p = ap(pset,r)
   reweight!(p,y)

@@ -108,8 +108,11 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
                       tipVals,
                       ProbabilityWeights(ones(n)) #dummy value, ignore
                       )
+    if params.rejuv
+      tip=rejuvenate(tip)
+    end
     debugOnce("FinkelParticles", typeof(lps))
-    fp = FinkelParticles(
+    fp = FuzzFinkelParticles(
                 tip,
                 base, #base
                 prev,

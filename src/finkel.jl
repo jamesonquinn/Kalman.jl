@@ -102,6 +102,7 @@ mutable struct FinkelParams{S<:SampleType,MH<:MhType}
     useForward::Float64
     overlap::Float64 #overlap factor for fuzz
     algo::Type
+    rejuv::Bool
 end
 
 
@@ -133,9 +134,10 @@ function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
             radius::Int64 = DEFAULT_PRODUCT_RADIUS,
             useForward::Float64=1.,
             overlap::Float64=2.,
-            algo::Type=FinkelParticles)
+            algo::Type=FinkelParticles,
+            rejuv=true)
     FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc),
-                useForward, overlap, algo)
+                useForward, overlap, algo,rejuv)
 end
 
 #uniform, compromise
@@ -145,11 +147,12 @@ function fparams(
             rSub::Int64,
             useForward::Float64=1.,
             overlap::Float64=2.,
-            algo::Type=FinkelParticles
+            algo::Type=FinkelParticles,
+            rejuv=true
             )
     FinkelParams(SampleUniform(),
                 MhCompromise(radius, histPerLoc, rSub),
-                useForward, overlap, algo)
+                useForward, overlap, algo, rejuv)
 end
 
 #log, sampled
@@ -158,9 +161,11 @@ function fparams(histPerLoc::Int64,
             factor::Float64,
             useForward::Float64=1.,
             overlap::Float64=2.,
-            algo::Type=FinkelParticles)
+            algo::Type=FinkelParticles,
+            rejuv=true)
     FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc),
-                useForward, overlap, algo)
+                useForward, overlap, algo,
+                rejuv)
 end
 
 #log, compromise
@@ -172,11 +177,13 @@ function fparams(inflectionPoint::Float64,
             rSub::Int64,
             useForward::Float64=1.,
             overlap::Float64=2.,
-            algo::Type=FinkelParticles
+            algo::Type=FinkelParticles,
+            rejuv=true
             )
     FinkelParams(SampleLog(inflectionPoint,factor),
                 MhCompromise(radius, histPerLoc, rSub),
-                useForward, overlap, algo)
+                useForward, overlap, algo,
+                rejuv)
 end
 
 
@@ -801,15 +808,31 @@ function predictUpdate(prev::AbstractFinkel, y::Observation, nIter=15, debug=tru
     else
         fp = T(prev,nothing) #nosteps - save time
     end
+    if typeof(fp) != T
+      print(typeof(fp))
+      throw(DomainError())
+    end
     reweight!(fp, y) #set ws
+    if typeof(fp) != fp.params.algo
+      print(typeof(fp))
+      throw(DomainError())
+    end
     replant!(fp) #set tip from base
+    if typeof(fp) != fp.params.algo
+      print(typeof(fp))
+      throw(DomainError())
+    end
     if nIter>0
         for i in 1:fp.tip.n
             mcmc!(fp,i,nIter)
             if debug & ((i % 40)==0)
-                print("Ran particle ", i, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")
+                print("Ran particle ", i, " ", nIter, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")
             end
         end
+    end
+    if typeof(fp) != fp.params.algo
+      print(typeof(fp))
+      throw(DomainError())
     end
     fp
 end

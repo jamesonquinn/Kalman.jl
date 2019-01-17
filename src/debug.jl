@@ -1,13 +1,14 @@
 
-canDebug = false
+canDebug = true
 if canDebug
 
-    verbose = false
+    verbose = true
     function debug(a...)
         global verbose
         if verbose
             for i=a
-                print(i," ")
+                show(i)
+                print(" ")
             end
             print("\n")
         end
@@ -20,10 +21,7 @@ if canDebug
         global debugDone
         if !get(debugDone,a[1],false)
             debugDone[a[1]] = true
-            for i=a
-                print(i," ")
-            end
-            print("\n"); print("\n","""print("\n")""")
+            debug(a...)
         end
     end
 

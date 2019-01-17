@@ -53,7 +53,7 @@ valfname = "lr96fixedest10.2.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "lorenzx13.csv"
+fname = "lorenz_2.csv"
 open( fname,  "a") do outfile
 
     myWritecsv( outfile, trsp(["model",
@@ -88,15 +88,15 @@ NEIGHBORHOOD_SIZE = 4
 IDEAL_SAMPLES = 1000
 
 histPerLocs = [45,30,9]
-nIters = [160,0,80,20,160]
+nIters = [80,0,160,20,40]
 useForwards = [1.,.5,0.]
 #
-if false #false for quickie test
+if true #false for quickie test
     nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (9,800,40^2      ,div(800^2,5),20,1,20,1,1,1),
+              (9,200,40^2      ,div(200^2,5),20,1,20,1,1,1),
               ]
 else
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -149,8 +149,12 @@ global sampType = sampTypes[1]
 
 global forcingF = 8.
 #d is set by nParticles above
-global timeStep = 0.005
-global numSteps = 40
+global timeSuperStep = .5
+global numSteps = 60
+global timeStep = timeSuperStep/numSteps
+if timeStep > .01
+  Val("Error here! increase numSteps or decrease timeSuperStep.")
+end
 global processNoiseVar = 0.001 #Is this good? Needs testing.
 global measurementNoiseVar = 0.1 #Again, ???
 global useMeasurementNoiseVar = false #So ignore above line.
@@ -158,8 +162,8 @@ global initialvar = 0.4 #leaves room for early progress
 
 
 
-global basenoise = .01
-global highnoise = .5
+global basenoise = .04
+global highnoise = 2
 global highgap = 5
 
 global overlapFactor = 2.
@@ -579,12 +583,9 @@ for _np in 1:lnParts
                             print("\n  hm1:")
                             for i in 2:length(t)-1
 
-                                print("\n  hm2:")
                                 open( fname,  "a") do outfile
                                     #
-                                    print("\n  hm3:")
                                     finalDist = bkf.toDistribution(kfs[i])
-                                    print("\n  hm4:")
                                     if true #false to time
                                       fp = bkf.predictUpdate(fp, observations[i], nIter)
                                       finktime = 0.
@@ -592,7 +593,6 @@ for _np in 1:lnParts
                                       finktime = (@timed fp = bkf.predictUpdate(fp, observations[i], nIter))[2]
                                     end
                                     #push!(fps, fp)
-                                    print("\n  hm5:")
                                     print("\nfinkel:",mhType," ",sampType," ",np," ",width," ",r," ",nIter," ",i," ",histPerLoc," \n")
                                     try
                                         kls = bkf.kl2(finalDist,fp.tip.particles)
