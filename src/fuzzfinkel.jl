@@ -11,6 +11,7 @@ DEFAULT_HISTPERLOC = 7
 
 mutable struct FuzzFinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
     tip::ParticleSet{T,F} #This is where we do MCMC and get the answer. Also holds the filter. It's got extra stuff; ignore.
+    obs::Union{Observation,Nothing} #the observation which was used to create this. Not used, only bookkeeping.
     base::Array{T,2} #This is the raw 1-step progression from last time.
                 #As with all similar arrays, size is [d,n]; that is, first index is space and second is particle.
         #[space, particle]
@@ -33,7 +34,7 @@ mutable struct FuzzFinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: Abstrac
         #[space, particle]
     prevProbs::Array{Union{Float64,Nothing},2} #sum over neighborhood history of local probability - avoid double calculation
     localDists::Array{Distribution,2} #for calculating probs
-        #[space, phistory]
+        #[space,phistory]
     totalProb::Array{Float64,2} #convergence diagnostic
     params::P
     numMhAccepts::Int64
@@ -82,23 +83,33 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
     histSampProbs = Array{ProbabilityWeights,2}(undef,d,n)
     localDists = Array{Distribution,2}(undef,d,n)
     logForwardDensities = Array{Float64,2}(undef,d,n)
+    lps = Array{Float64,3}(undef,d,n,n)
     for ph = 1:n
-        for l = 1:d #Ideally we could somehow call forwardDistribution just once but meh
-            localDists[l,ph] = forwardDistribution(filt.f,
-                                    means[:,ph],
-                                    fuzzes[ph],
-                                    l)
+        Σ = Matrix(Hermitian(noiseMatrix(filt.f)+fuzzes[ph]))
+
+        for l = 1:d
+            hood = prodNeighborhood(l,d,myparams.mh.r)
+
+            try
+              localDists[l,ph] = MvNormal(means[hood,ph],Σ[hood,hood])
+            catch y
+              #
+              debug("XXXXX FuzzFinkelParticles error")
+              debug(y)
+              debug(Σ[hood,hood])
+              debug("XXXXXXXX forwardDistribution\n")
+              localDists[l,ph] = MvNormal(means[hood,ph],Matrix(1.0I,size(hood)[1],size(hood)[1]))
+            end
+            #debug("broken",myparams.mh.r,hood,means[hood,ph],localDists[l,ph])
+            for pf = 1:n
+                lps[l,pf,ph] = logpdf(Normal(means[l,ph],Σ[l,l]),
+                                base[l,pf])
+            end
         end
     end
 
-    lps = Array{Float64,3}(undef,d,n,n)
     for pf = 1:n
         for l = 1:d
-
-            for ph = 1:n
-                lps[l,pf,ph] = logpdf(localDists[l,ph],
-                                base[l:l,pf])
-            end
             logForwardDensities[l,pf] = logsumexp(lps[l,pf,:])
             histSampProbs[l,pf] = getSampProbs(lps[l,pf,1:n],pf,myparams.s)
         end
@@ -108,12 +119,13 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
                       tipVals,
                       ProbabilityWeights(ones(n)) #dummy value, ignore
                       )
-    if params.rejuv
+    if myparams.rejuv
       tip=rejuvenate(tip)
     end
     debugOnce("FinkelParticles", typeof(lps))
     fp = FuzzFinkelParticles(
                 tip,
+                nothing,
                 base, #base
                 prev,
                 historyTerms, #historyTerms
@@ -175,19 +187,20 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
 
     filt = getbkf(prev)
     means = newCenters(filt, particleMatrix(prev))
-    histSampProbs = Array{ProbabilityWeights,2}(d,n)
-    localDists = Array{Distribution,2}(0,0)
-    logForwardDensities = Array{Float64,2}(0,0)
+    histSampProbs = Array{ProbabilityWeights,2}(undef,d,n)
+    localDists = Array{Distribution,2}(undef,0,0)
+    logForwardDensities = Array{Float64,2}(undef,0,0)
 
-    lps = Array{Float64,3}(0,0,0)
+    lps = Array{Float64,3}(undef,0,0,0)
     tip = ParticleSet(filt,
                       n,
                       tipVals,
                       ProbabilityWeights(ones(n)) #dummy value, ignore
                       )
     debugOnce("FinkelParticles", typeof(lps))
-    fp = FinkelParticles(
+    fp = FuzzFinkelParticles(
                 tip,
+                nothing,
                 base, #base
                 prev,
                 historyTerms, #historyTerms
@@ -206,6 +219,10 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
     fp
 end
 
+function neighborhoodCenter(fp)
+  div(fp.params.mh.r,2) + 1
+end
+
 """
     probSum(fp,i,h,
             neighborhood,
@@ -219,9 +236,9 @@ function probSum(fp::FuzzFinkelParticles,
         i::Int64, #current particle
         h::Int64, #history
         neighborhood::Vector,
-        l::Nothing,
+        l::Int64,
         lstem::Nothing)
-    pdf(fp.localDists[h],fp.tip.particles[neighborhood,i])
+    pdf(fp.localDists[l,h],fp.tip.particles[neighborhood,i])
 end
 
 function probSum(fp::FuzzFinkelParticles,
@@ -232,6 +249,6 @@ function probSum(fp::FuzzFinkelParticles,
         lstem::Int64)
     lp = 0.
     state = fp.tip.particles[neighborhood,i]
-    state[findfirst(x -> x==l,neighborhood)] = lstem
-    pdf(fp.localDists[h],state)
+    state[neighborhoodCenter(fp)] = lstem
+    pdf(fp.localDists[l,h],state)
 end

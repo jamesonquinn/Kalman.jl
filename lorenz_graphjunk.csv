@@ -1,1 +1,3 @@
 model,dimension,rep,steps,nfp,nfapf,npf,nIter,numMhAccepts,kl,covdiv,meandiv,entropydiv,histPerLoc,sampType,runtime,errorType,sqerr,mhType,useForward,neighborhoodsize,mvlmean,mvlvar,klideal,covdivideal,meandivideal,entropydivideal
+model,dimension,rep,steps,nfp,nfapf,npf,nIter,numMhAccepts,kl,covdiv,meandiv,entropydiv,histPerLoc,sampType,runtime,errorType,sqerr,mhType,useForward,neighborhoodsize,mvlmean,mvlvar,klideal,covdivideal,meandivideal,entropydivideal
+model,dimension,rep,steps,nfp,nfapf,npf,nIter,numMhAccepts,kl,covdiv,meandiv,entropydiv,histPerLoc,sampType,runtime,errorType,sqerr,mhType,useForward,neighborhoodsize,mvlmean,mvlvar,klideal,covdivideal,meandivideal,entropydivideal

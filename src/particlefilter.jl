@@ -46,16 +46,15 @@ end
 
 function rejuvenate(pset::ParticleSet,newPortion = .5)
   L,M = size(pset.particles)
-  Σ = cov(pset.particles;dims=2, weights=pset.weights) #Technically, I should restrict this to banded part, but meh.
-  μ = mean(pset.particles;dims=2, weights=pset.weights)
+  Σ = cov(pset.particles,pset.weights,2) #Technically, I should restrict this to banded part, but meh.
+  μ = vec(mean(pset.particles,pset.weights,2))
   nOld = floor(Int, (1-newPortion) * M)
   wmean = mean(pset.weights[1:nOld])
   newParticles = typeof(pset.particles)(undef,L,M)
   newParticles[:,1:nOld] = pset.particles[:,1:nOld]
   newParticles[:,(nOld+1):M] = rand(MvNormal(μ,Σ),M-nOld)
-
   ParticleSet(pset.filter,pset.n,newParticles,
-            ProbabilityWeights([pset.weights[1:nOld];Vector(wmean,M-nOld)]))
+            ProbabilityWeights([pset.weights[1:nOld];[wmean for i in 1:(M-nOld)]]))
 end
 
 function ap(pset::ParticleSet)
@@ -131,8 +130,8 @@ function ParticleStep(pset::ParticleSet, y::Observation, rejuv=false)
   ParticleStep(r,p,y)
 end
 
-function ParticleStep(pstep::ParticleStep, y::Observation)
-  ParticleStep(pstep.p,y)
+function ParticleStep(pstep::ParticleStep, y::Observation, rejuv=false)
+  ParticleStep(pstep.p,y, rejuv)
 end
 
 function ParticleStep(kf::KalmanFilter, n::Int64)

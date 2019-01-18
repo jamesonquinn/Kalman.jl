@@ -4,7 +4,7 @@ include("delegatemacro.jl")
 
 abstract type AbstractSparseFilter <: KalmanFilter end
 
-DEFAULT_PRODUCT_RADIUS = 1
+DEFAULT_PRODUCT_RADIUS = 4
 DEFAULT_RADIUS_FRINGE = 0
 DEFAULT_HISTPERLOC = 7
 
@@ -195,6 +195,7 @@ end
 
 mutable struct FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
     tip::ParticleSet{T,F} #This is where we do MCMC and get the answer. Also holds the filter. It's got extra stuff; ignore.
+    obs::Union{Observation,Nothing} #the observation which was used to create this. Not used, only bookkeeping.
     base::Array{T,2} #This is the raw 1-step progression from last time.
                 #As with all similar arrays, size is [d,n]; that is, first index is space and second is particle.
         #[space, particle]
@@ -215,7 +216,7 @@ mutable struct FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFin
     means::Array{T,2} #base, progressed, without adding noise.
         #[space, particle]
     prevProbs::Array{Union{Float64,Nothing},2} #sum over neighborhood history of local probability - avoid double calculation
-    localDists::Array{Distribution,2} #for calculating probs
+    #localDists::Array{Distribution,2} #for calculating probs
         #[space, phistory]
     totalProb::Array{Float64,2} #convergence diagnostic
     params::P
@@ -295,6 +296,7 @@ function FinkelParticles(prev::AbstractFinkel,
     debugOnce("FinkelParticles", typeof(lps))
     fp = FinkelParticles(
                 tip,
+                nothing,
                 base, #base
                 prev,
                 historyTerms, #historyTerms
@@ -305,7 +307,7 @@ function FinkelParticles(prev::AbstractFinkel,
                 histSampProbs,
                 means, #means
                 Array{Union{Nothing, Float64},2}(nothing,d,n), #prevProbs
-                localDists, #localDists
+                #localDists, #localDists
                 zeros(d,n), #totalProb
                 myparams,
                 0 #numMhAccepts
@@ -331,7 +333,7 @@ function FinkelParticles(prev::AbstractFinkel,
     filt = getbkf(prev)
     means = newCenters(filt, particleMatrix(prev))
     histSampProbs = Array{ProbabilityWeights,2}(d,n)
-    localDists = Array{Distribution,2}(0,0)
+    #localDists = Array{Distribution,2}(0,0)
     logForwardDensities = Array{Float64,2}(0,0)
 
     lps = Array{Float64,3}(0,0,0)
@@ -343,6 +345,7 @@ function FinkelParticles(prev::AbstractFinkel,
     debugOnce("FinkelParticles", typeof(lps))
     fp = FinkelParticles(
                 tip,
+                nothing,
                 base, #base
                 prev,
                 historyTerms, #historyTerms
@@ -353,7 +356,7 @@ function FinkelParticles(prev::AbstractFinkel,
                 histSampProbs,
                 means, #means
                 fill(Nullable{Float64}(),d,n), #prevProbs
-                localDists, #localDists
+                #localDists, #localDists
                 zeros(d,n), #totalProb
                 myparams,
                 0 #numMhAccepts
@@ -406,9 +409,10 @@ function reweight!(fp::AbstractFinkel, y::Observation)
         else
             forwardProb = 1. #ones(d)
         end
-        wvec = exp.(-diffs[l,:].^2 / vars[l] / 2 ) / forwardProb # ./ if forwardProb is vector
+        wvec = exp.(-diffs[l,:].^2 ./ vars[l] / 2 ) ./ forwardProb # ./ if forwardProb is vector
         fp.ws[l] = ProbabilityWeights(wvec)
     end
+    fp.obs=y
 end
 
 function replant!(fp::AbstractFinkel)
@@ -543,7 +547,7 @@ function probSum(fp::AbstractFinkel,
     d::Int64,
     locn::Int64, #location for neighborhood center
     lh::Int64, #location for history samples
-    lr::T = nothing, #location to replace
+    lr::Int64, #location to replace
     lstem::T = nothing,
     lhist::Nothing = nothing) where T <: Union{Nothing,Int64}
 
@@ -610,7 +614,7 @@ function probSum(
 
     if typeof(lstem) == Nothing
         debugOnce("probSum for MhSampled1",l)
-        a = probSum(fp,i,d,l,l,lstem,lstem,lhist)
+        a = probSum(fp,i,d,l,l,l,lstem,lhist)
         debugOnce("probSum for MhSampled2",a)
         a
     else
@@ -808,20 +812,8 @@ function predictUpdate(prev::AbstractFinkel, y::Observation, nIter=15, debug=tru
     else
         fp = T(prev,nothing) #nosteps - save time
     end
-    if typeof(fp) != T
-      print(typeof(fp))
-      throw(DomainError())
-    end
     reweight!(fp, y) #set ws
-    if typeof(fp) != fp.params.algo
-      print(typeof(fp))
-      throw(DomainError())
-    end
     replant!(fp) #set tip from base
-    if typeof(fp) != fp.params.algo
-      print(typeof(fp))
-      throw(DomainError())
-    end
     if nIter>0
         for i in 1:fp.tip.n
             mcmc!(fp,i,nIter)
@@ -829,10 +821,6 @@ function predictUpdate(prev::AbstractFinkel, y::Observation, nIter=15, debug=tru
                 print("Ran particle ", i, " ", nIter, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")
             end
         end
-    end
-    if typeof(fp) != fp.params.algo
-      print(typeof(fp))
-      throw(DomainError())
     end
     fp
 end

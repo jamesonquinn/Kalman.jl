@@ -217,7 +217,7 @@ for _np in 1:1 #jfc this is stupid but trust me don't change it
     global kfs = Vector{bkf.BasicLorenzFilter}(undef,0)#length(t))
     global pfs = Vector{bkf.ParticleStep}(undef,0)#length(t))
     global faps = Vector{bkf.FrankenStep}(undef,0)
-    global fips = Vector{bkf.FinkelParticles}(undef,0)
+    global fips = Vector{bkf.AbstractFinkel}(undef,0)
 
     global kf = kf0
     push!(kfs, kf)
@@ -323,6 +323,7 @@ for _np in 1:1 #jfc this is stupid but trust me don't change it
 
                             global fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward,
                                   overlapFactor,bkf.FuzzFinkelParticles,true)) #fparams(histPerLoc,2))
+                            global ft = fp
                             #sampType = "sampled..uniform"
                             #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                             #push!(fps, fp)
@@ -360,7 +361,7 @@ end
 
 ]
 
-function graphem()
+function evograph()
     #
     if true #true to show observations
       trace1 = scatter3d(;x=[observations[i].y[1] for i in 1:T],
@@ -381,7 +382,7 @@ function graphem()
                           line=attr(color="#1f77b4", width=1))
     end
     #
-    trace2 = scatter3d(;x=[mean(faps[i].p.particles[1,:],weights=faps[i].p.weights[1]) for i in 1:length(faps)],
+    trace2 = scatter3d(;x=[mean(faps[i].p.particles[1,:],faps[i].p.weights[1]) for i in 1:length(faps)],
                         y=[mean(faps[i].p.particles[2,:]) for i in 1:length(faps)],
                         z=[mean(faps[i].p.particles[3,:]) for i in 1:length(faps)],
                         mode="lines",
@@ -401,4 +402,160 @@ function graphem()
         margin=attr(l=0, r=0, b=0, t=65))
     plot([trace1, trace2,trace3], layout)
 end
-graphem()
+#evograph()
+
+
+function fuzzGraph()
+    #
+    if true #true to show observations
+      trace1 = scatter3d(;x=[observations[2].y[1] for i in 1:T],
+                          y=[observations[2].y[2] for i in 1:T],
+                          z=[observations[2].y[3] for i in 1:T],
+                          mode="lines",
+                          marker=attr(color="#1f77b4", size=12, symbol="circle",
+                                      line=attr(color="rgb(0,0,0)", width=0)),
+                          line=attr(color="#1f77b4", width=1))
+    else
+      #
+      trace1 = scatter3d(;x=[truth[2].particles[1,1] for i in 1:T],
+                          y=[truth[2].particles[2,1] for i in 1:T],
+                          z=[truth[2].particles[3,1] for i in 1:T],
+                          mode="lines",
+                          marker=attr(color="#1f77b4", size=12, symbol="circle",
+                                      line=attr(color="rgb(0,0,0)", width=0)),
+                          line=attr(color="#1f77b4", width=1))
+    end
+    #
+    trace2 = scatter3d(;x=fips[1].means[1,:],
+                        y=fips[1].means[2,:],
+                        z=fips[1].means[3,:],
+                        mode="markers",
+                          marker=attr(color="#9467bd", size=12, symbol="circle",
+                                      line=attr(color="rgb(0,0,0)", width=0)),
+                        line=attr(color="rgb(44, 160, 44)", width=1))
+    #
+    trace3 = scatter3d(;x=[mean(fips[1].localDists[1,i])[3] for i in 1:size(fips[1].localDists)[2]],
+                        y=[mean(fips[1].localDists[2,i])[3] for i in 1:size(fips[1].localDists)[2]],
+                        z=[mean(fips[1].localDists[3,i])[3] for i in 1:size(fips[1].localDists)[2]],
+                        mode="markers",
+                        marker=attr(color="#bcbd22", size=12, symbol="circle",
+                                    line=attr(color="rgb(0,0,0)", width=0)),
+                        line=attr(color="#bcbd22", width=1))
+    #
+    layout = Layout(autosize=false, width=500, height=500,
+        margin=attr(l=20, r=0, b=0, t=65))
+    plot([trace1, trace2], layout)
+end
+#fuzzGraph()
+
+length(fips)
+length(observations)
+
+i = 1
+mean(fips[i].lps) # mean of all quasi-f's
+mean([mean(fips[i].lps[:,i,i]) for i in 1:10]) #mean of same-particle quasi-f's
+mean([max(fips[i].lps[1,i,(i+1):(i+69)]...) for i in 1:10]) #mean of best different-particle quasi-f's
+
+fips[i].obs.y[1:5]
+
+
+
+
+
+mean(fips[i].means,dims=2)[1:5]
+
+
+
+
+
+mean(fips[i].base,dims=2)[1:5]
+
+
+
+
+
+mean(fips[i].tip.particles,dims=2)[1:5]
+
+
+
+
+
+[mean(fips[i].base,fips[i].ws[j],2)[j] for j in 1:5]
+
+
+
+
+
+size(fips[i].tip.particles)
+size(fips[i].ws[1])
+
+observations[i].y[1:5]
+print(fips[i].base[1:2,1],"\n",fips[i].means[1:2,1])
+fips[1].tip.filter.z.h
+
+size(fp.base)
+dimover = 2
+matrix = fp.base
+dimover
+fp.ws
+bkf.reweight!(fp,fp.obs)
+myweights = fp.ws[l]
+#function mmean(matrix,myweights,dimover)
+outy = [x for x in size(matrix)]
+outy[dimover] = 1
+outy
+size(repeat(myweights,outer=outy))
+
+sum(matrix .* repeat(myweights,outer=outy),dimover) / sum(myweights)
+#end
+
+
+fp = fips[i]
+y = fips[i].obs
+
+using StatsBase
+d = size(fp.base,1)
+fp.ws = Vector{ProbabilityWeights}(undef, d)
+diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
+
+fp.base[5,10]
+y.y[5]
+diffs[5,10]
+
+
+
+vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.h is eye and ...r is diagonal
+#for l = 1:d
+
+l = 1
+if false
+    forwardProb = zeros(d)
+    for ph = 1:fp.tip.n
+        forwardProb += exp.(fp.lps[l,:,ph])
+    end
+else
+    forwardProb = 1. #ones(d)
+end
+wvec = exp.(-diffs[l,:].^2 ./ vars[l] / 2 ) ./ forwardProb # ./ if forwardProb is vector
+#fp.ws[l] = ProbabilityWeights(wvec)
+#end
+fp.obs=y
+results = Array{Float64}(undef,5,3)
+results[:,1] = fp.base[l,1:5]
+results[:,2] = diffs[l,1:5]
+results[:,3] = wvec[1:5]
+results
+mean(fp.base,ProbabilityWeights(wvec),2)[l]
+
+
+[mean(fp.base),
+  mean(fp.base,ProbabilityWeights(wvec),2)[l],
+  y.y[l]]
+
+size(mmean(fp.tip.particles,ProbabilityWeights(wvec),2))
+
+mean(nothing)
+sum(fp.ws[2])
+
+ft = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(10),1.,
+      overlapFactor,bkf.FuzzFinkelParticles,true))
