@@ -55,31 +55,6 @@ function trsp(v)
     reshape(v,(1,:))
 end
 fname = "lorenz_graphjunk.csv"
-open( fname,  "a") do outfile
-
-    myWritecsv( outfile, trsp(["model",
-                        "dimension",
-                        "rep",
-                        "steps",
-                        "nfp",#finkel particles
-                        "nfapf",#franken particles
-                        "npf",#part particles
-                        "nIter", #mcmc steps in finkel
-                        "numMhAccepts",
-                        "kl","covdiv","meandiv","entropydiv",
-                        "histPerLoc",#hpl
-                        "sampType",#samp
-                        "runtime",#time
-                        "errorType",
-                        "sqerr",
-                        "mhType",
-                        "useForward",
-                        "neighborhoodsize",
-                        "mvlmean",
-                        "mvlvar",
-                        "klideal","covdivideal","meandivideal","entropydivideal",
-                        ]))
-end
 #@load bkf
 
 using bkf
@@ -92,7 +67,7 @@ histPerLocs = [45,30,9]
 nIters = [80,0,160,20,40]
 useForwards = [1.,.5,0.]
 #
-if false #false for quickie test
+if true #false for quickie test
     nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
@@ -357,6 +332,9 @@ for _np in 1:1 #jfc this is stupid but trust me don't change it
     end
 end
 
+
+
+
 [idealkl,finkelkl,frankenkl,partkl
 
 ]
@@ -382,7 +360,7 @@ function evograph()
                           line=attr(color="#1f77b4", width=1))
     end
     #
-    trace2 = scatter3d(;x=[mean(faps[i].p.particles[1,:],faps[i].p.weights[1]) for i in 1:length(faps)],
+    trace2 = scatter3d(;x=[mean(faps[i].p.particles[1,:]) for i in 1:length(faps)],
                         y=[mean(faps[i].p.particles[2,:]) for i in 1:length(faps)],
                         z=[mean(faps[i].p.particles[3,:]) for i in 1:length(faps)],
                         mode="lines",
@@ -402,7 +380,7 @@ function evograph()
         margin=attr(l=0, r=0, b=0, t=65))
     plot([trace1, trace2,trace3], layout)
 end
-#evograph()
+evograph()
 
 
 function fuzzGraph()
@@ -452,45 +430,47 @@ length(fips)
 length(observations)
 
 i = 1
-mean(fips[i].lps) # mean of all quasi-f's
-mean([mean(fips[i].lps[:,i,i]) for i in 1:10]) #mean of same-particle quasi-f's
-mean([max(fips[i].lps[1,i,(i+1):(i+69)]...) for i in 1:10]) #mean of best different-particle quasi-f's
+fp = fips[i]
+y = fp.obs
+mean(fp.lps) # mean of all quasi-f's
+mean([mean(fp.lps[:,i,i]) for i in 1:10]) #mean of same-particle quasi-f's
+mean([max(fp.lps[1,i,(i+1):(i+69)]...) for i in 1:10]) #mean of best different-particle quasi-f's
 
-fips[i].obs.y[1:5]
-
-
-
-
-
-mean(fips[i].means,dims=2)[1:5]
+fp.obs.y[1:5]
 
 
 
 
 
-mean(fips[i].base,dims=2)[1:5]
+mean(fp.means,dims=2)[1:5]
 
 
 
 
 
-mean(fips[i].tip.particles,dims=2)[1:5]
+mean(fp.base,dims=2)[1:5]
 
 
 
 
 
-[mean(fips[i].base,fips[i].ws[j],2)[j] for j in 1:5]
+mean(fp.tip.particles,dims=2)[1:5]
 
 
 
 
 
-size(fips[i].tip.particles)
-size(fips[i].ws[1])
+[mean(fp.base,fp.ws[j],2)[j] for j in 1:5]
+
+
+
+
+
+size(fp.tip.particles)
+size(fp.ws[1])
 
 observations[i].y[1:5]
-print(fips[i].base[1:2,1],"\n",fips[i].means[1:2,1])
+print(fp.base[1:2,1],"\n",fp.means[1:2,1])
 fips[1].tip.filter.z.h
 
 size(fp.base)
@@ -506,12 +486,10 @@ outy[dimover] = 1
 outy
 size(repeat(myweights,outer=outy))
 
-sum(matrix .* repeat(myweights,outer=outy),dimover) / sum(myweights)
+#sum(matrix .* repeat(myweights,outer=outy),dimover) / sum(myweights)
 #end
 
 
-fp = fips[i]
-y = fips[i].obs
 
 using StatsBase
 d = size(fp.base,1)
@@ -552,10 +530,13 @@ mean(fp.base,ProbabilityWeights(wvec),2)[l]
   mean(fp.base,ProbabilityWeights(wvec),2)[l],
   y.y[l]]
 
-size(mmean(fp.tip.particles,ProbabilityWeights(wvec),2))
+size(mean(fp.tip.particles,ProbabilityWeights(wvec),2))
 
-mean(nothing)
 sum(fp.ws[2])
 
-ft = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(10),1.,
-      overlapFactor,bkf.FuzzFinkelParticles,true))
+ft
+y
+fp1 = bkf.predictUpdate(ft,y,1)
+fp10 = bkf.predictUpdate(ft,y,10)
+fp100 = bkf.predictUpdate(ft,y,100)
+fp = fp1

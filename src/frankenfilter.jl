@@ -21,7 +21,7 @@ function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
 end
 
 
-function rejuvenate(pset::FrankenSet,newPortion = .5)
+function rejuvenate1(pset::FrankenSet,newPortion = .5)
   L,M = size(pset.particles)
   w = div(L, pset.hoodSize)
   newParticles = typeof(pset.particles)(undef,L,M)

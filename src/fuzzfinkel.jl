@@ -55,17 +55,25 @@ end
 
 function FuzzFinkelParticles(prev::AbstractFinkel,
                          myparams::FinkelParams)
-    d, n = size(particleMatrix(prev))
+    prevParts = particleMatrix(prev)
+    d, n = size(prevParts)
     h = myparams.mh.histPerLoc
 
     #get new centers
     filt = getbkf(prev)
-    prevParts = particleMatrix(prev)
     means = newCenters(filt, prevParts)
 
 
-    base = ap(prev.tip).particles #TODO: should use means instead of recalculating them
     fuzzes = getNextFuzzes(filt, prevParts, prev.params)
+    base = copy(means)
+
+    if myparams.rejuv != 0
+      for j = 1:n
+          base[:,j] += rand(MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv))))
+              #Matrix(Hermitian( :  ...Work, stupid!
+              #/4 : rejuv lightly, but pretend it's full. Not actually correct but meh.
+      end
+    end
     tipVals = copy(base)
 
 
@@ -119,9 +127,6 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
                       tipVals,
                       ProbabilityWeights(ones(n)) #dummy value, ignore
                       )
-    if myparams.rejuv
-      tip=rejuvenate(tip)
-    end
     debugOnce("FinkelParticles", typeof(lps))
     fp = FuzzFinkelParticles(
                 tip,
@@ -144,33 +149,6 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
     #getDists!(fp, d, n)
     #calcPrevProbs!(fp, d, n)
     fp
-end
-
-function getNextFuzzes(filt, prevParts, params)
-  d, n = size(prevParts)
-  Σ = cov(prevParts;dims=2)
-  Σinv = inv(Σ)
-  μ = mean(prevParts;dims=2)
-  localVariance = Array{Float64,2}(undef,n,d) #particle, locus
-  basePrecision = Vector{Float64}(undef,d)
-  diffs = prevParts .- μ
-  for l in 1:d
-    hood = prodNeighborhood(l,d,params.mh.r)
-    hooddet = det(Σ[hood,hood])
-    dethat = prod(Σ[i,i] for i in hood)
-    basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/params.mh.r)
-    for p in 1:n
-      dist = MvNormal(Σ[hood,hood])
-      logRelDens = logpdf(dist,diffs[hood,p]) - logpdf(dist,zeros(params.mh.r))
-      localVariance[p,l] = 1/(n-params.mh.r)/(1+exp(logRelDens))
-    end
-  end
-  [propagateUncertainty(filt.f,prevParts[:,p:p],
-      inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
-        prod(exp(localVariance[p,l]/params.mh.r^2)
-        for λ in prodNeighborhood(l,d,params.mh.r))
-      for l in 1:d])))
-    for p in 1:n]
 end
 
 function FuzzFinkelParticles(prev::AbstractFinkel,

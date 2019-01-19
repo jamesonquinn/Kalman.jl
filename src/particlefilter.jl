@@ -43,8 +43,58 @@ end
 #function ap(f::KalmanFilter,ps::Array{T,2})
   #don't force constructing a pset
 #end
+function getCurFuzzes(filt, prevParts, params)
+  d, n = size(prevParts)
+  Σ = cov(prevParts;dims=2)
+  Σinv = inv(Σ)
+  μ = mean(prevParts;dims=2)
+  localVariance = Array{Float64,2}(undef,n,d) #particle, locus
+  basePrecision = Vector{Float64}(undef,d)
+  diffs = prevParts .- μ
+  for l in 1:d
+    hood = prodNeighborhood(l,d,params.mh.r)
+    hooddet = det(Σ[hood,hood])
+    dethat = prod(Σ[i,i] for i in hood)
+    basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/params.mh.r)
+    for p in 1:n
+      dist = MvNormal(Σ[hood,hood])
+      logRelDens = logpdf(dist,diffs[hood,p]) - logpdf(dist,zeros(params.mh.r))
+      localVariance[p,l] = 1/(n-params.mh.r)/(1+exp(logRelDens))
+    end
+  end
+  [inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
+        prod(exp(localVariance[p,l]/params.mh.r^2)
+        for λ in prodNeighborhood(l,d,params.mh.r))
+      for l in 1:d]))
+    for p in 1:n]
+end
 
-function rejuvenate(pset::ParticleSet,newPortion = .5)
+function getNextFuzzes(filt, prevParts, params)
+  d, n = size(prevParts)
+  curFuzzes = getCurFuzzes(filt, prevParts, params)
+  [propagateUncertainty(filt.f,prevParts[:,p:p],
+      curFuzzes[p])
+    for p in 1:n]
+end
+
+function rejuvenateFuzz!(pset::ParticleSet)
+  myparams = params(pset)
+  if myparams.rejuv != 0
+    prevParts = particleMatrix(pset)
+    d, n = size(prevParts)
+    filt = getbkf(pset)
+    newCtrs = newCenters(filt, prevParts)
+    fuzzes = getCurFuzzes(filt, prevParts, prev.params)
+
+    for j = 1:n
+      pset.particles[:,j] += newCtrs[:,j] + rand(
+              MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv))))
+          #Matrix(Hermitian( :  ...Work, stupid!
+          #/4 : rejuv lightly, but pretend it's full. Not actually correct but meh.
+    end
+  end
+end
+function rejuvenateFullCloud(pset::ParticleSet,newPortion = .5)
   L,M = size(pset.particles)
   Σ = cov(pset.particles,pset.weights,2) #Technically, I should restrict this to banded part, but meh.
   μ = vec(mean(pset.particles,pset.weights,2))

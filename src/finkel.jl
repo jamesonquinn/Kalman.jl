@@ -102,7 +102,7 @@ mutable struct FinkelParams{S<:SampleType,MH<:MhType}
     useForward::Float64
     overlap::Float64 #overlap factor for fuzz
     algo::Type
-    rejuv::Bool
+    rejuv::Float64
 end
 
 
@@ -135,7 +135,7 @@ function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
             useForward::Float64=1.,
             overlap::Float64=2.,
             algo::Type=FinkelParticles,
-            rejuv=true)
+            rejuv=.25)
     FinkelParams(SampleUniform(),MhSampled(radius, histPerLoc),
                 useForward, overlap, algo,rejuv)
 end
@@ -148,7 +148,7 @@ function fparams(
             useForward::Float64=1.,
             overlap::Float64=2.,
             algo::Type=FinkelParticles,
-            rejuv=true
+            rejuv=.25
             )
     FinkelParams(SampleUniform(),
                 MhCompromise(radius, histPerLoc, rSub),
@@ -162,7 +162,7 @@ function fparams(histPerLoc::Int64,
             useForward::Float64=1.,
             overlap::Float64=2.,
             algo::Type=FinkelParticles,
-            rejuv=true)
+            rejuv=.25)
     FinkelParams(SampleLog(inflectionPoint,factor),MhSampled(DEFAULT_PRODUCT_RADIUS, histPerLoc),
                 useForward, overlap, algo,
                 rejuv)
@@ -178,7 +178,7 @@ function fparams(inflectionPoint::Float64,
             useForward::Float64=1.,
             overlap::Float64=2.,
             algo::Type=FinkelParticles,
-            rejuv=true
+            rejuv=.25
             )
     FinkelParams(SampleLog(inflectionPoint,factor),
                 MhCompromise(radius, histPerLoc, rSub),
