@@ -10,6 +10,13 @@ mutable struct FrankenSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     weights::Vector{ProbabilityWeights{Float64,Float64,Array{Float64,1}}}
 end
 
+#3
+mutable struct FrankenStep <: AbstractParticleFilter
+    r::Vector{Resample}
+    p::FrankenSet
+    y::Observation
+end
+
 function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
   d = toDistribution(kf)
   width = dimOf(kf.f)
@@ -51,7 +58,7 @@ function ap(pset::FrankenSet)
   FrankenSet(pset.filter, pset.n, pset.hoodSize, newCenters(pset.filter, pset.particles) + ε, pset.weights)
 end
 
-
+#2.2
 function ap(pset::FrankenSet, samp::Vector{Resample})
   n = pset.n
   w = length(samp)
@@ -75,6 +82,7 @@ function ap(pset::FrankenSet, samp::Vector{Resample})
               [ProbabilityWeights(ones(n),Float64(n)) for i in 1:size(pset.weights,1)])
 end
 
+#2.3
 function reweight!(pset::FrankenSet, y::Observation)
   for i in 1:size(pset.weights,1)
       toI = i*pset.hoodSize
@@ -92,15 +100,10 @@ function FResample(pset::FrankenSet)
       for hood in 1:size(pset.weights,1)]
 end
 
+#2.1
 function FResample(n::Int64, hoods)
   [Resample(collect(1:n))
     for hood in 1:hoods]
-end
-
-mutable struct FrankenStep <: AbstractParticleFilter
-    r::Vector{Resample}
-    p::FrankenSet
-    y::Observation
 end
 
 Base.copy(f::FrankenStep) = FrankenStep(f.r, f.p, f.y)
@@ -116,8 +119,9 @@ function FrankenStep(pset::FrankenSet)
   res
 end
 
-function FrankenStep(pset::FrankenSet, y::Observation, rejuv=false)
-  if rejuv
+#2
+function FrankenStep(pset::FrankenSet, y::Observation, rejuv=0.)
+  if rejuv != 0
     pset = rejuvenate(pset)
   end
   r = FResample(pset)
@@ -127,7 +131,8 @@ function FrankenStep(pset::FrankenSet, y::Observation, rejuv=false)
   res
 end
 
-function FrankenStep(pstep::FrankenStep, y::Observation, rejuv=false)
+#1
+function FrankenStep(pstep::FrankenStep, y::Observation, rejuv=0.)
   FrankenStep(pstep.p,y, rejuv)
 end
 
@@ -143,6 +148,7 @@ function nlocs(f::FrankenStep)
     nlocs(f.p)
 end
 
-function predictUpdate(f::Union{FrankenSet,FrankenStep}, y::Observation, rejuv=false)
+#0
+function predictUpdate(f::Union{FrankenSet,FrankenStep}, y::Observation, rejuv=0.)
     FrankenStep(f,y,rejuv)
 end

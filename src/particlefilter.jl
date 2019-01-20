@@ -148,6 +148,10 @@ function mysample(::Val{:systematic}, set, w::ProbabilityWeights, n)
         results[j] = i
       end
     end
+    while j<n
+      results[j] = sample(set)
+      j += 1
+    end
     results
   else
     sample(set,n)

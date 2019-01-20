@@ -16,6 +16,12 @@ mutable struct EkfishLorenzModel <: AbstractLorenz
     volumeFactor::Float64 #shrinks propagated quasi-uncertainty; should result in particles neither crowded nor lonely over subspace of neighboring loci
 end
 
+mutable struct BasicLorenzFilter <: KalmanFilter
+  x::State
+  f::AbstractLorenz
+  z::LinearObservationModel
+end
+
 function dimOf(lm::AbstractLorenz)
     lm.d
 end
@@ -34,7 +40,7 @@ function ap(f::LorenzModel,x::State)
   #if ptrace > maxScale
       p1 = (f.F*3/8)^2 * Matrix(1.0I,f.d,f.d)
   #end
-  print("ap   ",p1[1:3,1:3],"\n"); print("\n","""print("ap   ",p1[1:3,1:3],"\n")""")
+  #print("ap   ",p1[1:3,1:3],"\n"); print("\n","""print("ap   ",p1[1:3,1:3],"\n")""")
   State(x1,p1)
 end
 
@@ -52,11 +58,6 @@ function propagateUncertainty(s) #s::ParticleSet
   propagateUncertainty(s.filter.f,s.particles,s.filter.z.r)
 end
 
-mutable struct BasicLorenzFilter <: KalmanFilter
-  x::State
-  f::AbstractLorenz
-  z::LinearObservationModel
-end
 
 
 function toDistribution(kf::BasicLorenzFilter)

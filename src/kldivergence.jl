@@ -126,7 +126,7 @@ function meanvarlocs(f::ParticleStep, r::AbstractRange)
         var(locs, f.p.weights, corrected=false))
 end
 
-function meanvarlocs(f::FinkelParticles, r::AbstractRange)
+function meanvarlocs(f::AbstractFinkel, r::AbstractRange)
     meanvarlocs(f.tip,r)
 end
 
@@ -206,7 +206,7 @@ function musig(f::Array)
       cov(f,2,corrected=false))
 end
 
-function musig(f::FinkelParticles)
+function musig(f::AbstractFinkel)
     musig(f.tip.particles)
 end
 

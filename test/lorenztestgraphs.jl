@@ -72,7 +72,7 @@ if true #false for quickie test
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (9,200,40^2      ,div(200^2,5),1,1,20,1,1,1),
+              (20,200,40^2      ,div(200^2,5),1,1,20,1,1,1),
               ]
 else
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -180,7 +180,7 @@ for _np in 1:1 #jfc this is stupid but trust me don't change it
 
     fpf = bkf.ParticleSet(kf0,nfp)
     pf = bkf.ParticleSet(kf0,npf)
-    fapf = bkf.toFrankenSet(kf0,nfapf,NEIGHBORHOOD_SIZE)
+    global fapf = bkf.toFrankenSet(kf0,nfapf,NEIGHBORHOOD_SIZE)
 
     pf1 = bkf.ParticleSet(kf0,1)
 
@@ -197,12 +197,12 @@ for _np in 1:1 #jfc this is stupid but trust me don't change it
     global kf = kf0
     push!(kfs, kf)
     global ps = bkf.ParticleStep(pf)
-    #push!(pfs, ps)
+    push!(pfs, ps)
     global fap = bkf.FrankenStep(fapf)
     #print(fap.p.particles[1:2,1:2], " fap\n")
     #print(bkf.musig(fap)[2][1:2,1:2], " fapμΣ\n")
     global fapSamps = copy(fap) #null resample
-    #push!(faps, fap)
+    push!(faps, fap)
 
     push!(truth, pf1)
     push!(observations, bkf.Observation(pf1,1))
@@ -297,7 +297,7 @@ for _np in 1:1 #jfc this is stupid but trust me don't change it
 
 
                             global fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward,
-                                  overlapFactor,bkf.FuzzFinkelParticles,true)) #fparams(histPerLoc,2))
+                                  overlapFactor,bkf.FuzzFinkelParticles,0.25)) #fparams(histPerLoc,2))
                             global ft = fp
                             #sampType = "sampled..uniform"
                             #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
@@ -360,9 +360,9 @@ function evograph()
                           line=attr(color="#1f77b4", width=1))
     end
     #
-    trace2 = scatter3d(;x=[mean(faps[i].p.particles[1,:]) for i in 1:length(faps)],
-                        y=[mean(faps[i].p.particles[2,:]) for i in 1:length(faps)],
-                        z=[mean(faps[i].p.particles[3,:]) for i in 1:length(faps)],
+    trace2 = scatter3d(;x=[mean(faps[i].p.particles[1,:],faps[i].p.weights[1]) for i in 1:length(faps)],
+                        y=[mean(faps[i].p.particles[2,:],faps[i].p.weights[1]) for i in 1:length(faps)],
+                        z=[mean(faps[i].p.particles[3,:],faps[i].p.weights[1]) for i in 1:length(faps)],
                         mode="lines",
                           marker=attr(color="#9467bd", size=12, symbol="circle",
                                       line=attr(color="rgb(0,0,0)", width=0)),
@@ -540,3 +540,82 @@ fp1 = bkf.predictUpdate(ft,y,1)
 fp10 = bkf.predictUpdate(ft,y,10)
 fp100 = bkf.predictUpdate(ft,y,100)
 fp = fp1
+
+[mean(faps[i].p.weights[1]) for i in 1:length(faps)]
+
+bkf.obsNoiseDistribution(faps[i].p.filter)
+
+size(faps)
+
+i= 1
+fips[1].obs.y[1:4]
+
+
+
+
+faps[1].y.y[1:4]
+
+
+i = 2
+
+faps[i].y.y[1:4,1]
+
+
+
+
+mean(faps[i].p.particles[1:4,:],faps[i].p.weights[1],2)
+
+
+
+
+mean(faps[i].p.particles[1:4,:],dims=2)
+
+
+
+
+mean(faps[i].p.weights[1])
+using StatsBase
+using Statistics
+using Distributions
+pset = faps[i].p
+y = faps[i].y
+i = 1
+toI = i*pset.hoodSize
+fromI = toI - pset.hoodSize + 1
+ProbabilityWeights(
+          pdf(bkf.obsNoiseDistribution(pset.filter, fromI, toI),
+              pset.particles[fromI:toI,:] - pset.filter.z.h[fromI:toI,fromI:toI] * repeat(y.y[fromI:toI],outer=[1,size(pset.particles,2)])
+          ))
+
+pset.particles[fromI:toI,1] - pset.filter.z.h[fromI:toI,fromI:toI] * repeat(y.y[fromI:toI],outer=[1,1])
+pset.filter.z.h[fromI:toI,fromI:toI]* repeat(y.y[fromI:toI],outer=[1,1])
+pset.particles[fromI:toI,1]
+
+ProbabilityWeights(
+          pdf(bkf.obsNoiseDistribution(pset.filter, fromI, toI),
+              pset.particles[fromI:toI,1] - pset.filter.z.h[fromI:toI,fromI:toI] * repeat(y.y[fromI:toI],outer=[1,1])
+          ))
+
+(pset.particles[fromI:toI,:] - pset.filter.z.h[fromI:toI,fromI:toI] *
+    repeat(y.y[fromI:toI],outer=[1,size(pset.particles,2)]))[1:4,1:4]
+size(pdf(bkf.obsNoiseDistribution(pset.filter, fromI, toI),
+    pset.particles[fromI:toI,:] - pset.filter.z.h[fromI:toI,fromI:toI] * repeat(y.y[fromI:toI],outer=[1,size(pset.particles,2)])))
+
+fappy = bkf.FrankenStep(faps[1], faps[2].y)
+pset = fappy.p
+
+                          mean(faps[1].p.particles[1:4,:],dims=2)
+median(fappy.p.particles[1:4,:],dims=2)
+4
+
+
+
+smallState = fill(8.,9,2)
+smallState[9,1] = 8.1
+smallState[10,1] = 8.1
+newState = bkf.newCenters(fappy.p.filter,smallState)
+
+smallState = faps[1].p.particles[:,1:4]
+
+
+mean(newState,dims=2)

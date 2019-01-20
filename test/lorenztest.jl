@@ -53,7 +53,7 @@ valfname = "lr96fixedest10.2.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "lorenz_2.csv"
+fname = "lorenz_8.csv"
 open( fname,  "a") do outfile
 
     myWritecsv( outfile, trsp(["model",
@@ -84,10 +84,10 @@ end
 using bkf
 
 
-NEIGHBORHOOD_SIZE = 4
+NEIGHBORHOOD_SIZE = 5
 IDEAL_SAMPLES = 1000
 
-histPerLocs = [45,30,9]
+histPerLocs = [10,20,5]
 nIters = [80,0,160,20,40]
 useForwards = [1.,.5,0.]
 #
@@ -96,7 +96,7 @@ if true #false for quickie test
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (9,200,40^2      ,div(200^2,5),20,1,20,1,1,1),
+              (20,200,40^2      ,div(200^2,2),20,1,20,1,1,1),
               ]
 else
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
@@ -572,7 +572,7 @@ for _np in 1:lnParts
                             histPerLoc = histPerLocs[nhist]
 
 
-                            global fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward,overlapFactor,bkf.FuzzFinkelParticles)) #fparams(histPerLoc,2))
+                            global fp = bkf.FinkelToe(fpf,bkf.FinkelParams(sampType,mhType(histPerLoc),useForward,overlapFactor,bkf.FuzzFinkelParticles,.25)) #fparams(histPerLoc,2))
                             #sampType = "sampled..uniform"
                             #fps = Vector{bkf.AbstractFinkel}(0)#length(t))
                             #push!(fps, fp)
