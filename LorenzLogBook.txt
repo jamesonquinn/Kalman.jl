@@ -66,4 +66,6 @@ PosDefException: matrix is not Hermitian; Cholesky factorization failed.
 
 lorenz_11:
 Stopped prematurely because mean tp diagnostics were too low; 0.02 and the like.
+
+lorenz_12:
 Trying with useForward = 0. ...

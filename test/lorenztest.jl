@@ -53,7 +53,7 @@ valfname = "lr96fixedest10.2.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "lorenz_11.csv"
+fname = "lorenz_12.csv"
 open( fname,  "a") do outfile
 
     myWritecsv( outfile, trsp(["model",
