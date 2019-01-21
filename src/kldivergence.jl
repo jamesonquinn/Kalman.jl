@@ -214,3 +214,11 @@ function musig(stuff::Tuple)
     (resampledParticleSet, yesterdayFrank) = stuff
     musig(resampledParticleSet.particles)
 end
+
+function replace_nan!(x::Array{T}) where T
+    for i = eachindex(x)
+        if isnan(x[i])
+            x[i] = zero(T)
+        end
+    end
+end

@@ -78,3 +78,33 @@ lorenz_15:oops
 
 lorenz_16:
 (also use_forwards = 1.)
+...hmmm neighborhood is still size 1. Gotta fix...
+
+lorenz_17: one chain worked; second chain broke when franken left attractor. Fixed and rerun:
+
+lorenz_18: upping time step to 1. (100 substeps)
+More hermitian fails, but in different places:ArgumentError: Normal: the condition σ > zero(σ) is not satisfied.
+macro expansion at utils.jl:6 [inlined]
+Type at normal.jl:30 [inlined]
+Type at normal.jl:34 [inlined]
+bkf.FuzzFinkelParticles(::bkf.FinkelToe{Float64,bkf.BasicLorenzFilter}, ::bkf.FinkelParams{bkf.SampleUniform,bkf.MhSampled}) at fuzzfinkel.jl:117
+bkf.FuzzFinkelParticles(::bkf.FinkelToe{Float64,bkf.BasicLorenzFilter}) at fuzzfinkel.jl:44
+predictUpdate(::bkf.FinkelToe{Float64,bkf.BasicLorenzFilter}, ::bkf.Observation{Float64}, ::Int64, ::Bool) at finkel.jl:811
+predictUpdate(::bkf.FinkelToe{Float64,bkf.BasicLorenzFilter}, ::bkf.Observation{Float64}, ::Int64) at finkel.jl:809
+(::getfield(Main, Symbol("##27#30")){Int64})(::IOStream) at lorenztest.jl:592
+#open#294(::Base.Iterators.Pairs{Union{},Union{},Tuple{},NamedTuple{(),Tuple{}}}, ::Function, ::getfield(Main, Symbol("##27#30")){Int64}, ::String, ::Vararg{String,N} where N) at iostream.jl:369
+open(::Function, ::String, ::String) at iostream.jl:367
+top-level scope at lorenztest.jl:588
+Error in newCenters: state too far from 0 (slipped out of attractor?)
+"XXXXX FuzzFinkelParticles error"
+PosDefException(-1)
+[NaN NaN NaN NaN; NaN NaN NaN NaN; NaN NaN NaN NaN; NaN NaN NaN NaN]
+"XXXXXXXX forwardDistribution\n"
+
+_19: fixed NaN weights, and caught one more non-negative Normal err. Better yet?...nope minor oops.
+
+_20: More cholesky fuckery. more fixes.
+
+_21 abort
+
+_22:

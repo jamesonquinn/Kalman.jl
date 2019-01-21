@@ -378,7 +378,7 @@ function getSampProbs(lpdfs,
     mn -= 1
     #logpdfs[pf] = mn #avoid (over-juicing low-density futures by choosing the past they're conditional on)
     if (mx - mn) < s.inflectionPoint
-        ProbabilityWeights(logpdfs - mn)
+        result = logpdfs - mn
     else
         v = logpdfs - mn
         inflec = mx - mn - s.inflectionPoint
@@ -387,8 +387,10 @@ function getSampProbs(lpdfs,
                 v[i] += (v[i] - inflec) * s.factor
             end
         end
-        ProbabilityWeights(v)
+        result = v
     end
+    replace_nan!(result)
+    ProbabilityWeights(result)
 end
 
 function particles(fp::AbstractFinkel)
@@ -410,6 +412,8 @@ function reweight!(fp::AbstractFinkel, y::Observation)
             forwardProb = 1. #ones(d)
         end
         wvec = exp.(-diffs[l,:].^2 ./ vars[l] / 2 ) ./ forwardProb # ./ if forwardProb is vector
+
+        replace_nan!(wvec)
         fp.ws[l] = ProbabilityWeights(wvec)
     end
     fp.obs=y

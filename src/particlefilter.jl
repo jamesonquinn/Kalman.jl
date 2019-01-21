@@ -57,7 +57,18 @@ function getCurFuzzes(filt, prevParts, params)
     dethat = prod(Σ[i,i] for i in hood)
     basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/params.mh.r)
     for p in 1:n
-      dist = MvNormal(Σ[hood,hood])
+      try
+        dist = MvNormal(Σ[hood,hood])
+      catch
+        d = length(hood)
+        try
+          debug("Cholesky 3")
+          dist = MvNormal(Σ[hood,hood] + Matrix(1e-4I,d,d))
+        catch
+          debug("Cholesky 4")
+          dist = MvNormal(Matrix(1e-4I,d,d))
+        end
+      end
       logRelDens = logpdf(dist,diffs[hood,p]) - logpdf(dist,zeros(params.mh.r))
       localVariance[p,l] = 1/(n-params.mh.r)/(1+exp(logRelDens))
     end
@@ -127,9 +138,11 @@ function ap(pset::ParticleSet, samp::Resample)
 end
 
 function reweight!(pset::ParticleSet, y::Observation)
-  pset.weights = ProbabilityWeights(pdf(obsNoiseDistribution(pset.filter),
+  ws = pdf(obsNoiseDistribution(pset.filter),
                                 pset.particles - pset.filter.z.h * repeat(y.y,outer=[1,size(pset.particles,2)])
-                                ))
+                                )
+  replace_nan!(ws)
+  pset.weights = ProbabilityWeights(ws)
 end
 
 function mysample(::Val{:systematic}, set, w::ProbabilityWeights, n)

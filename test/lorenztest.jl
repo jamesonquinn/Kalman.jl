@@ -1,4 +1,4 @@
-fname = "lorenz_16.csv"
+fname = "lorenz_22.csv"
 
 
 function ppath(p)
@@ -151,8 +151,8 @@ global sampType = sampTypes[1]
 
 global forcingF = 8.
 #d is set by nParticles above
-global timeSuperStep = .5
-global numSteps = 60
+global timeSuperStep = 1.
+global numSteps = 110
 global timeStep = timeSuperStep/numSteps
 if timeStep > .01
   Val("Error here! increase numSteps or decrease timeSuperStep.")

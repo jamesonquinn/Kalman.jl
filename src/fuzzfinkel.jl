@@ -70,7 +70,13 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
                 #Matrix(Hermitian( :  ...Work, stupid!
                 #/4 : rejuv lightly, but pretend it's full. Not actually correct but meh.
           catch
-            base[:,j] += rand(MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv + Matrix(1e-4I,d,d)))))
+            try
+              debug("Cholesky 1")
+              base[:,j] += rand(MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv + Matrix(1e-4I,d,d)))))
+            catch
+              debug("Cholesky 2")
+              base[:,j] += rand(MvNormal(Matrix(Hermitian(myparams.rejuv * Matrix(1e-2I,d,d)))))
+            end
           end
       end
     end
@@ -110,8 +116,13 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
             end
             #debug("broken",myparams.mh.r,hood,means[hood,ph],localDists[l,ph])
             for pf = 1:n
+              try
                 lps[l,pf,ph] = logpdf(Normal(means[l,ph],Σ[l,l]),
                                 base[l,pf])
+              catch err
+                debug("Normal failed", err, means[l,ph], Σ[l,l], base[l,pf])
+                lps[l,pf,ph] = -2000
+              end
             end
         end
     end
@@ -229,7 +240,7 @@ function probSum(fp::FuzzFinkelParticles,
     state = fp.tip.particles[neighborhood,i]
     state[neighborhoodCenter(fp)] = fp.base[l,lstem] #lstem
     if (i == 1)
-      if (rand() < .0002)
+      if (l == 3) && rand() < 0.001
         debug("probsum denom",logpdf(fp.localDists[l,h],state),logpdf(fp.localDists[l,h],fp.tip.particles[neighborhood,i]))
         debug("probsum      ",fp.tip.particles[neighborhood,i],fp.base[l,lstem],neighborhoodCenter(fp))
     end end

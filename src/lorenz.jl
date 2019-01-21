@@ -207,7 +207,7 @@ function newCenters(lm::LorenzModel, oldState)
                   .* oldState[mod1(i-1, lm.d),:]
               - oldState[i,:] .+ lm.F
               )
-          if abs(newState[i,1]) > 100
+          if i==lm.d && abs(newState[i,1]) > 100
               print("Error in newCenters: state too far from 0 (slipped out of attractor?)\n")
                # ,i,oldState,newState[i],"x\n",
                #                oldState[mod1(i+1, lm.d),:],"y\n",
