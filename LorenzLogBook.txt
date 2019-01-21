@@ -69,3 +69,12 @@ Stopped prematurely because mean tp diagnostics were too low; 0.02 and the like.
 
 lorenz_12:
 Trying with useForward = 0. ...
+
+Aha! was using index instead of value for lstem replacement. Fixed for:
+lorenz_14:
+...which seemed to work but was a quickie so
+
+lorenz_15:oops
+
+lorenz_16:
+(also use_forwards = 1.)

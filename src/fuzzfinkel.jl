@@ -4,10 +4,6 @@ include("delegatemacro.jl")
 
 abstract type AbstractSparseFilter <: KalmanFilter end
 
-DEFAULT_PRODUCT_RADIUS = 1
-DEFAULT_RADIUS_FRINGE = 0
-DEFAULT_HISTPERLOC = 7
-
 
 mutable struct FuzzFinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFinkel
     tip::ParticleSet{T,F} #This is where we do MCMC and get the answer. Also holds the filter. It's got extra stuff; ignore.
@@ -231,6 +227,11 @@ function probSum(fp::FuzzFinkelParticles,
         lstem::Int64)
     lp = 0.
     state = fp.tip.particles[neighborhood,i]
-    state[neighborhoodCenter(fp)] = lstem
+    state[neighborhoodCenter(fp)] = fp.base[l,lstem] #lstem
+    if (i == 1)
+      if (rand() < .0002)
+        debug("probsum denom",logpdf(fp.localDists[l,h],state),logpdf(fp.localDists[l,h],fp.tip.particles[neighborhood,i]))
+        debug("probsum      ",fp.tip.particles[neighborhood,i],fp.base[l,lstem],neighborhoodCenter(fp))
+    end end
     pdf(fp.localDists[l,h],state)
 end

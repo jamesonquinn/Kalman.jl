@@ -1,3 +1,6 @@
+fname = "lorenz_16.csv"
+
+
 function ppath(p)
   if LOAD_PATH[end] != p
     push!(LOAD_PATH,p)
@@ -53,7 +56,6 @@ valfname = "lr96fixedest10.2.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "lorenz_12.csv"
 open( fname,  "a") do outfile
 
     myWritecsv( outfile, trsp(["model",
@@ -89,7 +91,7 @@ IDEAL_SAMPLES = 1000
 
 histPerLocs = [10,20,5]
 nIters = [80,0,160,20,40]
-useForwards = [0.,1.,.5,0.]
+useForwards = [1.,.5,0.]
 #
 if true #false for quickie test
     nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
@@ -107,7 +109,7 @@ else
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (9,80,4^2      ,div(80^2,5),1,1,3,1,1,1),
+              (9,200,4^2      ,div(80^2,5),1,1,5,1,1,1),
               ]
 end
 
