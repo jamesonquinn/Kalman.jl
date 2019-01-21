@@ -142,20 +142,26 @@ function mysample(::Val{:systematic}, set, w::ProbabilityWeights, n)
       while (basecut + inc * j) < cursum
         j += 1
         if j>n
-          debug("mysample overflow", i,j,cursum,n,sum(w), inc)
+          debugOnce("mysample overflow", i,j,cursum,n,sum(w), inc)
           break
         end
         results[j] = i
       end
     end
-    while j<n
-      results[j] = sample(set)
-      j += 1
+    for count in 1:length(results) #double check, yuck.
+      while !(0<results[count]<=n)
+        results[count] = sample(set,w)
+      end
     end
-    results
-  else
-    sample(set,n)
+  else #w is useless for some reason.
+    results = sample(set,n)
+    for count in 1:length(results) #double check, yuck.
+      while !(0<results[count]<=n)
+        results[count] = 1
+      end
+    end
   end
+  results
 end
 
 function Resample(pset::ParticleSet)

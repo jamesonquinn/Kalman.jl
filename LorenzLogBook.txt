@@ -50,3 +50,20 @@ useForwards = [1.,.5,0.]
               (20,200,40^2      ,div(200^2,2),20,1,20,1,1,1),
 
 lorenz_8: resample fixed?
+"mysample overflow" 19994 39820 6.23e-322 20000 6.23e-322 0.0
+still same funny bug
+BoundsError: attempt to access 20×20000 Array{Float64,2} at index [6, 0]
+getindex at array.jl:732 [inlined]
+ap(::bkf.FrankenSet{Float64,bkf.BasicLorenzFilter}, ::Array{bkf.Resample,1}) at frankenfilter.jl:72
+...
+
+lorenz_9: resample finds and "fixes" error
+stupid crash, "fixed"
+
+lorenz_10:
+PosDefException: matrix is not Hermitian; Cholesky factorization failed.
+"fixed" fuzzfinkel.jl 77
+
+lorenz_11:
+Stopped prematurely because mean tp diagnostics were too low; 0.02 and the like.
+Trying with useForward = 0. ...

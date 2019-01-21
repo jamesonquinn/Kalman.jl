@@ -53,7 +53,7 @@ valfname = "lr96fixedest10.2.csv"
 function trsp(v)
     reshape(v,(1,:))
 end
-fname = "lorenz_8.csv"
+fname = "lorenz_11.csv"
 open( fname,  "a") do outfile
 
     myWritecsv( outfile, trsp(["model",
@@ -89,7 +89,7 @@ IDEAL_SAMPLES = 1000
 
 histPerLocs = [10,20,5]
 nIters = [80,0,160,20,40]
-useForwards = [1.,.5,0.]
+useForwards = [0.,1.,.5,0.]
 #
 if true #false for quickie test
     nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,

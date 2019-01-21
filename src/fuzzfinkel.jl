@@ -69,9 +69,13 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
 
     if myparams.rejuv != 0
       for j = 1:n
-          base[:,j] += rand(MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv))))
-              #Matrix(Hermitian( :  ...Work, stupid!
-              #/4 : rejuv lightly, but pretend it's full. Not actually correct but meh.
+          try
+            base[:,j] += rand(MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv))))
+                #Matrix(Hermitian( :  ...Work, stupid!
+                #/4 : rejuv lightly, but pretend it's full. Not actually correct but meh.
+          catch
+            base[:,j] += rand(MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv + Matrix(1e-4I,d,d)))))
+          end
       end
     end
     tipVals = copy(base)
