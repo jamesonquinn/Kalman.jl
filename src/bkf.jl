@@ -23,7 +23,7 @@ module bkf
 
   mutable struct State{T} <: AbstractState
       x::Vector{T}
-      p::Matrix  #covariance
+      p::Matrix{Float64}  #covariance
   end
 
   Base.:(==)(x1::State,x2::State) = x1.x==x2.x && x1.p == x2.p

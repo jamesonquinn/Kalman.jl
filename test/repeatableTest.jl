@@ -7,35 +7,24 @@ function ppath(p)
   end
 end
 
-ppath("/Users/chema/mydev/Kalman.jl/src")
-ppath("/Users/chema/mydev/")
+ppath("/Users/chema/Dropbox/Kalman.jl/src")
+ppath("/Users/chema/Dropbox/")
 ppath("/Users/chema/mydev/Gadfly.jl/src")
 
-macro load(pkg)
-  quote
-    if isdefined(Symbol($(string(pkg))))
-      #try
-      #  reload(ucfirst(string(pkg)))
-      #catch
-        reload($(string(pkg)))
-      #end
-    else
-      import $pkg
-    end
-  end
-end
 
+
+using Revise
 using Distributions, DataStructures
+using bkf
+using DelimitedFiles
+using Random
+using LinearAlgebra
 
-@load bkf
-
-
-
-d = 66
+d = 20
 s = 10
-MEquiv = 400
+MEquiv = 40
 
-mod = bkf.createModel(d)
+mod = bkf.createLorenzModel(d)
 
 mydict = OrderedDict()
 
@@ -51,20 +40,27 @@ ba = bkf.BlockAlgo(MEquiv,3)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mod)
 
-fa = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,30,100,1.)
+fa = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
+                    30, #histPerLoc
+                    40, #nIter
+                    1., #useForward
+                    2., #overlap
+                    bkf.FuzzFinkelParticles,
+                    .25, #rejuv
+                    )
 bkf.putParams!(fa, mydict)
 bkf.init(fa, mod)
 
 
 obs = bkf.createObservations(mod, 5)
 
-testfname = "dummyworld.csv"
+testfname = "dummy2world.csv"
 bkf.saveObservations(obs, testfname, true)
 
 obs2 = bkf.loadObservations(testfname)
 obs2[3][6].x.x .- obs[3][6].x.x #should be zeros(mydict)
 
-fname = "myworld2.csv"
+fname = "myLorenzWorld.csv"
 obs = 0
 if false
     obs = bkf.createObservations(mod, s)
@@ -78,4 +74,4 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 outcomefile = "outcomes_big_"*string(MEquiv)*".csv"
 
-bkf.runAlgos(mod, obs, algos, 30, outcomefile)
+bkf.runAlgos(mod, obs, algos, 3, outcomefile)

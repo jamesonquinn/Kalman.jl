@@ -107,4 +107,18 @@ _20: More cholesky fuckery. more fixes.
 
 _21 abort
 
-_22:
+_22: fuck you, Julia scoping.
+
+_23:
+
+...
+
+_32: too much escaping attractor. Gonna slice time more finely
+
+_33: gone from 110 to 210 slices to make up 1.0 time. Also tightened initialvar from 0.4 to 0.1.
+
+_34: finished without error!
+
+_35: include sampTypeLog... minor bug in that code, fixed.
+
+_36:include sampTypeLog...

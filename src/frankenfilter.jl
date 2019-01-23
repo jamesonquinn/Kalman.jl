@@ -95,9 +95,17 @@ function reweight!(pset::FrankenSet, y::Observation)
 end
 
 function FResample(pset::FrankenSet)
-
-  [Resample(mysample(Val(:systematic),1:pset.n,pset.weights[hood],pset.n))#TODO: systematic (low-variance) resampling; Thrun/burgard/fox
-      for hood in 1:size(pset.weights,1)]
+  s = size(pset.weights,1)
+  result = Vector{Resample}(undef, s)
+  for hood in 1:s
+    try
+      result[hood] = Resample(mysample(Val(:systematic),1:pset.n,pset.weights[hood],pset.n))#systematic (low-variance) resampling; Thrun/burgard/fox
+    catch
+      debug("mysample failure in FResample", hood, pset.n, sum(pset.weights[hood])) #TODO: actually fix this bug, don't just workaround
+      result[hood] = Resample(sample(Val(:systematic),1:pset.n,pset.weights[hood],pset.n))
+    end
+  end
+  result
 end
 
 #2.1
@@ -149,6 +157,6 @@ function nlocs(f::FrankenStep)
 end
 
 #0
-function predictUpdate(f::Union{FrankenSet,FrankenStep}, y::Observation, rejuv=0.)
+function predictUpdate(f::Union{FrankenSet,FrankenStep}, y::Observation, rejuv::Float64=0.)
     FrankenStep(f,y,rejuv)
 end

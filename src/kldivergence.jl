@@ -202,8 +202,8 @@ function musig(f::ParticleStep)
 end
 
 function musig(f::Array)
-    (mean(f,2),
-      cov(f,2,corrected=false))
+    (mean(f,dims=2),
+      cov(f,dims=2,corrected=false))
 end
 
 function musig(f::AbstractFinkel)

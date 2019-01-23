@@ -45,39 +45,64 @@ end
 #end
 function getCurFuzzes(filt, prevParts, params)
   d, n = size(prevParts)
+  hoodd = params.mh.r
   Σ = cov(prevParts;dims=2)
-  Σinv = inv(Σ)
+  replace_nan!(Σ)
+  Σinv = Matrix{Float64}(undef,d,d)
+  try
+    Σinv = inv(Σ)
+  catch
+    Σ += Matrix(1e-6I,d,d)
+    Σinv = inv(Σ)
+    debug("no inverse but I fixed it")
+  end
   μ = mean(prevParts;dims=2)
   localVariance = Array{Float64,2}(undef,n,d) #particle, locus
   basePrecision = Vector{Float64}(undef,d)
   diffs = prevParts .- μ
   for l in 1:d
-    hood = prodNeighborhood(l,d,params.mh.r)
+    hood = prodNeighborhood(l,d,hoodd)
     hooddet = det(Σ[hood,hood])
     dethat = prod(Σ[i,i] for i in hood)
-    basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/params.mh.r)
+    basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/hoodd)
     for p in 1:n
+      dist = MvNormal(Matrix(1e-4I,hoodd,hoodd)) #hopefully this will be replaced
       try
         dist = MvNormal(Σ[hood,hood])
       catch
         d = length(hood)
         try
+          dist = MvNormal(Σ[hood,hood] + Matrix(1e-4I,hood,hood))
           debug("Cholesky 3")
-          dist = MvNormal(Σ[hood,hood] + Matrix(1e-4I,d,d))
         catch
           debug("Cholesky 4")
-          dist = MvNormal(Matrix(1e-4I,d,d))
         end
       end
-      logRelDens = logpdf(dist,diffs[hood,p]) - logpdf(dist,zeros(params.mh.r))
-      localVariance[p,l] = 1/(n-params.mh.r)/(1+exp(logRelDens))
+      logRelDens = logpdf(dist,diffs[hood,p]) - logpdf(dist,zeros(hoodd))
+      localVariance[p,l] = 1/(n-hoodd)/(1+exp(logRelDens))
     end
   end
-  [inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
-        prod(exp(localVariance[p,l]/params.mh.r^2)
-        for λ in prodNeighborhood(l,d,params.mh.r))
-      for l in 1:d]))
-    for p in 1:n]
+
+  # [inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
+  #       prod(exp(localVariance[p,l]/params.mh.r^2)
+  #       for λ in prodNeighborhood(l,d,params.mh.r))
+  #     for l in 1:d]))
+  #   for p in 1:n]
+
+  result = Vector{Matrix{Float64}}(undef,n)
+  for p in 1:n
+    try
+      result[p] = inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
+             prod(exp(localVariance[p,λ]/hoodd^2)
+                #localVar is inherently dimension hoodd, and we have hoodd copies, so divide by hoodd^2
+             for λ in prodNeighborhood(l,d,hoodd))
+           for l in 1:d]))
+    catch
+      debug("Problem in getCurFuzzes", p, basePrecision)
+      result[p] = inv(Σinv + Diagonal([basePrecision[l] / params.overlap for l in 1:d]))
+    end
+  end
+  result
 end
 
 function getNextFuzzes(filt, prevParts, params)

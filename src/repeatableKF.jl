@@ -1,6 +1,9 @@
-using DataFrames, CSV, DataStructures
+using DataFrames, CSV, DataStructures, Dates
 
 ##############filtering algorithms
+
+myWritecsv(io, a; opts...) = writedlm(io, a, ','; opts...)
+myReadcsv(io; opts...) = readdlm(io, ','; opts...)
 
 abstract type Algo end #filtering algorithms
 
@@ -73,6 +76,9 @@ mutable struct FinkelAlgo <: Algo
     #rsub::Int64 #possibly meaningless
     nIter::Int64
     useForward::Float64
+    overlap::Float64
+    algo::Type
+    rejuv::Float64
 end
 
 function predictUpdate(state, obs, algo::FinkelAlgo) #override if you need to pass in extra params - ie, nIter
@@ -95,18 +101,24 @@ function putParams!(algo::FinkelAlgo,row::OrderedDict)
     #row[:rsub] = algo.rsub
     row[:nIter] = algo.nIter
     row[:useForward] = algo.useForward
-    row
+    row[:overlap] = algo.overlap
+    row[:isFuzzed] = string(algo.algo)
+    row[:rejuv] = algo.rejuv
 end
 
 function init(algo::FinkelAlgo, model::KalmanFilter)
     FinkelToe(model, getM(algo), FinkelParams(algo.sampType(),
                                         algo.mhType(algo.r,algo.histPerLoc),
-                                        algo.useForward))
+                                        algo.useForward,
+                                        algo.overlap,
+                                        algo.algo,
+                                        algo.rejuv
+                                        ))
 end
 
 #TODO: algos for kalman "idealized" versions of block and finkel
 
-function createModel(d)
+function createLinearModel(d)
     bleedl = .7#1
     bleedm = .8
     bleedr = .1#.25
@@ -148,12 +160,60 @@ function createModel(d)
     kf0
 end
 
+
+function createLorenzModel(d)
+
+    forcingF = 8.
+    timeSuperStep = 1.
+    numSteps = 210
+    timeStep = timeSuperStep/numSteps
+    if timeStep > .01
+      Val("Error here! increase numSteps or decrease timeSuperStep.")
+    end
+    processNoiseVar = 0.001 #Is this good? Needs testing.
+    measurementNoiseVar = 0.1 #Again, ???
+    useMeasurementNoiseVar = false #So ignore above line.
+    initialvar = 0.1
+
+
+
+    basenoise = .04
+    highnoise = 2
+    highgap = 5
+
+
+    x0 = bkf.State(ones(d)*forcingF,initialvar*Matrix(1.0I,d,d))
+
+    g = Matrix(1.0I,d,d) * processNoiseVar
+
+    q = Matrix(1.0I,d,d)
+
+    f = bkf.LorenzModel(forcingF,d,timeStep,numSteps,g,q)#,overlapFactor)
+
+    if useMeasurementNoiseVar
+        #Uniform noise
+        r = Matrix(1.0I,d,d)*measurementNoiseVar
+    else
+        #low noise, with exceptions
+        noisevec = fill(basenoise,d)
+        noisevec[1:highgap:d] .= highnoise
+        r = Diagonal(noisevec)
+    end
+
+    #var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
+    z = bkf.LinearObservationModel(Array(r))
+    var35 = bkf.meanvarlocs(zeros(d), inv(r), 3:5)[2]
+
+    kf0 = bkf.BasicLorenzFilter(x0,f,z)
+    kf0
+end
+
 function createObservations(model, steps)
     pf1 = ParticleSet(model,1)
 
-    truth = Vector{ParticleSet}(0)#length(t))
-    observations = Vector{Observation}(0)#length(t))
-    kfs = Vector{BasicKalmanFilter}(0)#length(t))
+    truth = Vector{ParticleSet}(undef,0)#length(t))
+    observations = Vector{Observation}(undef,0)#length(t))
+    kfs = Vector{KalmanFilter}(undef,0)#length(t))
     kf = model
 
     push!(kfs, kf)
@@ -179,14 +239,14 @@ end
 
 function saveObservations(obs, fileName, overwrite = false)
     if !overwrite
-        assert(!isfile(fileName))
+        @assert(!isfile(fileName))
     elseif isfile(fileName)
         rm(fileName)
     end
     (truth, observations, kfs) = obs
     for i=2:length(truth)
         open( fileName,  "a") do outfile
-            writecsv( outfile, trsp([truth[i].particles[:,1]
+            myWritecsv( outfile, trsp([truth[i].particles[:,1]
                                      observations[i].y
                                     ]))
         end
@@ -194,15 +254,15 @@ function saveObservations(obs, fileName, overwrite = false)
 end
 
 function loadObservations(fileName)
-    data = readcsv(fileName)
+    data = myReadcsv(fileName)
     d = div(size(data)[2],2)
-    model = createModel(d)
+    model = createLorenzModel(d)
 
     pf1 = ParticleSet(model,1)
 
-    truth = Vector{ParticleSet}(0)#length(t))
-    observations = Vector{Observation}(0)#length(t))
-    kfs = Vector{BasicKalmanFilter}(0)#length(t))
+    truth = Vector{ParticleSet}(undef,0)#length(t))
+    observations = Vector{Observation}(undef,0)#length(t))
+    kfs = Vector{KalmanFilter}(undef,0)#length(t))
     kf = model
 
     push!(kfs, kf)
@@ -259,13 +319,13 @@ function runAlgos(model, obs, algos, reps, saveFileName)
         push!(names,"samptime")
         push!(names,"klerror")
         names = vcat(names,["kl","covdiv","meandiv","entropydiv"])
-        names = vcat(names,[("b"*lpad(i,2,0)) for i in 1:d])
-        names = vcat(names,[("v"*lpad(i,2,0)^2) for i in 1:d])
-        names = vcat(names,[("v"*lpad(i,2,0)*lpad(i+1,2,0)) for i in 1:(d-1)])
-        names = vcat(names,[("v"*lpad(i,2,0)*lpad(i+2,2,0)) for i in 1:(d-2)])
+        names = vcat(names,[("b"*lpad(i,2,"0")) for i in 1:d])
+        names = vcat(names,[("v"*lpad(i,2,"0")^2) for i in 1:d])
+        names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+1,2,"0")) for i in 1:(d-1)])
+        names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+2,2,"0")) for i in 1:(d-2)])
 
         open( saveFileName,  "a") do outfile
-            writecsv( outfile, trsp(names))
+            myWritecsv( outfile, trsp(names))
         end
     end
 
@@ -312,7 +372,7 @@ function runAlgos(model, obs, algos, reps, saveFileName)
                                 [Σ2[i,i+2] for i in 1:(d-2)])
 
                 open( saveFileName,  "a") do outfile
-                    writecsv( outfile, trsp(datavec))
+                    myWritecsv( outfile, trsp(datavec))
                 end
             end
         end
@@ -333,7 +393,8 @@ function finkelAlgos(Ms, sampTypes=[SampleUniform], mhTypes=[MhSampled], histPer
                                                     mh,
                                                     histPerLoc,
                                                     nIter,
-                                                    useForward
+                                                    useForward,
+                                                    2., FuzzFinkelParticles, .25
                                                     )
                                 )
                         end

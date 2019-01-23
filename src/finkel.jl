@@ -117,8 +117,8 @@ end
 #   ft.params
 # end
 
-function FinkelToe(model::KalmanFilter, n, params, algo=FinkelParticles)
-    FinkelToe(ParticleSet(model,n),params,algo)
+function FinkelToe(model::KalmanFilter, n, params)
+    FinkelToe(ParticleSet(model,n),params)
 end
 
 function particleMatrix(fp::AbstractFinkel)
@@ -378,9 +378,9 @@ function getSampProbs(lpdfs,
     mn -= 1
     #logpdfs[pf] = mn #avoid (over-juicing low-density futures by choosing the past they're conditional on)
     if (mx - mn) < s.inflectionPoint
-        result = logpdfs - mn
+        result = logpdfs .- mn
     else
-        v = logpdfs - mn
+        v = logpdfs .- mn
         inflec = mx - mn - s.inflectionPoint
         for i = 1:length(v)
             if v[i] > inflec
@@ -809,7 +809,7 @@ function mcmc!(fp::AbstractFinkel,i::Int64,steps::Int64)
     end
 end
 
-function predictUpdate(prev::AbstractFinkel, y::Observation, nIter=15, debug=true)
+function predictUpdate(prev::AbstractFinkel, y::Observation, nIter::Int64=15, debug=true)
     T = prev.params.algo
     if nIter>0
         fp = T(prev)

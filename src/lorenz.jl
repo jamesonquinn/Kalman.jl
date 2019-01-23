@@ -60,15 +60,18 @@ end
 
 
 
-function toDistribution(kf::BasicLorenzFilter)
-    mineig = minimum(eigvals((kf.x.p + kf.x.p') / 2))
+function toDistribution(lf::BasicLorenzFilter)
+    debug("toDistribution")
+    debug(typeof(lf),typeof(lf.x))
+    pmat = lf.x.p
+    mineig = minimum(eigvals((pmat + pmat') / 2))
 
-    #print("toDistribution ",mineig,kf.x.p[1:3,1:3],"\n"); print("\n","""print("toDistribution ",mineig,kf.x.p[1:3,1:3],"\n")""")
+    #print("toDistribution ",mineig,lf.x.p[1:3,1:3],"\n"); print("\n","""print("toDistribution ",mineig,lf.x.p[1:3,1:3],"\n")""")
     try
-        MvNormal(kf.x.x,((kf.x.p + kf.x.p') / 2))
+        MvNormal(lf.x.x,((lf.x.p + lf.x.p') / 2))
     catch
-       mineig = minimum(eigvals((kf.x.p + kf.x.p') / 2))
-       MvNormal(kf.x.x,((kf.x.p + kf.x.p') / 2) - (mineig*Matrix(1.0I,kf.f.d,kf.f.d)))
+       mineig = minimum(eigvals((lf.x.p + lf.x.p') / 2))
+       MvNormal(lf.x.x,((lf.x.p + lf.x.p') / 2) - (mineig*Matrix(1.0I,lf.f.d,lf.f.d)))
     end
 end
 

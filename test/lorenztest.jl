@@ -1,4 +1,5 @@
-fname = "lorenz_22.csv"
+fname = "lorenz_36.csv"
+fullRun = true
 
 
 function ppath(p)
@@ -93,18 +94,20 @@ histPerLocs = [10,20,5]
 nIters = [80,0,160,20,40]
 useForwards = [1.,.5,0.]
 #
-if true #false for quickie test
+if fullRun #false for quickie test
     nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
               #
-              (20,200,40^2      ,div(200^2,2),20,1,20,1,1,1),
+              (20,200,40^2      ,div(200^2,2),25,1,20,1,2,1),
               ]
 else
 # nParticles = [(5,25,5,40,5,10,1), #nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot
 #             (100, 100,20,10,5,10,3),
 #             (500,250,10,7,3,5,2),
 #             (1000,10,10,4,3,3,2)]
+
+    fname ="quickie"*fname
     nParticles = [ #d,nfp,npf,nfapf,reps,max nIters slot, steps,max histPerLoc slot,
                     #max sampType/mhType, max useForward
               #(60,80,  80^2   *10,div(80^2*2, 1), 4,2,20,1),
@@ -116,9 +119,9 @@ end
 #Small numbers for quicker test
 # nParticles = [(5,25,5,5,5,4), #nfp,npf,nfapf,reps,max nIters slot, steps
 #             (100, 10000,2000,5,5,4)]
-global sampTypes = [bkf.SampleLog(5.,5.), bkf.SampleUniform()]
 global mhTypes = [bkf.MhSampled, bkf.MhCompromise]
 global sampTypes = [bkf.SampleUniform(), bkf.SampleLog(5.,5.)]
+global sampTypes = [bkf.SampleLog(5.,5.), bkf.SampleUniform()]
 global mhTypes = [bkf.MhSampled]
 #mhTypes = []
 global reps = max([_np[4] for _np in nParticles]...)#max of reps above
@@ -152,7 +155,7 @@ global sampType = sampTypes[1]
 global forcingF = 8.
 #d is set by nParticles above
 global timeSuperStep = 1.
-global numSteps = 110
+global numSteps = 210
 global timeStep = timeSuperStep/numSteps
 if timeStep > .01
   Val("Error here! increase numSteps or decrease timeSuperStep.")
@@ -160,7 +163,7 @@ end
 global processNoiseVar = 0.001 #Is this good? Needs testing.
 global measurementNoiseVar = 0.1 #Again, ???
 global useMeasurementNoiseVar = false #So ignore above line.
-global initialvar = 0.4 #leaves room for early progress
+global initialvar = 0.1
 
 
 

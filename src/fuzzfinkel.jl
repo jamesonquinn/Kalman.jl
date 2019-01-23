@@ -116,11 +116,16 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
             end
             #debug("broken",myparams.mh.r,hood,means[hood,ph],localDists[l,ph])
             for pf = 1:n
-              try
-                lps[l,pf,ph] = logpdf(Normal(means[l,ph],Σ[l,l]),
-                                base[l,pf])
-              catch err
-                debug("Normal failed", err, means[l,ph], Σ[l,l], base[l,pf])
+              if isfinite(Σ[l,l])
+                try
+                  lps[l,pf,ph] = logpdf(Normal(means[l,ph],Σ[l,l]),
+                                  base[l,pf])
+                catch err
+                  debug("Normal failed", err, means[l,ph], Σ[l,l], base[l,pf])
+                  lps[l,pf,ph] = -2000
+                end
+              else
+                debugOnce("Normal kinda failed", err, means[l,ph], Σ[l,l], base[l,pf])
                 lps[l,pf,ph] = -2000
               end
             end
@@ -187,6 +192,8 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
                       ProbabilityWeights(ones(n)) #dummy value, ignore
                       )
     debugOnce("FinkelParticles", typeof(lps))
+    prevProbs = Matrix{Union{Nothing,Float64}}(undef,d,n)
+    fill!(prevProbs,nothing)
     fp = FuzzFinkelParticles(
                 tip,
                 nothing,
@@ -199,7 +206,7 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
                 lps,
                 histSampProbs,
                 means, #means
-                fill(Nullable{Float64}(),d,n), #prevProbs
+                prevProbs, #prevProbs
                 localDists, #localDists
                 zeros(d,n), #totalProb
                 myparams,
