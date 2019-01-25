@@ -200,27 +200,29 @@ function newCenters(kf::BasicLorenzFilter, oldState)
     newCenters(kf.f,oldState)
 end
 
-function newCenters(lm::LorenzModel, oldState)
-    newState = oldState
+function newCenters(lm::LorenzModel, oldState::AbstractMatrix) #oldstate is a matrix
+    savedState = similar(oldState)
+    newState = copy(oldState)
+
     for n in 1:lm.ss
-      oldState = copy(newState) #ideally, would be destructive each time except the first, to avoid reallocating memory
+      savedState[:] = newState[:]
       for i in 1:lm.d
           newState[i,:] += lm.s * (
-              (oldState[mod1(i+1, lm.d),:] - oldState[mod1(i-2, lm.d),:])
-                  .* oldState[mod1(i-1, lm.d),:]
-              - oldState[i,:] .+ lm.F
+              (savedState[mod1(i+1, lm.d),:] - savedState[mod1(i-2, lm.d),:])
+                  .* savedState[mod1(i-1, lm.d),:]
+              - savedState[i,:] .+ lm.F
               )
           if i==lm.d && abs(newState[i,1]) > 100
               print("Error in newCenters: state too far from 0 (slipped out of attractor?)\n")
-               # ,i,oldState,newState[i],"x\n",
-               #                oldState[mod1(i+1, lm.d),:],"y\n",
-               #                oldState[mod1(i-2, lm.d),:],"z\n",
-               #                oldState[mod1(i-1, lm.d),:],"a\n",
-               #                oldState[i,:],
+               # ,i,savedState,newState[i],"x\n",
+               #                savedState[mod1(i+1, lm.d),:],"y\n",
+               #                savedState[mod1(i-2, lm.d),:],"z\n",
+               #                savedState[mod1(i-1, lm.d),:],"a\n",
+               #                savedState[i,:],
                #                lm.s * (
-               #                    (oldState[mod1(i+1, lm.d),:] - oldState[mod1(i-2, lm.d),:])
-               #                        .* oldState[mod1(i-1, lm.d),:]
-               #                    - oldState[i,:] + lm.F
+               #                    (savedState[mod1(i+1, lm.d),:] - savedState[mod1(i-2, lm.d),:])
+               #                        .* savedState[mod1(i-1, lm.d),:]
+               #                    - savedState[i,:] + lm.F
                #                    ),
                #                "\n")
           end
@@ -230,14 +232,15 @@ function newCenters(lm::LorenzModel, oldState)
 end
 
 function newCenters(lm::LorenzModel, oldState::Vector)
-    newState = oldState
+    savedState = similar(oldState)
+    newState = copy(oldState)
     for n in 1:lm.ss
-      oldState = copy(newState)
+      savedState[:] = newState[:]
       for i in 1:lm.d
         newState[i] += lm.s * (
-            (oldState[mod1(i+1, lm.d)] - oldState[mod1(i-2, lm.d)])
-                * oldState[mod1(i-1, lm.d)]
-            - oldState[i] + lm.F
+            (savedState[mod1(i+1, lm.d)] - savedState[mod1(i-2, lm.d)])
+                * savedState[mod1(i-1, lm.d)]
+            - savedState[i] + lm.F
             )
       end
     end

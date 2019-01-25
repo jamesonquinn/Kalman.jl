@@ -1,3 +1,20 @@
+nanmean(x) = mean(filter(!isnan,x))
+
+nanmean(x,y::Int64) = mapslices(nanmean,x;dims=y)
+
+nan0(v) = isnan(v) ? 0 : v
+nan0(v1,v2) = isnan(v1) ? 0 : v2
+
+function nanmean(x,w::ProbabilityWeights)
+  sum(nan0(ax)*nan0(aw) for (ax,aw) in zip(x,w)) / sum(nan0(ax,aw) for (ax,aw) in zip(x,w))
+end
+
+
+function nanmean(x,w::ProbabilityWeights,y::Int64)
+  @assert y==2
+  [nanmean(x[v,:],w) for v in 1:size(x,1)]
+end
+
 function kl2(dist::MvNormal,
             samps::Array{Float64,2},window = 3)
     p = params(dist)
@@ -47,7 +64,7 @@ function kl2(μ1,Σ1raw,μ2,Σ2raw, window = 4)
         subdivs[w] = subtr[w] + subdif[w] + sublog[w]
     end
     #print("KL parts:",mean(subtr),",",mean(subdif),",",mean(sublog),",",mean(subdivs))
-    [mean(subdivs),mean(subtr),mean(subdif),mean(sublog)]
+    [nanmean(subdivs),nanmean(subtr),nanmean(subdif),nanmean(sublog)]
 end
 
 
@@ -55,7 +72,7 @@ function sqerr(truth::Array{Float64,1},
             samps::Array{Float64,2})
     nsamps = size(samps)[2]
     mean(
-        mean((truth - samps[:,i]) .^ 2) for i = 1:nsamps
+        nanmean((truth - samps[:,i]) .^ 2) for i = 1:nsamps
         )
 end
 
@@ -70,7 +87,7 @@ function sqerr(truth::Array{Float64,1},
 
     nsamps = size(samps)[2]
     mean(
-        [mean((truth - samps[:,i]) .^ 2) for i = 1:nsamps], f.weights
+        [nanmean((truth - samps[:,i]) .^ 2) for i = 1:nsamps], f.weights
     )
 end
 
@@ -90,7 +107,7 @@ function sqerr(truth::Array{Float64,1},
         # print(mean((truth[fromN:toN,i] - f.particles[fromN:toN,1]) .^ 2)," ")
         # print()
         submeans[n] = mean(
-            [mean((truth[fromN:toN] - f.particles[fromN:toN,i]) .^ 2) for i = 1:f.n], f.weights[n]
+            [nanmean((truth[fromN:toN] - f.particles[fromN:toN,i]) .^ 2) for i = 1:f.n], f.weights[n]
         )
     end
     mean(submeans)
@@ -122,7 +139,7 @@ logsumexp = logsumexp_batch
 
 function meanvarlocs(f::ParticleStep, r::AbstractRange)
     locs = vec(sum(f.p.particles[r,:],dims=1))
-    (mean(locs, f.p.weights),
+    (nanmean(locs, f.p.weights),
         var(locs, f.p.weights, corrected=false))
 end
 
@@ -145,7 +162,7 @@ function meanvarlocs(f::ParticleSet, r::AbstractRange)
         (sum(f.particles[r,1]),0.)
     else
         locs = vec(sum(f.particles[r,:],dims=1))
-        (mean(locs),
+        (nanmean(locs),
             var(locs))
     end
 end
@@ -173,7 +190,7 @@ function musig(f::FrankenSet, lim=999)
         toI = i*f.hoodSize
         fromI = toI - f.hoodSize + 1
 
-        mu[fromI:toI] = mean(f.particles[fromI:toI,:],f.weights[i],2)
+        mu[fromI:toI] = nanmean(f.particles[fromI:toI,:],f.weights[i],2)
         sig[fromI:toI,fromI:toI] = cov(f.particles[fromI:toI,:],f.weights[i],2, corrected=false)
     end
     (mu,sig)
@@ -197,12 +214,12 @@ function musig(f::MvNormal)
 end
 
 function musig(f::ParticleStep)
-    (mean(f.p.particles,f.p.weights,2),
+    (nanmean(f.p.particles,f.p.weights,2),
       cov(f.p.particles,f.p.weights,2,corrected=false))
 end
 
 function musig(f::Array)
-    (mean(f,dims=2),
+    (nanmean(f,2),
       cov(f,dims=2,corrected=false))
 end
 

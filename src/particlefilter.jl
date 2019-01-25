@@ -5,7 +5,7 @@ abstract type AbstractParticleFilter end
 mutable struct ParticleSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     filter::F
     n::Int64
-    particles::Array{T,2} #[location, particle]
+    particles::Array{T,2} #[location, particle] #or is it [particle, location]? Got error, confused.
     weights::ProbabilityWeights
 end
 

@@ -1,50 +1,100 @@
+#Analyze nonlinear output conditional on fixed truth and observations
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 library(ggplot2)
 library(data.table)
 library(gridExtra)
 library(ggsci)
 library(plyr)
 library(tidyr)
+library(stringr)
+shifter = function(x, n = 1) {
+  if (n == 0) x else c(tail(x, -n), head(x, n))
+}
+#read data from different formats and merge to common format
 
-cond = fread("1outcomes_big_400.csv")
-for i = 2:6 {
-  cond = rbind(cond, fread(paste0(i,"outcomes_big_400.csv")))
-}
-condi = cond[nIter %in% c(NA,160),]
+d = 20 #dimension
+
+cond = fread("nondest_200.csv")
+condi = cond[nIter %in% c(NA,40),]
 condi[,mean(kl),by=model ]
-condi[,mean(b11^2),by=list(model,step) ]
-pre_b = 22
-pre_v = 52
-biases = data.table()
-for (l in 1:10) {
-  oneterm_left = condi[,c(1,14,pre_b-2+3*l),with=F]
-  onevar = condi[,c(1,14,pre_v-2+3*l),with=F]
-  #oneterm[,loc:=l]
-  names(oneterm_left)[3] = "error"
-  names(onevar)[3] = "theestvar"
-  oneterm_left[,estvar:=onevar[,theestvar]]
-  biases = rbind(biases,oneterm_left[,list(bias=mean(error),variance=var(error),
-                                             estvar=estvar,neighborhood=l,loc=-2+3*l,border=T,position=-1),by=list(model,step)],
-                  fill=T)
-  oneterm_center = condi[,c(1,14,pre_b-1+3*l),with=F]
-  onevar = condi[,c(1,14,pre_v-1+3*l),with=F]
-  #oneterm[,loc:=l]
-  names(oneterm_center)[3] = "error"
-  names(onevar)[3] = "theestvar"
-  oneterm_center[,estvar:=onevar[,theestvar]]
-  biases = rbind(biases,oneterm_center[,list(bias=mean(error),variance=var(error),
-                                               estvar=estvar,neighborhood=l,loc=-1+3*l,border=F,position=0),by=list(model,step)],
-                  fill=T)
-  oneterm_right = condi[,c(1,14,pre_b+3*l),with=F]
-  onevar = condi[,c(1,14,pre_v+3*l),with=F]
-  #oneterm[,loc:=l]
-  names(oneterm_right)[3] = "error"
-  names(onevar)[3] = "theestvar"
-  oneterm_right[,estvar:=onevar[,theestvar]]
-  biases = rbind(biases,oneterm_right[,list(bias=mean(error),variance=var(error),
-                                              estvar=estvar,neighborhood=l,loc=3*l,border=F,position=0),by=list(model,step)],
-                  fill=T)
+condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
+
+blocksize = 5
+nblocks = floor(d/blocksize)
+measurevars = rep(c(0.36,0.09,1.,4.,   1.,.09,4.,0.36),10)[1:d]
+measuresds = sqrt(measurevars)
+peersds = shifter(measuresds,-1)
+quadneighborsds = shifter(measuresds,-2) *  shifter(measuresds,1)
+
+
+if (F) { #look at raw values
+      truth = fread("nondestructiveWorld.csv")
+      for (i in 1:d) {
+        cat(i,
+            mean((truth[,i,with=F]-truth[,i+d,with=F])[[1]]),
+            var(truth[,i,with=F]-truth[,i+d,with=F]),
+            measuresds[i],
+            "\n")
+      }
 }
-biases[,mean(bias^2),by=list(model,border) ]
+
+
+stepcol = match("step",names(condi))
+pre_d = match("d01",names(condi)) - 1 #number of the last col before the "b's" μ
+pre_v = match("v0101",names(condi)) - 1 #number of the last col before the "v's" Σ
+
+
+biases = data.table()
+for (l in 1:nblocks) {
+  for (j in 1:blocksize) {
+    oneterm = condi[,c(1,stepcol,pre_d+j+blocksize*(l-1)),with=F] #model, step
+    onevar = condi[,c(1,stepcol,pre_v+j+blocksize*(l-1)),with=F]
+    #oneterm[,loc:=l]
+    names(oneterm)[3] = "error"
+    names(onevar)[3] = "theestvar"
+    oneterm[,estvar:=onevar[,theestvar]]
+    biases = rbind(biases,oneterm[,list(bias=mean(error),variance=var(error),
+                                               estvar=mean(estvar),
+                                        block=l,position=j,
+                                        border=(j %in% c(1,2,blocksize)),
+                                        doubleborder=(j == 1),
+                                        mysd=measuresds[j+blocksize*(l-1)],
+                                        peersd=peersds[j+blocksize*(l-1)],
+                                        quadsd=quadneighborsds[j+blocksize*(l-1)]),
+                                  by=list(model,step)],
+                    fill=T)
+  }
+}
+#condi[,list(b01=mean(b01),k01=mean(k01),t01=mean(t01),o01=mean(o01),do=mean(do01)),by=list(model,step)]
+allbiases = biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
+             mvar=sqrt(mean(variance,na.rm=T)),
+             mvar=sqrt(mean(estvar,na.rm=T)),
+             mysd=mean(mysd),
+             peersd=mean(peersd),
+             quadsd=mean(quadsd),
+             border=border[1],
+             doubleborder=doubleborder[1],
+             anyborder=border[1] | doubleborder[1]
+               ),by=list(model,position,block) ]
+biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
+             mvar=sqrt(mean(variance,na.rm=T)),
+             mvar=sqrt(mean(estvar,na.rm=T))
+),by=list(model) ]
+biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
+             mvar=sqrt(mean(variance,na.rm=T)),
+             mvar=sqrt(mean(estvar,na.rm=T))
+),by=list(model,position) ]
+oneterm[model=="Block PF"&step==1,error]
+
+
+summary(lm(msqbias ~ mysd + peersd + quadsd, data=allbiases[model=="Finkelstein PF",]))
+summary(lm(msqbias ~ mysd + peersd + quadsd + `|`(border,doubleborder), data=allbiases[model=="Block PF",]))
+
+
+
+
+
 
 
 

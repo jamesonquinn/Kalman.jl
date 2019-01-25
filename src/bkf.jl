@@ -130,6 +130,7 @@ module bkf
     end
 
 function newCenters(kf::BasicKalmanFilter, oldState)
+    debug("old version nopers")
     kf.f.a * oldState
 end
 

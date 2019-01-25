@@ -122,3 +122,25 @@ _34: finished without error!
 _35: include sampTypeLog... minor bug in that code, fixed.
 
 _36:include sampTypeLog...
+
+1-5 outcomes_big_200: repeatable with
+d = 20
+s = 10
+MEquiv = 200
+forcingF = 8.
+timeSuperStep = 1.
+numSteps = 210
+processNoiseVar = 0.001 #Is this good? Needs testing.
+initialvar = 0.1
+basenoise = .04
+highnoise = 2
+highgap = 5
+30, #histPerLoc
+40, #nIter
+1., #useForward
+2., #overlap
+bkf.FuzzFinkelParticles,
+.25, #rejuv
+
+Xoutcomes_big_400: with vec measurementNoiseVar = [0.36,0.09,1.,4.,   1.,.09,4.,0.36]
+and nanmean (probably will break)

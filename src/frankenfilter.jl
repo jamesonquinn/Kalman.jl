@@ -102,7 +102,7 @@ function FResample(pset::FrankenSet)
       result[hood] = Resample(mysample(Val(:systematic),1:pset.n,pset.weights[hood],pset.n))#systematic (low-variance) resampling; Thrun/burgard/fox
     catch
       debug("mysample failure in FResample", hood, pset.n, sum(pset.weights[hood])) #TODO: actually fix this bug, don't just workaround
-      result[hood] = Resample(sample(Val(:systematic),1:pset.n,pset.weights[hood],pset.n))
+      result[hood] = Resample(sample(1:pset.n,pset.weights[hood],pset.n))
     end
   end
   result

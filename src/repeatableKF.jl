@@ -1,4 +1,7 @@
 using DataFrames, CSV, DataStructures, Dates
+using NaNMath
+
+REPEATABLE_VERSION = 1.0
 
 ##############filtering algorithms
 
@@ -51,7 +54,7 @@ mutable struct BlockAlgo <: Algo
 end
 
 function getM(algo::BlockAlgo)
-    div(algo.MEquiv^2, 5)
+    div(algo.MEquiv^2, 2)
 end
 
 function putParams!(algo::BlockAlgo,row::OrderedDict)
@@ -171,15 +174,10 @@ function createLorenzModel(d)
       Val("Error here! increase numSteps or decrease timeSuperStep.")
     end
     processNoiseVar = 0.001 #Is this good? Needs testing.
-    measurementNoiseVar = 0.1 #Again, ???
-    useMeasurementNoiseVar = false #So ignore above line.
-    initialvar = 0.1
+    measurementNoiseVar = [0.36,0.09,1.,4.,   1.,.09,4.,0.36]
+    mnvvec = repeat(measurementNoiseVar,40)[1:d]
+    initialvar = 0.0009
 
-
-
-    basenoise = .04
-    highnoise = 2
-    highgap = 5
 
 
     x0 = bkf.State(ones(d)*forcingF,initialvar*Matrix(1.0I,d,d))
@@ -190,15 +188,7 @@ function createLorenzModel(d)
 
     f = bkf.LorenzModel(forcingF,d,timeStep,numSteps,g,q)#,overlapFactor)
 
-    if useMeasurementNoiseVar
-        #Uniform noise
-        r = Matrix(1.0I,d,d)*measurementNoiseVar
-    else
-        #low noise, with exceptions
-        noisevec = fill(basenoise,d)
-        noisevec[1:highgap:d] .= highnoise
-        r = Diagonal(noisevec)
-    end
+    r = diagm(0=>mnvvec)
 
     #var35 = bkf.meanvarlocs(zeros(d), inv(h), 3:5)[2]
     z = bkf.LinearObservationModel(Array(r))
@@ -214,23 +204,40 @@ function createObservations(model, steps)
     truth = Vector{ParticleSet}(undef,0)#length(t))
     observations = Vector{Observation}(undef,0)#length(t))
     kfs = Vector{KalmanFilter}(undef,0)#length(t))
+    difs = Vector{Vector{Float64}}(undef,0)
     kf = model
 
     push!(kfs, kf)
 
     push!(truth, pf1)
     push!(observations, Observation(pf1,1))
+    push!(difs, [observations[1].y[l]-truth[1].particles[l,1] for l in 1:5])
+
 
     for i in 2:(steps+1)
 
         push!(truth, ap(truth[i-1]))
         push!(observations, Observation(truth[i],1))
+        push!(difs, [observations[i].y[l]-truth[i].particles[l,1] for l in 1:5])
+        #debug(difs[i])
         kf2 = bkf.predict(kf)
         kf = update(kf2,observations[i])
         push!(kfs, kf)
     end
 
     (truth, observations, kfs)
+end
+
+if false #testing code; pseudo-pastebin
+  model = bkf.createLorenzModel(20)
+  pf1 = bkf.ParticleSet(model,1)
+  (mytruths, myobss, mykfs,mydifs) = bkf.createObservations(model,100)
+  [(mean(myobss[j].y[l]-mytruths[j].particles[l,1] for j in 2:100),
+    var(myobss[j].y[l]-mytruths[j].particles[l,1] for j in 2:100),
+    cor([myobss[j].y[l] for j in 2:100],[mytruths[j].particles[l,1] for j in 2:100]))
+          for l in 1:20]
+  l = 1
+  [(myobss[j].y[l]-mytruths[j].particles[l,1],mydifs[j][l]) for j in 1:5]
 end
 
 function trsp(v)
@@ -274,7 +281,7 @@ function loadObservations(fileName)
 
         push!(truth, ParticleSet(model,
                                 1,
-                                data[i:i,1:d],
+                                Matrix((data[i:i,1:d])'),
                                 ProbabilityWeights(ones(d))))
 
         push!(observations,
@@ -291,7 +298,7 @@ function loadObservations(fileName)
 end
 
 function runAlgos(model, obs, algos, reps, saveFileName)
-
+    #debug(obs)
     (truth, observations, kfs) = obs
     runstarttime = Dates.now()
     d = length(model.x.x)
@@ -310,6 +317,7 @@ function runAlgos(model, obs, algos, reps, saveFileName)
     else
         print("Writing column headers\n")
         names = [string(param) for param in keys(blankParams)]
+        push!(names,"version")
         push!(names,"dimension")
         push!(names,"rep")
         push!(names,"startTime")
@@ -319,11 +327,13 @@ function runAlgos(model, obs, algos, reps, saveFileName)
         push!(names,"samptime")
         push!(names,"klerror")
         names = vcat(names,["kl","covdiv","meandiv","entropydiv"])
-        names = vcat(names,[("b"*lpad(i,2,"0")) for i in 1:d])
+        names = vcat(names,[("d"*lpad(i,2,"0")) for i in 1:d])
         names = vcat(names,[("v"*lpad(i,2,"0")^2) for i in 1:d])
         names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+1,2,"0")) for i in 1:(d-1)])
         names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+2,2,"0")) for i in 1:(d-2)])
 
+        names = vcat(names,[("t"*lpad(i,2,"0")) for i in 1:d])
+        names = vcat(names,[("o"*lpad(i,2,"0")) for i in 1:d])
         open( saveFileName,  "a") do outfile
             myWritecsv( outfile, trsp(names))
         end
@@ -333,11 +343,16 @@ function runAlgos(model, obs, algos, reps, saveFileName)
 
 
     for rep in 1:reps
+        debug("Rep:",rep)
+        debug()
+        debug()
+        debug()
         for algo = algos
             paramDict = deepcopy(blankParams)
             putParams!(algo,paramDict)
             basedatavec = [get(paramDict,k,"") for k in keys(paramDict)]
             print("\n\nAlgo: ",basedatavec,"\n"); print("\n","""print("\n\nAlgo: ",basedatavec,"\n")""")
+            push!(basedatavec,REPEATABLE_VERSION) #version
             push!(basedatavec,d) #dimension
             push!(basedatavec,rep) #rep
             push!(basedatavec,runstarttime) #time
@@ -349,7 +364,8 @@ function runAlgos(model, obs, algos, reps, saveFileName)
                 #measure something here? maybe TODO later
                 (μ2,Σ2) = musig(state)
                 (μ1,Σ1) = musig(kfs[i])
-                μ = μ2 - μ1
+                debug("sizes",i,size(μ2),size(truth[i].particles))
+                μ = μ2 - truth[i].particles[:,1]
                 print("Meansqs: resampled:",mean(μ.^2),"\n"); print("\n","""print("Meansqs: resampled:",mean(μ.^2),"\n")""")
 
                 datavec = copy(basedatavec)
@@ -367,9 +383,12 @@ function runAlgos(model, obs, algos, reps, saveFileName)
                 end
                 datavec = vcat(datavec,
                                 μ,
-                                [Σ2[i,i] for i in 1:d],
-                                [Σ2[i,i+1] for i in 1:(d-1)],
-                                [Σ2[i,i+2] for i in 1:(d-2)])
+                                [Σ2[l,l] for l in 1:d],
+                                [Σ2[l,l+1] for l in 1:(d-1)],
+                                [Σ2[l,l+2] for l in 1:(d-2)],
+                                [truth[i].particles[l,1] for l in 1:d],
+                                [observations[i].y[l] for l in 1:d]
+                              )
 
                 open( saveFileName,  "a") do outfile
                     myWritecsv( outfile, trsp(datavec))
