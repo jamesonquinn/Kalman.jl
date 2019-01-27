@@ -55,8 +55,8 @@ bkf.putParams!(kfa,mydict)
 bkf.init(kfa, mod)
 
 pf = bkf.PfAlgo(MEquiv)
-bkf.putParams!(pfa, mydict)
-bkf.init(pfa, mod)
+bkf.putParams!(pf, mydict)
+bkf.init(pf, mod)
 
 ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
