@@ -1,5 +1,5 @@
 
-MEquiv = 400
+MEquiv = 200
 easy = false
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"

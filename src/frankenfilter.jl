@@ -27,49 +27,75 @@ function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
                   #ProbabilityWeights[ProbabilityWeights(ones(n),Float64(n)) for i in 1:nHoods]) #?
 end
 
-function rejuvenate(pset::FrankenSet,rejuv=1.)
-  fuzzes = getCurFuzzes(pset.filter, pset.particles, fparams(0,
-                                                pset.hoodSize,
-                                                0.,
-                                                1., #overlap is multiplied in below
-                                                DataType,
-                                                rejuv
-                                                ))
+function rejuvenate(pset::union{FrankenSet,ParticleSet},rejuv=1., quick = false)
   newset = deepcopy(pset)
-  for (i, fuzz) in enumerate(fuzzes)
+  d, n = size(particleMatrix(prev))
+  if quick
+    fuzz = getCurFuzzQuick(pset.filter, pset.particles, fparams(0,
+                                                  pset.hoodSize,
+                                                  0.,
+                                                  1., #overlap is multiplied in below
+                                                  DataType,
+                                                  rejuv
+                                                  ))
+    #
+    fuzzdist = ZeroMeanFullNormalCanon(Matrix(1.0I,size(hood)[1],size(hood)[1]))
     try
-      newset.particles[:,i] += rand(MvNormal(Matrix(Hermitian(fuzz * rejuv))))
+      fuzzdist = ZeroMeanFullNormalCanon(Matrix(Hermitian(fuzz * rejuv))))
     catch y
-      debug("rejuvenate",fuzz[1:3,1:3])
+      debug("rejuvenatequick",fuzz[1:3,1:3])
       try
-        newset.particles[:,i] += rand(MvNormal(Matrix(Hermitian(fuzz * rejuv + Matrix(1e-4I,d,d)))))
+        fuzzdist= ZeroMeanFullNormalCanon(Matrix(Hermitian(fuzz * rejuv + Matrix(1e-4I,d,d))))
       catch
+      end
+    end
+    for i in 1:(size(pset.particles)[2])
+      newset.particles[:,i] += rand(fuzzdist)
+    end
+  else
+    fuzzes = getCurFuzzes(pset.filter, pset.particles, fparams(0,
+                                                  pset.hoodSize,
+                                                  0.,
+                                                  1., #overlap is multiplied in below
+                                                  DataType,
+                                                  rejuv
+                                                  ))
+    #
+    for (i, fuzz) in enumerate(fuzzes)
+      try
+        newset.particles[:,i] += rand(MvNormal(Matrix(Hermitian(fuzz * rejuv))))
+      catch y
+        debug("rejuvenate",fuzz[1:3,1:3])
+        try
+          newset.particles[:,i] += rand(MvNormal(Matrix(Hermitian(fuzz * rejuv + Matrix(1e-4I,d,d)))))
+        catch
+        end
       end
     end
   end
   newset
 end
-
-function rejuvenate1(pset::FrankenSet,newPortion = .5)
-  L,M = size(pset.particles)
-  w = div(L, pset.hoodSize)
-  newParticles = typeof(pset.particles)(undef,L,M)
-  newWeights = typeof(pset.weights)(undef,w)
-
-  nOld = floor(Int, (1-newPortion) * M)
-  for nHood in 1:w
-          hood = ((nHood-1)*pset.hoodSize+1):((nHood)*pset.hoodSize)
-          Σ = cov(pset.particles[hood,:];dims=2, weights=pset.weights) #Technically, I should restrict this to banded part, but meh.
-          μ = mean(pset.particles[hood,:];dims=2, weights=pset.weights)
-          wmean = mean(pset.weights[nHood][1:nOld])
-          newParticles[hood,1:nOld] = pset.particles[hood,1:nOld]
-          newParticles[hood,(nOld+1):M] = rand(MvNormal(μ,Σ),M-nOld)
-          newWeights[nHood] = ProbabilityWeights([pset.weights[nHood][1:nOld];
-                                                  Vector(wmean,M-nOld)])
-  end
-  ParticleSet(pset.filter,pset.n,pset.hoodSize,
-            newParticles,newWeights)
-end
+#
+# function rejuvenate1(pset::FrankenSet,newPortion = .5) #old, unused
+#   L,M = size(pset.particles)
+#   w = div(L, pset.hoodSize)
+#   newParticles = typeof(pset.particles)(undef,L,M)
+#   newWeights = typeof(pset.weights)(undef,w)
+#
+#   nOld = floor(Int, (1-newPortion) * M)
+#   for nHood in 1:w
+#           hood = ((nHood-1)*pset.hoodSize+1):((nHood)*pset.hoodSize)
+#           Σ = cov(pset.particles[hood,:];dims=2, weights=pset.weights) #Technically, I should restrict this to banded part, but meh.
+#           μ = mean(pset.particles[hood,:];dims=2, weights=pset.weights)
+#           wmean = mean(pset.weights[nHood][1:nOld])
+#           newParticles[hood,1:nOld] = pset.particles[hood,1:nOld]
+#           newParticles[hood,(nOld+1):M] = rand(MvNormal(μ,Σ),M-nOld)
+#           newWeights[nHood] = ProbabilityWeights([pset.weights[nHood][1:nOld];
+#                                                   Vector(wmean,M-nOld)])
+#   end
+#   ParticleSet(pset.filter,pset.n,pset.hoodSize,
+#             newParticles,newWeights)
+# end
 
 #function ap(f::KalmanFilter,ps::Array{T,2})
   #don't force constructing a pset
