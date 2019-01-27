@@ -1,22 +1,24 @@
 
-MEquiv = 261
+MEquiv = 400
 easy = false
 clones = 1 #apparent dimensions = d*clones
+basefname = "truth.csv"
 if easy
-  fname = "easy_truth.csv"
+  difficulty = "easy_"
   timeSuperStep = 0.05
 else
-  fname = "hard_truth.csv"
+  difficulty = "hard_"
   timeSuperStep = 0.4
 end
-outcomefile = "myworld3__"*string(MEquiv)*".csv"
+fname = difficulty*basefname
+outcomefile = "outcome_"*difficulty*string(MEquiv)*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
 if clones>1
   fname = "repeating_" * fname
 end
-doAlgos = false
+doAlgos = true
 
 function ppath(p)
   if LOAD_PATH[end] != p
@@ -53,11 +55,11 @@ pfa = bkf.PfAlgo(MEquiv)
 bkf.putParams!(pfa, mydict)
 bkf.init(pfa, mod)
 
-ba = bkf.BlockAlgo(MEquiv,5)
+ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mod)
 
-fa1 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
+faLog = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
                     30, #histPerLoc
                     60, #nIter
                     1., #useForward
@@ -66,17 +68,17 @@ fa1 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
                     1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
                     )
 #
-fa2 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
-                    15, #histPerLoc
-                    100, #nIter
+fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
+                    10, #histPerLoc
+                    50, #nIter
                     1., #useForward
                     MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
                     bkf.FuzzFinkelParticles,
                     1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
                     )
 #
-bkf.putParams!(fa1, mydict)
-bkf.putParams!(fa2, mydict)
+bkf.putParams!(faLog, mydict)
+bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mod)
 
 
@@ -104,5 +106,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mod, obs, [fa1, fa2], 360, outcomefile)
+  bkf.runAlgos(mod, obs, [ba, fa1050], 360, outcomefile)
 end
