@@ -1,13 +1,21 @@
 
 MEquiv = 261
-fname = "repeating_easy_truth.csv"
-timeSuperStep = 0.05
-fname = "repeating_hard_truth.csv"
-timeSuperStep = 0.4
+easy = false
+clones = 1 #apparent dimensions = d*clones
+if easy
+  fname = "easy_truth.csv"
+  timeSuperStep = 0.05
+else
+  fname = "hard_truth.csv"
+  timeSuperStep = 0.4
+end
 outcomefile = "myworld3__"*string(MEquiv)*".csv"
-d = 5 #dimensions
+full_d = 40 #dimensions
 s = 60 #steps
-clones = 8 #apparent dimensions = d*clones
+d = div(full_d, clones)
+if clones>1
+  fname = "repeating_" * fname
+end
 doAlgos = false
 
 function ppath(p)
@@ -45,7 +53,7 @@ pfa = bkf.PfAlgo(MEquiv)
 bkf.putParams!(pfa, mydict)
 bkf.init(pfa, mod)
 
-ba = bkf.BlockAlgo(MEquiv,4)
+ba = bkf.BlockAlgo(MEquiv,5)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mod)
 
