@@ -93,7 +93,7 @@ function getCurFuzzes(filt, prevParts, params)
   for p in 1:n
     try
       result[p] = inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
-             prod(exp(localVariance[p,λ]/hoodd^2)
+             prod(localVariance[p,λ]^(1/hoodd^2))
                 #localVar is inherently dimension hoodd, and we have hoodd copies, so divide by hoodd^2
              for λ in prodNeighborhood(l,d,hoodd))
            for l in 1:d]))
@@ -105,6 +105,23 @@ function getCurFuzzes(filt, prevParts, params)
   result
 end
 
+
+function getCurFuzzQuick(filt, prevParts, params)
+  d, n = size(prevParts)
+  hoodd = params.mh.r
+  Σ = cov(prevParts;dims=2)
+  replace_nan!(Σ)
+  Σinv = Matrix{Float64}(undef,d,d)
+  try
+    Σinv = inv(Σ)
+  catch
+    Σ += Matrix(1e-6I,d,d)
+    Σinv = inv(Σ)
+    debug("no inverse but I fixed it")
+  end
+  return(Σinv * (n-hoodd)^(1/hoodd) / params.overlap)
+end
+
 function getNextFuzzes(filt, prevParts, params)
   d, n = size(prevParts)
   curFuzzes = getCurFuzzes(filt, prevParts, params)
@@ -112,36 +129,37 @@ function getNextFuzzes(filt, prevParts, params)
       curFuzzes[p])
     for p in 1:n]
 end
-
-function rejuvenateFuzz!(pset::ParticleSet)
-  myparams = params(pset)
-  if myparams.rejuv != 0
-    prevParts = particleMatrix(pset)
-    d, n = size(prevParts)
-    filt = getbkf(pset)
-    newCtrs = newCenters(filt, prevParts)
-    fuzzes = getCurFuzzes(filt, prevParts, prev.params)
-
-    for j = 1:n
-      pset.particles[:,j] += newCtrs[:,j] + rand(
-              MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv))))
-          #Matrix(Hermitian( :  ...Work, stupid!
-          #/4 : rejuv lightly, but pretend it's full. Not actually correct but meh.
-    end
-  end
-end
-function rejuvenateFullCloud(pset::ParticleSet,newPortion = .5)
-  L,M = size(pset.particles)
-  Σ = cov(pset.particles,pset.weights,2) #Technically, I should restrict this to banded part, but meh.
-  μ = vec(mean(pset.particles,pset.weights,2))
-  nOld = floor(Int, (1-newPortion) * M)
-  wmean = mean(pset.weights[1:nOld])
-  newParticles = typeof(pset.particles)(undef,L,M)
-  newParticles[:,1:nOld] = pset.particles[:,1:nOld]
-  newParticles[:,(nOld+1):M] = rand(MvNormal(μ,Σ),M-nOld)
-  ParticleSet(pset.filter,pset.n,newParticles,
-            ProbabilityWeights([pset.weights[1:nOld];[wmean for i in 1:(M-nOld)]]))
-end
+#
+# function rejuvenateFuzz!(pset::ParticleSet) #not used, and BROKEN — newCenters should not be here
+#   myparams = params(pset)
+#   if myparams.rejuv != 0
+#     prevParts = particleMatrix(pset)
+#     d, n = size(prevParts)
+#     filt = getbkf(pset)
+#     newCtrs = newCenters(filt, prevParts)
+#     fuzzes = getCurFuzzes(filt, prevParts, prev.params)
+#
+#     for j = 1:n
+#       pset.particles[:,j] += newCtrs[:,j] + rand(
+#               MvNormal(Matrix(Hermitian(fuzzes[j] * myparams.rejuv))))
+#           #Matrix(Hermitian( :  ...Work, stupid!
+#           #/4 : rejuv lightly, but pretend it's full. Not actually correct but meh.
+#     end
+#   end
+# end
+#
+# function rejuvenateFullCloud(pset::ParticleSet,newPortion = .5) #not used, obsolete
+#   L,M = size(pset.particles)
+#   Σ = cov(pset.particles,pset.weights,2) #Technically, I should restrict this to banded part, but meh.
+#   μ = vec(mean(pset.particles,pset.weights,2))
+#   nOld = floor(Int, (1-newPortion) * M)
+#   wmean = mean(pset.weights[1:nOld])
+#   newParticles = typeof(pset.particles)(undef,L,M)
+#   newParticles[:,1:nOld] = pset.particles[:,1:nOld]
+#   newParticles[:,(nOld+1):M] = rand(MvNormal(μ,Σ),M-nOld)
+#   ParticleSet(pset.filter,pset.n,newParticles,
+#             ProbabilityWeights([pset.weights[1:nOld];[wmean for i in 1:(M-nOld)]]))
+# end
 
 function ap(pset::ParticleSet)
   ε=rand(noiseDistribution(pset.filter),pset.n)
@@ -218,9 +236,9 @@ function ParticleStep(pset::ParticleSet)
   ParticleStep(r, pset, o)
 end
 
-function ParticleStep(pset::ParticleSet, y::Observation, rejuv=false)
-  if rejuv
-    pset = rejuvenate(pset)
+function ParticleStep(pset::ParticleSet, y::Observation, rejuv=.5)
+  if rejuv>0
+    pset = rejuvenate(pset, rejuv, true) #true for quickie
   end
   r = Resample(pset)
   p = ap(pset,r)
@@ -228,9 +246,14 @@ function ParticleStep(pset::ParticleSet, y::Observation, rejuv=false)
   ParticleStep(r,p,y)
 end
 
-function ParticleStep(pstep::ParticleStep, y::Observation, rejuv=false)
+function ParticleStep(pstep::ParticleStep, y::Observation, rejuv=.5)
   ParticleStep(pstep.p,y, rejuv)
 end
+
+function predictUpdate(pstep::ParticleStep, y::Observation)
+  ParticleStep(pstep, y)
+end
+
 
 function ParticleStep(kf::KalmanFilter, n::Int64)
   ParticleStep(ParticleSet(kf,n))

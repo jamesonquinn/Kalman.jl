@@ -1,7 +1,7 @@
 using DataFrames, CSV, DataStructures, Dates
 using NaNMath
 
-REPEATABLE_VERSION = 1.4
+REPEATABLE_VERSION = 1.5
 
 ##############filtering algorithms
 
