@@ -29,9 +29,12 @@ function ppath(p)
   end
 end
 
-ppath("/Users/chema/Dropbox/Kalman.jl/src")
-ppath("/Users/chema/Dropbox/")
-ppath("/Users/chema/mydev/Gadfly.jl/src")
+kalmandir = join(split(Base.source_path(),'/')[1:end-2],'/')
+ppath(kalmandir * "/src")
+if false #kalmandir == "/Users/chema/Dropbox/Kalman.jl"
+  ppath("/Users/chema/Dropbox/")
+  ppath("/Users/chema/mydev/Gadfly.jl/src")
+end
 
 
 
