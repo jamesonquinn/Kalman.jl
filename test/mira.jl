@@ -52,6 +52,7 @@ function ppath(p)
 end
 
 kalmandir = join(split(Base.source_path(),'/')[1:end-2],'/')
+cd(kalmandir)
 ppath(kalmandir * "/src")
 if false #kalmandir == "/Users/chema/Dropbox/Kalman.jl"
   ppath("/Users/chema/Dropbox/")
@@ -104,7 +105,8 @@ try
     global obs = bkf.loadObservations(fname)
     print(obs[3][3].x.x[3])
     print("QQQQQQQQQQQQQQQQQQQ")
-catch
+catch y
+  bkf.debug(y)
   @assert "couldn't load observations" ==0
     global obs = bkf.createObservations(mod, s)
     bkf.saveObservations(obs, fname, false, clones)
