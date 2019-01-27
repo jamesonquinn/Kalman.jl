@@ -118,4 +118,4 @@ end
 
 bkf.runAlgos(mod, obs, [pf], 1, outcomefile)
 
-bkf.runAlgos(mod, obs, [fa1050, ba], 1, outcomefilesmall)
+bkf.runAlgos(mod, obs, [fa1050, ba], 25, outcomefilesmall)
