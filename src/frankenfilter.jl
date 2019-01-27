@@ -27,25 +27,25 @@ function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
                   #ProbabilityWeights[ProbabilityWeights(ones(n),Float64(n)) for i in 1:nHoods]) #?
 end
 
-function rejuvenate(pset::union{FrankenSet,ParticleSet},rejuv=1., quick = false)
+function rejuvenate(pset::Union{FrankenSet,ParticleSet},rejuv=1., quick = false)
   newset = deepcopy(pset)
-  d, n = size(particleMatrix(prev))
+  d, n = size(pset.particles)
   if quick
     fuzz = getCurFuzzQuick(pset.filter, pset.particles, fparams(0,
-                                                  pset.hoodSize,
+                                                  d,
                                                   0.,
                                                   1., #overlap is multiplied in below
                                                   DataType,
                                                   rejuv
                                                   ))
     #
-    fuzzdist = ZeroMeanFullNormalCanon(Matrix(1.0I,size(hood)[1],size(hood)[1]))
+    fuzzdist = MvNormalCanon(Matrix(1.0I,2,2))
     try
-      fuzzdist = ZeroMeanFullNormalCanon(Matrix(Hermitian(fuzz * rejuv))))
+      fuzzdist = MvNormalCanon(Matrix(Hermitian(fuzz * rejuv)))
     catch y
       debug("rejuvenatequick",fuzz[1:3,1:3])
       try
-        fuzzdist= ZeroMeanFullNormalCanon(Matrix(Hermitian(fuzz * rejuv + Matrix(1e-4I,d,d))))
+        fuzzdist= MvNormalCanon(Matrix(Hermitian(fuzz * rejuv + Matrix(1e-4I,d,d))))
       catch
       end
     end

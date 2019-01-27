@@ -1,5 +1,5 @@
 
-MEquiv = 3125
+MEquiv = 40
 easy = false
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
@@ -85,13 +85,6 @@ bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mod)
 
 
-obs = bkf.createObservations(mod, 5)
-
-testfname = "dummy2world.csv"
-bkf.saveObservations(obs, testfname, true)
-
-obs2 = bkf.loadObservations(testfname)
-obs2[3][6].x.x .- obs[3][6].x.x #should be zeros(mydict)
 
 obs = 0
 try

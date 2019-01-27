@@ -93,8 +93,8 @@ function getCurFuzzes(filt, prevParts, params)
   for p in 1:n
     try
       result[p] = inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
-             prod(localVariance[p,λ]^(1/hoodd^2))
-                #localVar is inherently dimension hoodd, and we have hoodd copies, so divide by hoodd^2
+             prod(localVariance[p,λ]^(1/hoodd^2)
+                 #localVar is inherently dimension hoodd, and we have hoodd copies, so divide by hoodd^2
              for λ in prodNeighborhood(l,d,hoodd))
            for l in 1:d]))
     catch

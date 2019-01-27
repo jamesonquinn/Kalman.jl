@@ -130,7 +130,7 @@ function getbkf(fp::AbstractFinkel)
 end
 
 #uniform, sampled
-function 1.(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
+function fparams(histPerLoc::Int64 = DEFAULT_HISTPERLOC,
             radius::Int64 = DEFAULT_PRODUCT_RADIUS,
             useForward::Float64=1.,
             overlap::Float64=2.,
