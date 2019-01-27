@@ -11,21 +11,19 @@ library(stringr)
 shifter = function(x, n = 1) {
   if (n == 0) x else c(tail(x, -n), head(x, n))
 }
-#read data from different formats and merge to common format
 
-d = 20 #dimension
+#equal measurement variance edition
 
-cond = fread("nondest_200.csv")
-condi = cond[nIter %in% c(NA,40),]
+d = 15 #dimension
+
+cond = fread("myworld3__260.csv")
+cond = rbind(cond,fread("myworld3__261.csv"))
+condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
 condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
 
 blocksize = 5
 nblocks = floor(d/blocksize)
-measurevars = rep(c(0.36,0.09,1.,4.,   1.,.09,4.,0.36),10)[1:d]
-measuresds = sqrt(measurevars)
-peersds = shifter(measuresds,-1)
-quadneighborsds = shifter(measuresds,-2) *  shifter(measuresds,1)
 
 
 if (F) { #look at raw values
@@ -40,7 +38,10 @@ if (F) { #look at raw values
 }
 
 
-stepcol = match("step",names(condi))
+savecols = c(match("step",names(condi)),
+             match("nIter",names(condi)),
+             match("sampType",names(condi)),
+             match("hpl",names(condi)))
 pre_d = match("d01",names(condi)) - 1 #number of the last col before the "b's" μ
 pre_v = match("v0101",names(condi)) - 1 #number of the last col before the "v's" Σ
 
@@ -48,21 +49,21 @@ pre_v = match("v0101",names(condi)) - 1 #number of the last col before the "v's"
 biases = data.table()
 for (l in 1:nblocks) {
   for (j in 1:blocksize) {
-    oneterm = condi[,c(1,stepcol,pre_d+j+blocksize*(l-1)),with=F] #model, step
-    onevar = condi[,c(1,stepcol,pre_v+j+blocksize*(l-1)),with=F]
+    oneterm = condi[,c(1,savecols,pre_d+j+blocksize*(l-1)),with=F] #model, step
+    onevar = condi[,c(1,savecols,pre_v+j+blocksize*(l-1)),with=F]
+    #print(names(oneterm))
     #oneterm[,loc:=l]
-    names(oneterm)[3] = "error"
-    names(onevar)[3] = "theestvar"
+    names(oneterm)[length(names(oneterm))] = "error"
+    names(onevar)[length(names(oneterm))] = "theestvar"
     oneterm[,estvar:=onevar[,theestvar]]
+    #print(names(oneterm))
     biases = rbind(biases,oneterm[,list(bias=mean(error),variance=var(error),
                                                estvar=mean(estvar),
                                         block=l,position=j,
                                         border=(j %in% c(1,2,blocksize)),
-                                        doubleborder=(j == 1),
-                                        mysd=measuresds[j+blocksize*(l-1)],
-                                        peersd=peersds[j+blocksize*(l-1)],
-                                        quadsd=quadneighborsds[j+blocksize*(l-1)]),
-                                  by=list(model,step)],
+                                        doubleborder=(j == 1)
+                                        ),
+                                  by=list(model,nIter,hpl,step,sampType)],
                     fill=T)
   }
 }
@@ -70,17 +71,14 @@ for (l in 1:nblocks) {
 allbiases = biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
              mvar=sqrt(mean(variance,na.rm=T)),
              mvar=sqrt(mean(estvar,na.rm=T)),
-             mysd=mean(mysd),
-             peersd=mean(peersd),
-             quadsd=mean(quadsd),
              border=border[1],
              doubleborder=doubleborder[1],
              anyborder=border[1] | doubleborder[1]
-               ),by=list(model,position,block) ]
+               ),by=list(model,position,block,step,nIter,hpl) ]
 biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
              mvar=sqrt(mean(variance,na.rm=T)),
              mvar=sqrt(mean(estvar,na.rm=T))
-),by=list(model) ]
+),by=list(model,nIter,hpl,sampType) ]
 biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
              mvar=sqrt(mean(variance,na.rm=T)),
              mvar=sqrt(mean(estvar,na.rm=T))
@@ -88,8 +86,8 @@ biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
 oneterm[model=="Block PF"&step==1,error]
 
 
-summary(lm(msqbias ~ mysd + peersd + quadsd, data=allbiases[model=="Finkelstein PF",]))
-summary(lm(msqbias ~ mysd + peersd + quadsd + `|`(border,doubleborder), data=allbiases[model=="Block PF",]))
+summary(lm(msqbias ~ border + doubleborder, data=allbiases[model=="Finkelstein PF",]))
+summary(lm(msqbias ~ border + doubleborder, data=allbiases[model=="Block PF",]))
 
 
 

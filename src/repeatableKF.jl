@@ -1,7 +1,7 @@
 using DataFrames, CSV, DataStructures, Dates
 using NaNMath
 
-REPEATABLE_VERSION = 1.0
+REPEATABLE_VERSION = 1.3
 
 ##############filtering algorithms
 
@@ -164,19 +164,16 @@ function createLinearModel(d)
 end
 
 
-function createLorenzModel(d)
+function createLorenzModel(d, timeSuperStep = 0.05)
 
     forcingF = 8.
-    timeSuperStep = 1.
-    numSteps = 210
-    timeStep = timeSuperStep/numSteps
-    if timeStep > .01
-      Val("Error here! increase numSteps or decrease timeSuperStep.")
-    end
-    processNoiseVar = 0.001 #Is this good? Needs testing.
-    measurementNoiseVar = [0.36,0.09,1.,4.,   1.,.09,4.,0.36]
+    timeStep = 0.002 #timeSuperStep/numSteps
+    numSteps = div(timeSuperStep,timeStep)
+    @assert numSteps > 20
+    processNoiseVar = 1e-100
+    measurementNoiseVar = [1.]
     mnvvec = repeat(measurementNoiseVar,40)[1:d]
-    initialvar = 0.0009
+    initialvar = 0.09
 
 
 
@@ -244,17 +241,17 @@ function trsp(v)
     reshape(v,(1,:))
 end
 
-function saveObservations(obs, fileName, overwrite = false)
+function saveObservations(obs, fileName, overwrite = false, clones = 1)
     if !overwrite
         @assert(!isfile(fileName))
     elseif isfile(fileName)
         rm(fileName)
     end
     (truth, observations, kfs) = obs
-    for i=2:length(truth)
+    for i=1:length(truth)
         open( fileName,  "a") do outfile
-            myWritecsv( outfile, trsp([truth[i].particles[:,1]
-                                     observations[i].y
+            myWritecsv( outfile, trsp([repeat(truth[i].particles[:,1],clones)
+                                     repeat(observations[i].y,clones)
                                     ]))
         end
     end

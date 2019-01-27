@@ -1,7 +1,14 @@
 
-MEquiv = 250
-fname = "myworld2truth.csv"
-outcomefile = "myworld2_"*string(MEquiv)*".csv"
+MEquiv = 261
+fname = "repeating_easy_truth.csv"
+timeSuperStep = 0.05
+fname = "repeating_hard_truth.csv"
+timeSuperStep = 0.4
+outcomefile = "myworld3__"*string(MEquiv)*".csv"
+d = 5 #dimensions
+s = 60 #steps
+clones = 8 #apparent dimensions = d*clones
+doAlgos = false
 
 function ppath(p)
   if LOAD_PATH[end] != p
@@ -25,10 +32,8 @@ using DelimitedFiles
 using Random
 using LinearAlgebra
 
-d = 20
-s = 10
 
-mod = bkf.createLorenzModel(d)
+mod = bkf.createLorenzModel(d, timeSuperStep)
 
 mydict = OrderedDict()
 
@@ -40,11 +45,11 @@ pfa = bkf.PfAlgo(MEquiv)
 bkf.putParams!(pfa, mydict)
 bkf.init(pfa, mod)
 
-ba = bkf.BlockAlgo(MEquiv,5)
+ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mod)
 
-fa = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
+fa1 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
                     30, #histPerLoc
                     60, #nIter
                     1., #useForward
@@ -52,8 +57,19 @@ fa = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     bkf.FuzzFinkelParticles,
                     1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
                     )
-bkf.putParams!(fa, mydict)
-bkf.init(fa, mod)
+#
+fa2 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
+                    15, #histPerLoc
+                    100, #nIter
+                    1., #useForward
+                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
+                    bkf.FuzzFinkelParticles,
+                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
+                    )
+#
+bkf.putParams!(fa1, mydict)
+bkf.putParams!(fa2, mydict)
+#bkf.init(fa, mod)
 
 
 obs = bkf.createObservations(mod, 5)
@@ -71,9 +87,14 @@ try
     print("QQQQQQQQQQQQQQQQQQQ")
 catch
     global obs = bkf.createObservations(mod, s)
-    bkf.saveObservations(obs, fname, false)
+    bkf.saveObservations(obs, fname, false, clones)
+    if clones>1
+      bkf.saveObservations(obs, "uncloned_"*fname, false, 1)
+    end
 end
 
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
-bkf.runAlgos(mod, obs, [ba,fa], 60, outcomefile)
+if doAlgos
+  bkf.runAlgos(mod, obs, [fa1, fa2], 360, outcomefile)
+end

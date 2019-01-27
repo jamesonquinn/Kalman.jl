@@ -27,6 +27,28 @@ function toFrankenSet(kf::KalmanFilter, n::Int64, hoodSize)
                   #ProbabilityWeights[ProbabilityWeights(ones(n),Float64(n)) for i in 1:nHoods]) #?
 end
 
+function rejuvenate(pset::FrankenSet,rejuv=1.)
+  fuzzes = getCurFuzzes(pset.filter, pset.particles, fparams(0,
+                                                pset.hoodSize,
+                                                0.,
+                                                1., #overlap is multiplied in below
+                                                DataType,
+                                                rejuv
+                                                ))
+  newset = deepcopy(pset)
+  for (i, fuzz) in enumerate(fuzzes)
+    try
+      newset.particles[:,i] += rand(MvNormal(Matrix(Hermitian(fuzz * rejuv))))
+    catch y
+      debug("rejuvenate",fuzz[1:3,1:3])
+      try
+        newset.particles[:,i] += rand(MvNormal(Matrix(Hermitian(fuzz * rejuv + Matrix(1e-4I,d,d)))))
+      catch
+      end
+    end
+  end
+  newset
+end
 
 function rejuvenate1(pset::FrankenSet,newPortion = .5)
   L,M = size(pset.particles)
@@ -128,9 +150,9 @@ function FrankenStep(pset::FrankenSet)
 end
 
 #2
-function FrankenStep(pset::FrankenSet, y::Observation, rejuv=0.)
+function FrankenStep(pset::FrankenSet, y::Observation, rejuv=1.)
   if rejuv != 0
-    pset = rejuvenate(pset)
+    pset = rejuvenate(pset,rejuv)
   end
   r = FResample(pset)
   p = ap(pset,r)
@@ -140,7 +162,7 @@ function FrankenStep(pset::FrankenSet, y::Observation, rejuv=0.)
 end
 
 #1
-function FrankenStep(pstep::FrankenStep, y::Observation, rejuv=0.)
+function FrankenStep(pstep::FrankenStep, y::Observation, rejuv=1.)
   FrankenStep(pstep.p,y, rejuv)
 end
 
