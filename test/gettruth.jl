@@ -11,7 +11,7 @@ else
   timeSuperStep = 0.4
 end
 fname = "uncloned_"*difficulty*basefname
-outcomefile = "outcome_"*difficulty*string(MEquiv)*".csv"
+outcomefile = "truth_"*difficulty*string(MEquiv)*".csv"
 full_d = 5 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
