@@ -94,7 +94,6 @@ fa1050 = bkf.FinkelAlgo(MEquivSmall,1,bkf.SampleUniform,bkf.MhSampled,
                     1/(MEquivSmall^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
                     )
 #
-bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mod)
 
