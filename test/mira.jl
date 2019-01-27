@@ -31,7 +31,7 @@ else
   difficulty = "hard_"
   timeSuperStep = 0.4
 end
-fname = "uncloned_"*difficulty*basefname
+fname = "uncloned_repeating_"*difficulty*basefname
 outcomefile = "truth_"*difficulty*string(MEquiv)*".csv"
 outcomefilesmall = "outcome_"*difficulty*string(MEquivSmall)*".csv"
 full_d = 5 #dimensions
