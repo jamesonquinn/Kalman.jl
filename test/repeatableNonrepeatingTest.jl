@@ -1,6 +1,6 @@
 
-MEquiv = 3125
-easy = false
+MEquiv = 250
+easy = true
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
 if easy
@@ -10,12 +10,12 @@ else
   difficulty = "hard_"
   timeSuperStep = 0.4
 end
-fname = "uncloned_repeating_"*difficulty*basefname
-outcomefile = "truth_"*difficulty*string(MEquiv)*".csv"
-full_d = 5 #dimensions
+fname = difficulty*basefname
+outcomefile = "outcome_"*difficulty*string(MEquiv)*".csv"
+full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
-if clones>1
+if true #clones>1
   fname = "repeating_" * fname
 end
 doAlgos = true
@@ -54,9 +54,9 @@ kfa = bkf.KfAlgo()
 bkf.putParams!(kfa,mydict)
 bkf.init(kfa, mod)
 
-pf = bkf.PfAlgo(MEquiv)
-bkf.putParams!(pf, mydict)
-bkf.init(pf, mod)
+pfa = bkf.PfAlgo(MEquiv)
+bkf.putParams!(pfa, mydict)
+bkf.init(pfa, mod)
 
 ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
@@ -83,8 +83,6 @@ fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
 bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mod)
-bkf.debug(fname)
-
 
 obs = 0
 try
@@ -92,6 +90,7 @@ try
     print(obs[3][3].x.x[3])
     print("QQQQQQQQQQQQQQQQQQQ")
 catch
+    @assert "Don't recreate; too late." == 0
     global obs = bkf.createObservations(mod, s)
     bkf.saveObservations(obs, fname, false, clones)
     if clones>1
@@ -102,5 +101,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mod, obs, [pf], 1, outcomefile)
+  bkf.runAlgos(mod, obs, [ba, fa1050], 360, outcomefile)
 end
