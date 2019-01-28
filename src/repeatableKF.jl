@@ -309,7 +309,7 @@ function runAlgos(model, obs, algos, reps, saveFileName)
     end
 
     if isfile(saveFileName)
-        print("Appending to existing save file! \n"); print("\n","""print("Appending to existing save file! \n")""")
+        print("Appending to existing save file! \n")
         #check file validity
     else
         print("Writing column headers\n")
@@ -340,7 +340,7 @@ function runAlgos(model, obs, algos, reps, saveFileName)
 
 
     for rep in 1:reps
-        debug("Rep:",rep)
+        debug("Rep:",rep, Dates.format(now(), dateformat"u d HH:MM:SS"))
         debug()
         debug()
         debug()
@@ -348,7 +348,7 @@ function runAlgos(model, obs, algos, reps, saveFileName)
             paramDict = deepcopy(blankParams)
             putParams!(algo,paramDict)
             basedatavec = [get(paramDict,k,"") for k in keys(paramDict)]
-            print("\n\nAlgo: ",basedatavec,"\n"); print("\n","""print("\n\nAlgo: ",basedatavec,"\n")""")
+            print("\n\nAlgo: ",basedatavec,"\n")
             push!(basedatavec,REPEATABLE_VERSION) #version
             push!(basedatavec,d) #dimension
             push!(basedatavec,rep) #rep
@@ -356,14 +356,14 @@ function runAlgos(model, obs, algos, reps, saveFileName)
 
             state = init(algo, model)
             for i = 2:length(truth)
-                print("Step ",i-1,":     ",basedatavec,"\n"); print("\n","""print("Step ",i-1,":     ",basedatavec,"\n")""")
+                print("Step ",i-1,":     ",basedatavec,Dates.format(now(), dateformat"u d HH:MM:SS"),"\n")
                 putime = (@timed state = predictUpdate(state, observations[i], algo))[2]
                 #measure something here? maybe TODO later
                 (μ2,Σ2) = musig(state)
                 (μ1,Σ1) = musig(kfs[i])
                 debug("sizes",i,size(μ2),size(truth[i].particles))
                 μ = μ2 - truth[i].particles[:,1]
-                print("Meansqs: resampled:",mean(μ.^2),"\n"); print("\n","""print("Meansqs: resampled:",mean(μ.^2),"\n")""")
+                print("Meansqs: resampled:",mean(μ.^2),"\n")
 
                 datavec = copy(basedatavec)
                 push!(datavec,i-1) #step

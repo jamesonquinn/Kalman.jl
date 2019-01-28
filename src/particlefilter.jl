@@ -119,7 +119,7 @@ function getCurFuzzQuick(filt, prevParts, params)
     Σinv = inv(Σ)
     debug("no inverse but I fixed it")
   end
-  return(Σinv * (n-hoodd)^(1/hoodd) / params.overlap)
+  return(Σinv * ((n-hoodd)/ params.overlap)^(1/hoodd) )
 end
 
 function getNextFuzzes(filt, prevParts, params)

@@ -178,7 +178,7 @@ end
 #2
 function FrankenStep(pset::FrankenSet, y::Observation, rejuv=1.)
   if rejuv != 0
-    pset = rejuvenate(pset,rejuv)
+    pset = rejuvenate(pset,rejuv, true)
   end
   r = FResample(pset)
   p = ap(pset,r)

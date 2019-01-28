@@ -1,6 +1,27 @@
+# using Pkg
+# Pkg.add("LinearAlgebra")
+# Pkg.add("Distributions")
+# Pkg.add("StatsBase")
+# Pkg.add("Memoize")
+# Pkg.add("Compat")
+# Pkg.add("ForwardDiff")
+# Pkg.add("DataFrames")
+# Pkg.add("CSV")
+# Pkg.add("DataStructures")
+# Pkg.add("Revise")
+# #Pkg.add("Plots")
+# #Pkg.add("Plotly")
+# #Pkg.add("Gadfly")
+# Pkg.add("NaNMath")
 
-MEquiv = 250
-easy = false
+
+
+
+
+
+MEquiv = 3125
+MEquivSmall = 250
+easy = true
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
 if easy
@@ -10,12 +31,13 @@ else
   difficulty = "hard_"
   timeSuperStep = 0.4
 end
-fname = difficulty*basefname
-outcomefile = "outcome_"*difficulty*string(MEquiv)*".csv"
-full_d = 40 #dimensions
+fname = "uncloned_repeating_"*difficulty*basefname
+outcomefile = "truth_"*difficulty*string(MEquiv)*".csv"
+outcomefilesmall = "outcome_"*difficulty*string(MEquivSmall)*".csv"
+full_d = 5 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
-if true #clones>1
+if clones>1
   fname = "repeating_" * fname
 end
 doAlgos = true
@@ -30,6 +52,7 @@ function ppath(p)
 end
 
 kalmandir = join(split(Base.source_path(),'/')[1:end-2],'/')
+cd(kalmandir)
 ppath(kalmandir * "/src")
 if false #kalmandir == "/Users/chema/Dropbox/Kalman.jl"
   ppath("/Users/chema/Dropbox/")
@@ -54,43 +77,37 @@ kfa = bkf.KfAlgo()
 bkf.putParams!(kfa,mydict)
 bkf.init(kfa, mod)
 
-pfa = bkf.PfAlgo(MEquiv)
-bkf.putParams!(pfa, mydict)
-bkf.init(pfa, mod)
+pf = bkf.PfAlgo(MEquiv)
+bkf.putParams!(pf, mydict)
+bkf.init(pf, mod)
 
-ba = bkf.BlockAlgo(MEquiv,4)
+ba = bkf.BlockAlgo(MEquivSmall,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mod)
 
-faLog = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
-                    30, #histPerLoc
-                    60, #nIter
-                    1., #useForward
-                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
-                    bkf.FuzzFinkelParticles,
-                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
-                    )
 #
-fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
+fa1050 = bkf.FinkelAlgo(MEquivSmall,1,bkf.SampleUniform,bkf.MhSampled,
                     10, #histPerLoc
                     50, #nIter
                     1., #useForward
-                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
+                    MEquivSmall^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
                     bkf.FuzzFinkelParticles,
-                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
+                    1/(MEquivSmall^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
                     )
 #
-bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mod)
+
+
 
 obs = 0
 try
     global obs = bkf.loadObservations(fname)
     print(obs[3][3].x.x[3])
     print("QQQQQQQQQQQQQQQQQQQ")
-catch
-    @assert "Don't recreate; too late." == 0
+catch y
+  bkf.debug(y)
+  @assert "couldn't load observations" ==0
     global obs = bkf.createObservations(mod, s)
     bkf.saveObservations(obs, fname, false, clones)
     if clones>1
@@ -98,8 +115,8 @@ catch
     end
 end
 
-algos = vcat([ba],bkf.finkelAlgos(MEquiv))
+#algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
-if doAlgos
-  bkf.runAlgos(mod, obs, [ba, fa1050], 360, outcomefile)
-end
+bkf.runAlgos(mod, obs, [pf], 1, outcomefile)
+
+bkf.runAlgos(mod, obs, [fa1050, ba], 25, outcomefilesmall)
