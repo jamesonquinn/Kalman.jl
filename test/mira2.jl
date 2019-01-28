@@ -1,6 +1,6 @@
 
 MEquiv = 250
-easy = false
+easy = true
 useRepeats = false
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
@@ -104,5 +104,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mymodel, obs, [ba, fa1050], 360, outcomefile)
+  bkf.runAlgos(mymodel, obs, [ba, fa1050], 40, outcomefile)
 end
