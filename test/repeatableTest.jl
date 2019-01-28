@@ -12,6 +12,7 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
+outprefix = "outcome_lowlap_threaded_"
 outprefix = "outcome_lowlap_"
 outcomefile = outprefix*difficulty*string(MEquiv)*".csv"
 full_d = 40 #dimensions
