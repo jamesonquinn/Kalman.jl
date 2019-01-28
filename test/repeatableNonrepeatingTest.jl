@@ -46,29 +46,29 @@ using Random
 using LinearAlgebra
 
 
-mod = bkf.createLorenzModel(d, timeSuperStep)
+mymodel = bkf.createLorenzModel(d, timeSuperStep)
 
 mydict = OrderedDict()
 
 kfa = bkf.KfAlgo()
 bkf.putParams!(kfa,mydict)
-bkf.init(kfa, mod)
+bkf.init(kfa, mymodel)
 
 pfa = bkf.PfAlgo(MEquiv)
 bkf.putParams!(pfa, mydict)
-bkf.init(pfa, mod)
+bkf.init(pfa, mymodel)
 
 ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
-bkf.init(ba, mod)
+bkf.init(ba, mymodel)
 
 faLog = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
                     30, #histPerLoc
                     60, #nIter
                     1., #useForward
-                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
+                    4, #overlap
                     bkf.FuzzFinkelParticles,
-                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
+                    .125, #rejuv
                     )
 #
 fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
@@ -82,7 +82,7 @@ fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
 #
 bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
-#bkf.init(fa, mod)
+#bkf.init(fa, mymodel)
 
 obs = 0
 try
@@ -91,9 +91,9 @@ try
     print("QQQQQQQQQQQQQQQQQQQ")
 catch
     @assert "Don't recreate; too late." == 0
-    global obs = bkf.createObservations(mod, s)
+    global obs = bkf.createObservations(mymodel, s)
     bkf.saveObservations(obs, fname, false, clones)
-    if clones>1
+    if clones>1#
       bkf.saveObservations(obs, "uncloned_"*fname, false, 1)
     end
 end
@@ -101,5 +101,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mod, obs, [ba, fa1050], 360, outcomefile)
+  bkf.runAlgos(mymodel, obs, [ba, fa1050], 360, outcomefile)
 end
