@@ -33,6 +33,7 @@ function ppath(p)
 end
 
 kalmandir = join(split(Base.source_path(),'/')[1:end-2],'/')
+cd(kalmandir)
 ppath(kalmandir * "/src")
 if false #kalmandir == "/Users/chema/Dropbox/Kalman.jl"
   ppath("/Users/chema/Dropbox/")

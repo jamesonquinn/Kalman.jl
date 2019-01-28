@@ -16,7 +16,7 @@ shifter = function(x, n = 1) {
 
 d = 15 #dimension
 
-cond = fread("myworld3__260.csv")
+cond = fread("outcome_hard_250.csv")
 cond = rbind(cond,fread("myworld3__261.csv"))
 condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
