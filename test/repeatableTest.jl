@@ -1,4 +1,4 @@
-
+#outcome_lowlap_hard_250_nonrep.csv
 MEquiv = 250
 easy = false
 useRepeats = false
@@ -12,14 +12,15 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outcomefile = "outcome_"*difficulty*string(MEquiv)*".csv"
+outprefix = "outcome_lowlap_"
+outcomefile = outprefix*difficulty*string(MEquiv)*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
 if useRepeats #clones>1
   fname = "repeating_" * fname
 else
-  outcomefile = "outcome_"*difficulty*string(MEquiv)*"_nonrep.csv"
+  outcomefile = outprefix*difficulty*string(MEquiv)*"_nonrep.csv"
 end
 doAlgos = true
 
@@ -78,9 +79,9 @@ fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     10, #histPerLoc
                     50, #nIter
                     1., #useForward
-                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
+                    4, #overlap
                     bkf.FuzzFinkelParticles,
-                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
+                    .125, #rejuv
                     )
 #
 bkf.putParams!(faLog, mydict)
@@ -104,5 +105,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mymodel, obs, [ba, fa1050], 360, outcomefile)
+  bkf.runAlgos(mymodel, obs, [fa1050], 360, outcomefile)
 end
