@@ -1,5 +1,5 @@
 
-MEquiv = 40
+MEquiv = 3125
 easy = false
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
@@ -10,7 +10,7 @@ else
   difficulty = "hard_"
   timeSuperStep = 0.4
 end
-fname = "uncloned_"*difficulty*basefname
+fname = "uncloned_repeating_"*difficulty*basefname
 outcomefile = "truth_"*difficulty*string(MEquiv)*".csv"
 full_d = 5 #dimensions
 s = 60 #steps
@@ -83,7 +83,7 @@ fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
 bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mod)
-
+bkf.debug(fname)
 
 
 obs = 0
