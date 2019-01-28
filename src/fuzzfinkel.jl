@@ -1,6 +1,6 @@
 #included in bkf.jl
 
-include("delegatemacro.jl")
+#include("delegatemacro.jl")
 
 abstract type AbstractSparseFilter <: KalmanFilter end
 
