@@ -1,6 +1,7 @@
 
 MEquiv = 250
 easy = false
+useRepeats = false
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
 if easy
@@ -15,8 +16,10 @@ outcomefile = "outcome_"*difficulty*string(MEquiv)*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
-if true #clones>1
+if useRepeats #clones>1
   fname = "repeating_" * fname
+else
+  outcomefile = "outcome_"*difficulty*string(MEquiv)*"_nonrep.csv"
 end
 doAlgos = true
 
