@@ -5,8 +5,12 @@ abstract type AbstractParticleFilter end
 mutable struct ParticleSet{T,F<:KalmanFilter} <: AbstractParticleFilter
     filter::F
     n::Int64
-    particles::Array{T,2} #[location, particle] #or is it [particle, location]? Got error, confused.
+    particles::SharedArray{T,2} #[location, particle] #or is it [particle, location]? Got error, confused.
     weights::ProbabilityWeights
+end
+
+function ParticleSet(f,n::Int64,p::Matrix,w::ProbabilityWeights)
+  ParticleSet(f,n,SharedArray(p),w)
 end
 
 Base.copy(pw::ProbabilityWeights) = deepcopy(pw) #Annoying that I have to do this explicitly because otherwise copy() isn't type-preserving

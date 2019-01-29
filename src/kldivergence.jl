@@ -218,7 +218,7 @@ function musig(f::ParticleStep)
       cov(f.p.particles,f.p.weights,2,corrected=false))
 end
 
-function musig(f::Array)
+function musig(f::AbstractArray)
     (nanmean(f,2),
       cov(f,dims=2,corrected=false))
 end
