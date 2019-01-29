@@ -1,6 +1,7 @@
 #included in bkf.jl
 
 #include("delegatemacro.jl")
+#using Distributed
 
 abstract type AbstractSparseFilter <: KalmanFilter end
 
@@ -819,6 +820,8 @@ function predictUpdate(prev::AbstractFinkel, y::Observation, nIter::Int64=15, de
     reweight!(fp, y) #set ws
     replant!(fp) #set tip from base
     if nIter>0
+        #Threads.@threads for i in 1:fp.tip.n #crashes... fix later
+        #@distributed for i in 1:fp.tip.n #need to use SharedArrays... probably not too hard actually
         for i in 1:fp.tip.n
             mcmc!(fp,i,nIter)
             if debug & ((i % 40)==0)
