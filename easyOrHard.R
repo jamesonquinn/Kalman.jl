@@ -16,7 +16,7 @@ shifter = function(x, n = 1) {
 
 d = 15 #dimension
 
-cond = fread("outcome_hard_250.csv")
+cond = fread("outcome_lowlap_threaded_hard_250.csv")
 cond = fread("outcome_hard_250_nonrep.csv")
 cond = cond[mod=="block"]
 dim(cond)
