@@ -2,7 +2,7 @@
 
 #include("delegatemacro.jl")
 #using Distributed
-
+ 
 abstract type AbstractSparseFilter <: KalmanFilter end
 
 DEFAULT_PRODUCT_RADIUS = 4
@@ -398,12 +398,15 @@ function particles(fp::AbstractFinkel)
     fp.tip.particles
 end
 
-function reweight!(fp::AbstractFinkel, y::Observation)
+function reweight!(fp::AbstractFinkel, y::Observation, imax=0)
     d = size(fp.base,1)
     fp.ws = Vector{ProbabilityWeights}(undef, d)
     diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
     vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.h is eye and ...r is diagonal
-    for l = 1:d
+    if imax == 0
+      imax = d
+    end
+    for l = 1:imax
         if false
             forwardProb = zeros(d)
             for ph = 1:fp.tip.n
@@ -847,7 +850,7 @@ function testAlgorithm(prev::AbstractFinkel, y::Observation, truth::ParticleSet,
       fp.base[:,i] = y.y
     end
   end
-  reweight!(fp, y) #set ws
+  reweight!(fp, y, 2) #set ws
 
   #replant-ish
   for i in 1:2
@@ -861,16 +864,18 @@ function testAlgorithm(prev::AbstractFinkel, y::Observation, truth::ParticleSet,
 
   #
   tps = Vector{Float64}(undef,2)
-  truthpercents = Vector{Float64}(undef,2)
+  truthpercents = Matrix{Float64}(undef,2,3)
   if nIter>0
       #Threads.@threads for i in 1:fp.tip.n #crashes... fix later
       #@sync @distributed for i in 1:fp.tip.n #need to use Arrays... probably not too hard actually #SharedArray
       for i in 1:2
           mcmc!(fp,i,nIter)
           tps[i] = mean(fp.totalProb[:,i])
-          truthpercents[i] = mean(fp.stem[j,i] % 2 for j in 1:d)
+          truthpercents[i,1] = mean(fp.stem[j,i] % 2 for j in 1:d)
+          truthpercents[i,2] = mean(fp.stem[j,i] == 1 for j in 1:d)
+          truthpercents[i,3] = mean(fp.stem[j,i] == 2 for j in 1:d)
           print("Ran particle ", i, " ", nIter, "; mean tp = ", tps[i], "\n")
-          print("   ......... ", i, " ", nIter, "; final truth = ", truthpercents[i], "\n")
+          print("   ......... ", i, " ", nIter, "; final truth = ", truthpercents[i,1], " ", truthpercents[i,2]," ", truthpercents[i,3],"\n")
       end
   end
   (tps, truthpercents)
@@ -881,6 +886,6 @@ function resample(state::AbstractFinkel)
 end
 
 function testAlgorithm(prev, y::Observation,
-          truth::ParticleSet, nIter::Int64=15) #dummy for other algos
+          truth::ParticleSet, stuff) #dummy for other algos
   return ([-1., -1], [-1., -1])
 end
