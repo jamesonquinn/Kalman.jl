@@ -1,5 +1,5 @@
 #outcome_lowlap_2_hard_250_nonrep.csv
-MEquiv = 300
+MEquiv = 250
 easy = false
 useRepeats = true
 clones = 1 #apparent dimensions = d*clones
@@ -66,9 +66,9 @@ ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mymodel)
 
-fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
-                    20, #histPerLoc
-                    100, #nIter
+fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
+                    25, #histPerLoc
+                    200, #nIter
                     1., #useForward
                     4, #overlap
                     bkf.FuzzFinkelParticles,

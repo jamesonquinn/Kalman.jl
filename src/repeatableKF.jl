@@ -1,5 +1,5 @@
-REPEATABLE_VERSION = 1.666
- 
+REPEATABLE_VERSION = 1.8
+
 ##############filtering algorithms
 
 myWritecsv(io, a; opts...) = writedlm(io, a, ','; opts...)
@@ -627,7 +627,7 @@ function testConvergence(model, algos, nIterVec, reps, saveFileName) #like runAl
                 i = 2
                 print("Step ",nIter,":     ",basedatavec,Dates.format(now(), dateformat"u d HH:MM:SS"),"\n")
 
-                tps, percents = testAlgorithm(state, observations[i], truth[i], nIter)
+                putime = (@timed tps, percents = testAlgorithm(state, observations[i], truth[i], nIter))[2]
                 #measure something here? maybe TODO later
 
                 datavec = copy(basedatavec)

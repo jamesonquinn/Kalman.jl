@@ -3,7 +3,7 @@ MEquiv = 25
 easy = false
 clones = 1 #apparent dimensions = d*clones
 highcor, corgap, othervar, mainvar, vargap, μ = (.8,2,2.,.5,3,.25)
-nIterVec = [30,150,500]
+nIterVec = [200,350,700]
 basefname = "convergetruth.csv"
 if easy
   difficulty = "easy_"
@@ -13,7 +13,7 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outprefix = "outcome_convergence_"
+outprefix = "outcome_converged_"
 outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 20 #dimensions
 s = 2 #steps

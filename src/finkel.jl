@@ -2,7 +2,7 @@
 
 #include("delegatemacro.jl")
 #using Distributed
- 
+
 abstract type AbstractSparseFilter <: KalmanFilter end
 
 DEFAULT_PRODUCT_RADIUS = 4
@@ -399,23 +399,28 @@ function particles(fp::AbstractFinkel)
 end
 
 function reweight!(fp::AbstractFinkel, y::Observation, imax=0)
-    d = size(fp.base,1)
+    d, n = size(fp.base)
     fp.ws = Vector{ProbabilityWeights}(undef, d)
     diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
+      #TODO: inv(fp.tip.filter.z.h) ???
     vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.h is eye and ...r is diagonal
     if imax == 0
-      imax = d
+      imax = n
+      fromrange = 1:imax
+    else
+      fromrange = (imax+1):(imax*2) #never replace with inits
     end
-    for l = 1:imax
+    for l = 1:d
         if false
             forwardProb = zeros(d)
             for ph = 1:fp.tip.n
-                forwardProb += exp.(fp.lps[l,:,ph])
+                forwardProb += exp.(fp.lps[l,1:imax,ph])
             end
         else
             forwardProb = 1. #ones(d)
         end
-        wvec = exp.(-diffs[l,:].^2 ./ vars[l] / 2 ) ./ forwardProb # ./ if forwardProb is vector
+        wvec = zeros(n)
+        wvec[fromrange] = exp.(-diffs[l,1:imax].^2 ./ vars[l] / 2 ) ./ forwardProb # ./ if forwardProb is vector
 
         replace_nan!(wvec)
         fp.ws[l] = ProbabilityWeights(wvec)
@@ -852,6 +857,7 @@ function testAlgorithm(prev::AbstractFinkel, y::Observation, truth::ParticleSet,
   end
   reweight!(fp, y, 2) #set ws
 
+  #replant!(fp) #set tip from base
   #replant-ish
   for i in 1:2
     for l in 1:d

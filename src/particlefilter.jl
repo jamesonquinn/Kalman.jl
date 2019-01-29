@@ -62,13 +62,9 @@ function getCurFuzzes(filt, prevParts, params)
   end
   μ = mean(prevParts;dims=2)
   localVariance = Array{Float64,2}(undef,n,d) #particle, locus
-  basePrecision = Vector{Float64}(undef,d)
   diffs = prevParts .- μ
   for l in 1:d
     hood = prodNeighborhood(l,d,hoodd)
-    hooddet = det(Σ[hood,hood])
-    dethat = prod(Σ[i,i] for i in hood)
-    basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/hoodd)
     for p in 1:n
       dist = MvNormal(Matrix(1e-4I,hoodd,hoodd)) #hopefully this will be replaced
       try
@@ -83,7 +79,7 @@ function getCurFuzzes(filt, prevParts, params)
         end
       end
       logRelDens = logpdf(dist,diffs[hood,p]) - logpdf(dist,zeros(hoodd))
-      localVariance[p,l] = 1/(n-hoodd)/(1+exp(logRelDens))
+      localVariance[p,l] = 1/(n-hoodd)/(exp(logRelDens))
     end
   end
 
@@ -96,14 +92,21 @@ function getCurFuzzes(filt, prevParts, params)
   result = Vector{Matrix{Float64}}(undef,n)
   for p in 1:n
     try
-      result[p] = inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
-             prod(localVariance[p,λ]^(1/hoodd^2)
-                 #localVar is inherently dimension hoodd, and we have hoodd copies, so divide by hoodd^2
-             for λ in prodNeighborhood(l,d,hoodd))
-           for l in 1:d]))
-    catch
-      debug("Problem in getCurFuzzes", p, basePrecision)
-      result[p] = inv(Σinv + Diagonal([basePrecision[l] / params.overlap for l in 1:d]))
+      result[p] = diagm(0=>[params.overlap *
+           prod(localVariance[p,λ]^(1/hoodd^2) for λ in prodNeighborhood(l,d,hoodd))
+         for l in 1:d])
+    catch err
+      prange = (max(1,p-2)):(min(n,p+1))
+      debug("Problem in getCurFuzzes", p, localVariance[prange], err)
+      result[p] = Σ * params.overlap / (n-hoodd)
+    end
+  end
+  if true #extra error check #TODO: remove
+    for (i, fuzz) in enumerate(result)
+      if fuzz[2,2] < 0
+        debug(i, fuzz[1:5,1:5])
+        @assert "negative diagonal entry"==0
+      end
     end
   end
   result
