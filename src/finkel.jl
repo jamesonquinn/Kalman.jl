@@ -832,6 +832,55 @@ function predictUpdate(prev::AbstractFinkel, y::Observation, nIter::Int64=15, de
     fp
 end
 
+function testAlgorithm(prev::AbstractFinkel, y::Observation, truth::ParticleSet, nIter::Int64=15)
+  T = prev.params.algo
+  if nIter>0
+      fp = T(prev)
+  else
+      fp = T(prev,nothing) #nosteps - save time
+  end
+  d,n = size(fp.base)
+  for i in 1:n
+    if (i % 2) == 1
+      fp.base[:,i] = truth.particles[:,1]
+    else
+      fp.base[:,i] = y.y
+    end
+  end
+  reweight!(fp, y) #set ws
+
+  #replant-ish
+  for i in 1:2
+    for l in 1:d
+      fp.stem[l,i] = i
+      if size(fp.historyTerms)[1] > 0
+          fp.historyTerms[l,i,:] = histTerms(l, i, fp)
+      end
+    end
+  end
+
+  #
+  tps = Vector{Float64}(undef,2)
+  truthpercents = Vector{Float64}(undef,2)
+  if nIter>0
+      #Threads.@threads for i in 1:fp.tip.n #crashes... fix later
+      #@sync @distributed for i in 1:fp.tip.n #need to use Arrays... probably not too hard actually #SharedArray
+      for i in 1:2
+          mcmc!(fp,i,nIter)
+          tps[i] = mean(fp.totalProb[:,i])
+          truthpercents[i] = mean(fp.stem[j,i] % 2 for j in 1:d)
+          print("Ran particle ", i, " ", nIter, "; mean tp = ", tps[i], "\n")
+          print("   ......... ", i, " ", nIter, "; final truth = ", truthpercents[i], "\n")
+      end
+  end
+  (tps, truthpercents)
+end
+
 function resample(state::AbstractFinkel)
     state #do nothing
+end
+
+function testAlgorithm(prev, y::Observation,
+          truth::ParticleSet, nIter::Int64=15) #dummy for other algos
+  return ([-1., -1], [-1., -1])
 end

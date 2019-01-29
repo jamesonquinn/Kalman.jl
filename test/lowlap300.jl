@@ -13,7 +13,7 @@ else
 end
 fname = difficulty*basefname
 outprefix = "outcome_lowlap_overkill_"
-outcomefile = outprefix*difficulty*string(MEquiv)*".csv"
+outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
@@ -75,7 +75,6 @@ fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     .125, #rejuv
                     )
 #
-bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mymodel)
 
@@ -96,5 +95,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mymodel, obs, [ba,fa1050], 360, outcomefile)
+  bkf.runAlgos(mymodel, obs, [fa1050], 360, outcomefile)
 end
