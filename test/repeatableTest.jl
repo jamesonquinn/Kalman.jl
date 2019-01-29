@@ -1,7 +1,7 @@
-#outcome_lowlap_hard_250_nonrep.csv
+#outcome_lowlap_dis_hard_250_nonrep.csv
 MEquiv = 250
 easy = false
-useRepeats = false
+useRepeats = true
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
 if easy
@@ -13,7 +13,7 @@ else
 end
 fname = difficulty*basefname
 outprefix = "outcome_lowlap_threaded_"
-outprefix = "outcome_lowlap_"
+#outprefix = "outcome_lowlap_"
 outcomefile = outprefix*difficulty*string(MEquiv)*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
@@ -25,7 +25,10 @@ else
 end
 doAlgos = true
 
-function ppath(p)
+using Revise
+using Distributed
+
+@everywhere function ppath(p)
   if LOAD_PATH[end] != p
     push!(LOAD_PATH,p)
   else
@@ -35,7 +38,7 @@ function ppath(p)
 end
 
 kalmandir = join(split(Base.source_path(),'/')[1:end-2],'/')
-ppath(kalmandir * "/src")
+@everywhere ppath(kalmandir * "/src")
 if false #kalmandir == "/Users/chema/Dropbox/Kalman.jl"
   ppath("/Users/chema/Dropbox/")
   ppath("/Users/chema/mydev/Gadfly.jl/src")
@@ -43,12 +46,11 @@ end
 
 
 
-using Revise
-using Distributions, DataStructures
-using bkf
-using DelimitedFiles
-using Random
-using LinearAlgebra
+@everywhere using Distributions, DataStructures
+@everywhere using bkf
+@everywhere using DelimitedFiles
+@everywhere using Random
+@everywhere using LinearAlgebra
 
 
 mymodel = bkf.createLorenzModel(d, timeSuperStep)
@@ -67,14 +69,6 @@ ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mymodel)
 
-faLog = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
-                    30, #histPerLoc
-                    60, #nIter
-                    1., #useForward
-                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
-                    bkf.FuzzFinkelParticles,
-                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
-                    )
 #
 fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     10, #histPerLoc
@@ -85,7 +79,6 @@ fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     .125, #rejuv
                     )
 #
-bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mymodel)
 
