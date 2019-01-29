@@ -75,7 +75,6 @@ fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     .125, #rejuv
                     )
 #
-bkf.putParams!(faLog, mydict)
 bkf.putParams!(fa1050, mydict)
 #bkf.init(fa, mymodel)
 
