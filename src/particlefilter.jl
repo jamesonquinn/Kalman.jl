@@ -68,8 +68,7 @@ function getCurFuzzes(filt, prevParts, params)
     hood = prodNeighborhood(l,d,hoodd)
     hooddet = det(Σ[hood,hood])
     dethat = prod(Σ[i,i] for i in hood)
-    #basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/hoodd)
-    basePrecision[l] = Σinv[l,l] / (hooddet/dethat)^(1/d)
+    basePrecision[l] = Σ[l,l] * (hooddet/dethat)^(1/hoodd)
     for p in 1:n
       dist = MvNormal(Matrix(1e-4I,hoodd,hoodd)) #hopefully this will be replaced
       try
@@ -87,8 +86,7 @@ function getCurFuzzes(filt, prevParts, params)
       localVariance[p,l] = 1/(n-hoodd)/(1+exp(logRelDens))
     end
   end
-  debug("localVariance",mean(lvar > 0 for lvar in localVariance),mean(localVariance))
-  debug("basePrecision",mean(bp > 0 for bp in basePrecision),mean(basePrecision))
+
   # [inv(Σinv + Diagonal([basePrecision[l] / params.overlap *
   #       prod(exp(localVariance[p,l]/params.mh.r^2)
   #       for λ in prodNeighborhood(l,d,params.mh.r))
@@ -106,14 +104,6 @@ function getCurFuzzes(filt, prevParts, params)
     catch
       debug("Problem in getCurFuzzes", p, basePrecision)
       result[p] = inv(Σinv + Diagonal([basePrecision[l] / params.overlap for l in 1:d]))
-    end
-  end
-
-  for (i, fuzz) in enumerate(result)
-    if fuzz[2,2] < 0
-      debug(i, fuzz[1:5,1:5])
-      debug("with", curFuzzes[i][1:5,1:5])
-      @assert "negative diagonal entry"==0
     end
   end
   result
@@ -139,18 +129,9 @@ end
 function getNextFuzzes(filt, prevParts, params)
   d, n = size(prevParts)
   curFuzzes = getCurFuzzes(filt, prevParts, params)
-  fuzzes = [propagateUncertainty(filt.f,prevParts[:,p:p],
+  [propagateUncertainty(filt.f,prevParts[:,p:p],
       curFuzzes[p])
     for p in 1:n]
-
-  for (i, fuzz) in enumerate(fuzzes)
-    if fuzz[2,2] < 0
-      debug(i, fuzz[1:5,1:5])
-      debug("with", curFuzzes[i][1:5,1:5])
-      @assert "negative diagonal entry"==0
-    end
-  end
-  fuzzes
 end
 #
 # function rejuvenateFuzz!(pset::ParticleSet) #not used, and BROKEN — newCenters should not be here

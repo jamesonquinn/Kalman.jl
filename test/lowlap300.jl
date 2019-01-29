@@ -12,7 +12,7 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outprefix = "outcome_lowlap_tests_"
+outprefix = "outcome_lowlap_overkill_"
 outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
@@ -95,5 +95,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.testAlgos(mymodel, obs, [fa1050], 360, outcomefile)
+  bkf.runAlgos(mymodel, obs, [fa1050], 360, outcomefile)
 end
