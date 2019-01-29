@@ -17,11 +17,12 @@ shifter = function(x, n = 1) {
 d = 15 #dimension
 
 cond = fread("outcome_lowlap_threaded_hard_250.csv")
-cond = fread("outcome_hard_250_nonrep.csv")
+cond = fread("outcome_hard_250.csv")
 cond = cond[mod=="block"]
 dim(cond)
-cond = rbind(cond,fread("outcome_lowlap_hard_250_nonrep.csv"))
-cond = rbind(cond,fread("outcome_lowlap_2_hard_250_nonrep.csv"))
+cond = rbind(cond,fread("outcome_lowlap_threaded_hard_250.csv"))
+cond = rbind(cond,fread("outcome_lowlap_2_hard_250.csv"))
+cond = rbind(cond,fread("outcome_lowlap_hard_250.csv"))
 condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
 condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
@@ -83,9 +84,9 @@ biases[,list(msqbias=mean(bias^2,na.rm=T),
              mvar=mean(variance,na.rm=T),
              mestvar=mean(estvar,na.rm=T)
 ),by=list(model,nIter,hpl,sampType) ]
-biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
-             mvar=sqrt(mean(variance,na.rm=T)),
-             mestvar=sqrt(mean(estvar,na.rm=T))
+biases[,list(msqbias=mean(bias^2,na.rm=T),
+             mvar=mean(variance,na.rm=T),
+             mestvar=mean(estvar,na.rm=T)
 ),by=list(model,position) ]
 oneterm[model=="Block PF"&step==1,error]
 

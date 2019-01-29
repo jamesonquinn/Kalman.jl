@@ -28,7 +28,7 @@ doAlgos = true
 using Revise
 using Distributed
 
-@everywhere function ppath(p)
+function ppath(p) #@everywhere
   if LOAD_PATH[end] != p
     push!(LOAD_PATH,p)
   else
@@ -38,7 +38,7 @@ using Distributed
 end
 
 kalmandir = join(split(Base.source_path(),'/')[1:end-2],'/')
-@everywhere ppath(kalmandir * "/src")
+ppath(kalmandir * "/src") #@everywhere
 if false #kalmandir == "/Users/chema/Dropbox/Kalman.jl"
   ppath("/Users/chema/Dropbox/")
   ppath("/Users/chema/mydev/Gadfly.jl/src")
@@ -46,11 +46,11 @@ end
 
 
 
-@everywhere using Distributions, DataStructures
-@everywhere using bkf
-@everywhere using DelimitedFiles
-@everywhere using Random
-@everywhere using LinearAlgebra
+using Distributions, DataStructures #@everywhere
+using bkf #@everywhere
+using DelimitedFiles #@everywhere
+using Random #@everywhere
+using LinearAlgebra #@everywhere
 
 
 mymodel = bkf.createLorenzModel(d, timeSuperStep)

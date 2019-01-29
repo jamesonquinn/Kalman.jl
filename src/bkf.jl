@@ -15,9 +15,9 @@ using DataFrames, CSV, DataStructures, Dates
 using NaNMath
 
 
-if true
+if false
   using Distributed
-  using SharedArrays
+  using Arrays #SharedArray
   if length(workers())<4
     addprocs(4)
   end

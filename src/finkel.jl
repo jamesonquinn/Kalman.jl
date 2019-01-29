@@ -201,9 +201,9 @@ mutable struct FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFin
                 #As with all similar arrays, size is [d,n]; that is, first index is space and second is particle.
         #[space, particle]
     prev::AbstractFinkel
-    historyTerms::SharedArray{Int64,3} #tells which histories each particle was checked against
+    historyTerms::Array{Int64,3} #tells which histories each particle was checked against #SharedArray
         #[space, particle, sample]
-    stem::SharedArray{Int64,2} #tells which base each tip comes from
+    stem::Array{Int64,2} #tells which base each tip comes from #SharedArray
         #[space, particle]
     ws::Vector{ProbabilityWeights} #selection probabilities at each point; p(y_l|z^i_l)
         #[space][particle]
@@ -216,10 +216,10 @@ mutable struct FinkelParticles{T,F<:KalmanFilter,P<:FinkelParams} <: AbstractFin
         #[space, pfuture][phistory]
     means::Array{T,2} #base, progressed, without adding noise.
         #[space, particle]
-    prevProbs::SharedArray{Union{Float64,Nothing},2} #sum over neighborhood history of local probability - avoid double calculation
+    prevProbs::Array{Union{Float64,Nothing},2} #sum over neighborhood history of local probability - avoid double calculation #SharedArray
     #localDists::Array{Distribution,2} #for calculating probs
         #[space, phistory]
-    totalProb::SharedArray{Float64,2} #convergence diagnostic
+    totalProb::Array{Float64,2} #convergence diagnostic #SharedArray
     params::P
     numMhAccepts::Int64
 end
@@ -254,8 +254,8 @@ function FinkelParticles(prev::AbstractFinkel,
     tipVals = copy(base)
 
 
-    historyTerms = SharedArray(zeros(Int64,d,n,h))
-    stem = SharedArray(zeros(Int64,d,n))
+    historyTerms = Array(zeros(Int64,d,n,h)) #SharedArray
+    stem = Array(zeros(Int64,d,n)) #SharedArray
     for j = 1:n
         for l = 1:d
             stem[l,j] = j
@@ -307,9 +307,9 @@ function FinkelParticles(prev::AbstractFinkel,
                 lps,
                 histSampProbs,
                 means, #means
-                SharedArray{Union{Nothing, Float64},2}(nothing,d,n), #prevProbs
+                Array{Union{Nothing, Float64},2}(nothing,d,n), #prevProbs #SharedArray
                 #localDists, #localDists
-                SharedArray(zeros(d,n)), #totalProb
+                Array(zeros(d,n)), #totalProb #SharedArray
                 myparams,
                 0 #numMhAccepts
                 )
@@ -821,8 +821,8 @@ function predictUpdate(prev::AbstractFinkel, y::Observation, nIter::Int64=15, de
     replant!(fp) #set tip from base
     if nIter>0
         #Threads.@threads for i in 1:fp.tip.n #crashes... fix later
-        @sync @distributed for i in 1:fp.tip.n #need to use SharedArrays... probably not too hard actually
-        #for i in 1:fp.tip.n
+        #@sync @distributed for i in 1:fp.tip.n #need to use Arrays... probably not too hard actually #SharedArray
+        for i in 1:fp.tip.n
             mcmc!(fp,i,nIter)
             if debug & ((i % 40)==0)
                 print("Ran particle ", i, " ", nIter, "; mean tp = ", mean(fp.totalProb[:,1:i]), "\n")

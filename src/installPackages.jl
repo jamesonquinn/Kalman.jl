@@ -13,14 +13,4 @@ Pkg.add("Revise")
 #Pkg.add("Plotly")
 #Pkg.add("Gadfly")
 Pkg.add("NaNMath")
-Pkg.add("SharedArrays")
-
-if false
-  using Distributed
-  @sync @distributed for i in 1:10
-    print(i)
-    print("\n")
-  end
-
-  print("\n\n\n")
-end
+Pkg.add("Arrays") #SharedArray
