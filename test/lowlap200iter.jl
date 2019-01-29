@@ -12,8 +12,8 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outprefix = "outcome_lowlap_2_"
-outcomefile = outprefix*difficulty*string(MEquiv)*".csv"
+outprefix = "outcome_200iter_"
+outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
@@ -66,26 +66,16 @@ ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mymodel)
 
-faLog = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
-                    30, #histPerLoc
+fa = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
+                    25, #histPerLoc
                     200, #nIter
-                    1., #useForward
-                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
-                    bkf.FuzzFinkelParticles,
-                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
-                    )
-#
-fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
-                    10, #histPerLoc
-                    50, #nIter
                     1., #useForward
                     4, #overlap
                     bkf.FuzzFinkelParticles,
                     .125, #rejuv
                     )
 #
-bkf.putParams!(faLog, mydict)
-bkf.putParams!(fa1050, mydict)
+bkf.putParams!(fa, mydict)
 #bkf.init(fa, mymodel)
 
 obs = 0
@@ -105,5 +95,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mymodel, obs, [fa1050], 360, outcomefile)
+  bkf.runAlgos(mymodel, obs, [fa], 360, outcomefile)
 end

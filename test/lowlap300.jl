@@ -1,5 +1,5 @@
 #outcome_lowlap_2_hard_250_nonrep.csv
-MEquiv = 300
+MEquiv = 250
 easy = false
 useRepeats = true
 clones = 1 #apparent dimensions = d*clones
@@ -13,7 +13,7 @@ else
 end
 fname = difficulty*basefname
 outprefix = "outcome_lowlap_overkill_"
-outcomefile = outprefix*difficulty*string(MEquiv)*".csv"
+outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
@@ -66,9 +66,9 @@ ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mymodel)
 
-fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
-                    20, #histPerLoc
-                    100, #nIter
+fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
+                    25, #histPerLoc
+                    200, #nIter
                     1., #useForward
                     4, #overlap
                     bkf.FuzzFinkelParticles,
@@ -95,5 +95,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mymodel, obs, [ba,fa1050], 360, outcomefile)
+  bkf.runAlgos(mymodel, obs, [fa1050], 360, outcomefile)
 end

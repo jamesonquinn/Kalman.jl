@@ -1,9 +1,10 @@
-#outcome_lowlap_2_hard_250_nonrep.csv
-MEquiv = 250
+#.....csv
+MEquiv = 25
 easy = false
-useRepeats = true
 clones = 1 #apparent dimensions = d*clones
-basefname = "truth.csv"
+highcor, corgap, othervar, mainvar, vargap, μ = (.8,2,2.,.5,3,.25)
+nIterVec = [200,350,700]
+basefname = "convergetruth.csv"
 if easy
   difficulty = "easy_"
   timeSuperStep = 0.05
@@ -12,16 +13,11 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outprefix = "outcome_lowlap_2_"
-outcomefile = outprefix*difficulty*string(MEquiv)*".csv"
-full_d = 40 #dimensions
-s = 60 #steps
+outprefix = "outcome_converged_"
+outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
+full_d = 20 #dimensions
+s = 2 #steps
 d = div(full_d, clones)
-if useRepeats #clones>1
-  fname = "repeating_" * fname
-else
-  outcomefile = outprefix*difficulty*string(MEquiv)*"_nonrep.csv"
-end
 doAlgos = true
 
 function ppath(p)
@@ -51,6 +47,7 @@ using LinearAlgebra
 
 
 mymodel = bkf.createLorenzModel(d, timeSuperStep)
+bkf.makeFunkyInitialDist!(mymodel, highcor, corgap, othervar, mainvar, vargap, μ)
 
 mydict = OrderedDict()
 
@@ -66,26 +63,44 @@ ba = bkf.BlockAlgo(MEquiv,4)
 bkf.putParams!(ba, mydict)
 bkf.init(ba, mymodel)
 
-faLog = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
+
+fa30u = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     30, #histPerLoc
-                    200, #nIter
-                    1., #useForward
-                    MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS, #overlap
-                    bkf.FuzzFinkelParticles,
-                    1/(MEquiv^(1-1/bkf.DEFAULT_PRODUCT_RADIUS)/bkf.DEFAULT_PRODUCT_RADIUS) /2, #rejuv
-                    )
-#
-fa1050 = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
-                    10, #histPerLoc
-                    50, #nIter
+                    100, #nIter
                     1., #useForward
                     4, #overlap
                     bkf.FuzzFinkelParticles,
                     .125, #rejuv
                     )
 #
-bkf.putParams!(faLog, mydict)
-bkf.putParams!(fa1050, mydict)
+fa10u = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
+                    10, #histPerLoc
+                    100, #nIter
+                    1., #useForward
+                    4, #overlap
+                    bkf.FuzzFinkelParticles,
+                    .125, #rejuv
+                    )
+#
+fa30l = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
+                    30, #histPerLoc
+                    100, #nIter
+                    1., #useForward
+                    4, #overlap
+                    bkf.FuzzFinkelParticles,
+                    .125, #rejuv
+                    )
+#
+fa10l = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
+                    10, #histPerLoc
+                    100, #nIter
+                    1., #useForward
+                    4, #overlap
+                    bkf.FuzzFinkelParticles,
+                    .125, #rejuv
+                    )
+#
+bkf.putParams!(fa30u, mydict)
 #bkf.init(fa, mymodel)
 
 obs = 0
@@ -94,7 +109,7 @@ try
     print(obs[3][3].x.x[3])
     print("QQQQQQQQQQQQQQQQQQQ")
 catch
-    @assert "Don't recreate; too late." == 0
+    #@assert "Don't recreate; too late." == 0
     global obs = bkf.createObservations(mymodel, s)
     bkf.saveObservations(obs, fname, false, clones)
     if clones>1
@@ -105,5 +120,5 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mymodel, obs, [fa1050], 360, outcomefile)
+  bkf.testConvergence(mymodel, [fa30u,fa10u,fa30l,fa10u], nIterVec, 360, outcomefile)
 end

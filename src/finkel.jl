@@ -398,21 +398,29 @@ function particles(fp::AbstractFinkel)
     fp.tip.particles
 end
 
-function reweight!(fp::AbstractFinkel, y::Observation)
-    d = size(fp.base,1)
+function reweight!(fp::AbstractFinkel, y::Observation, imax=0)
+    d, n = size(fp.base)
     fp.ws = Vector{ProbabilityWeights}(undef, d)
     diffs = fp.base - fp.tip.filter.z.h * repeat(y.y,outer=[1,fp.tip.n])  # fp.tip.f.z.h should probably be eye ?
+      #TODO: inv(fp.tip.filter.z.h) ???
     vars = diag(fp.tip.filter.z.r) #assumes fp.tip.f.z.h is eye and ...r is diagonal
+    if imax == 0
+      imax = n
+      fromrange = 1:imax
+    else
+      fromrange = (imax+1):(imax*2) #never replace with inits
+    end
     for l = 1:d
         if false
             forwardProb = zeros(d)
             for ph = 1:fp.tip.n
-                forwardProb += exp.(fp.lps[l,:,ph])
+                forwardProb += exp.(fp.lps[l,1:imax,ph])
             end
         else
             forwardProb = 1. #ones(d)
         end
-        wvec = exp.(-diffs[l,:].^2 ./ vars[l] / 2 ) ./ forwardProb # ./ if forwardProb is vector
+        wvec = zeros(n)
+        wvec[fromrange] = exp.(-diffs[l,1:imax].^2 ./ vars[l] / 2 ) ./ forwardProb # ./ if forwardProb is vector
 
         replace_nan!(wvec)
         fp.ws[l] = ProbabilityWeights(wvec)
@@ -832,6 +840,58 @@ function predictUpdate(prev::AbstractFinkel, y::Observation, nIter::Int64=15, de
     fp
 end
 
+function testAlgorithm(prev::AbstractFinkel, y::Observation, truth::ParticleSet, nIter::Int64=15)
+  T = prev.params.algo
+  if nIter>0
+      fp = T(prev)
+  else
+      fp = T(prev,nothing) #nosteps - save time
+  end
+  d,n = size(fp.base)
+  for i in 1:n
+    if (i % 2) == 1
+      fp.base[:,i] = truth.particles[:,1]
+    else
+      fp.base[:,i] = y.y
+    end
+  end
+  reweight!(fp, y, 2) #set ws
+
+  #replant!(fp) #set tip from base
+  #replant-ish
+  for i in 1:2
+    for l in 1:d
+      fp.stem[l,i] = i
+      if size(fp.historyTerms)[1] > 0
+          fp.historyTerms[l,i,:] = histTerms(l, i, fp)
+      end
+    end
+  end
+
+  #
+  tps = Vector{Float64}(undef,2)
+  truthpercents = Matrix{Float64}(undef,2,3)
+  if nIter>0
+      #Threads.@threads for i in 1:fp.tip.n #crashes... fix later
+      #@sync @distributed for i in 1:fp.tip.n #need to use Arrays... probably not too hard actually #SharedArray
+      for i in 1:2
+          mcmc!(fp,i,nIter)
+          tps[i] = mean(fp.totalProb[:,i])
+          truthpercents[i,1] = mean(fp.stem[j,i] % 2 for j in 1:d)
+          truthpercents[i,2] = mean(fp.stem[j,i] == 1 for j in 1:d)
+          truthpercents[i,3] = mean(fp.stem[j,i] == 2 for j in 1:d)
+          print("Ran particle ", i, " ", nIter, "; mean tp = ", tps[i], "\n")
+          print("   ......... ", i, " ", nIter, "; final truth = ", truthpercents[i,1], " ", truthpercents[i,2]," ", truthpercents[i,3],"\n")
+      end
+  end
+  (tps, truthpercents)
+end
+
 function resample(state::AbstractFinkel)
     state #do nothing
+end
+
+function testAlgorithm(prev, y::Observation,
+          truth::ParticleSet, stuff) #dummy for other algos
+  return ([-1., -1], [-1., -1])
 end

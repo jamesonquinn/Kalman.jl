@@ -1,7 +1,4 @@
-using DataFrames, CSV, DataStructures, Dates
-using NaNMath
-
-REPEATABLE_VERSION = 1.5
+REPEATABLE_VERSION = 1.8
 
 ##############filtering algorithms
 
@@ -84,8 +81,13 @@ mutable struct FinkelAlgo <: Algo
     rejuv::Float64
 end
 
-function predictUpdate(state, obs, algo::FinkelAlgo) #override if you need to pass in extra params - ie, nIter
+function predictUpdate(state, obs, algo::FinkelAlgo) #need to pass in extra params - ie, nIter
     predictUpdate(state, obs, algo.nIter)
+end
+
+function testAlgorithm(prev::AbstractFinkel, y::Observation,
+        truth::ParticleSet, algo::FinkelAlgo) #pass in nIter
+  testAlgorithm(prev,y,truth,algo.nIter)
 end
 
 function getM(algo::FinkelAlgo)
@@ -172,7 +174,7 @@ function createLorenzModel(d, timeSuperStep = 0.05)
     @assert numSteps > 20
     processNoiseVar = 1e-100
     measurementNoiseVar = [1.]
-    mnvvec = repeat(measurementNoiseVar,40)[1:d]
+    mnvvec = repeat(measurementNoiseVar,d)[1:d]
     initialvar = 0.09
 
 
@@ -194,6 +196,21 @@ function createLorenzModel(d, timeSuperStep = 0.05)
     kf0 = bkf.BasicLorenzFilter(x0,f,z)
     kf0
 end
+
+function makeFunkyInitialDist!(model, highcor, corgap, othervar, mainvar, vargap, μ)
+  d = length(model.x.x)
+  funkyVar = Matrix(1.0I,d,d)
+  for i in 1:corgap:(d-1)
+    funkyVar[i,i+1] = highcor
+    funkyVar[i+1,i] = highcor
+  end
+  varvec = fill(mainvar,d)
+  varvec[1:vargap:end] = fill(othervar,div(d-1,vargap)+1)
+  funkyVar = funkyVar * diagm(0=>varvec)
+  model.x.p = funkyVar
+  model.x.x = fill(μ*model.f.F,d)
+end
+
 
 function createObservations(model, steps)
     pf1 = ParticleSet(model,1)
@@ -356,7 +373,8 @@ function runAlgos(model, obs, algos, reps, saveFileName)
 
             state = init(algo, model)
             for i = 2:length(truth)
-                print("Step ",i-1,":     ",basedatavec,Dates.format(now(), dateformat"u d HH:MM:SS"),"\n")
+                print("Step ",i-1,":     ",basedatavec,Dates.format(now(), dateformat"u d HH:MM:SS")," algo ",algo,"\n")
+                #debug(@which predictUpdate(state, observations[i], algo))
                 putime = (@timed state = predictUpdate(state, observations[i], algo))[2]
                 #measure something here? maybe TODO later
                 (μ2,Σ2) = musig(state)
@@ -420,4 +438,213 @@ function finkelAlgos(Ms, sampTypes=[SampleUniform], mhTypes=[MhSampled], histPer
         end
     end
     algos
+end
+
+
+function testAlgos(model, obs, algos, reps, saveFileName) #like runAlgos, but also do testAlgorithm, and no kl.
+    #debug(obs)
+    (truth, observations, kfs) = obs
+    runstarttime = Dates.now()
+    d = length(model.x.x)
+    blankParams = OrderedDict()
+    for algo = algos
+        putParams!(algo,blankParams)
+    end
+    i = 1
+    for k in keys(blankParams)
+        blankParams[k] = ""
+    end
+
+    if isfile(saveFileName)
+        print("Appending to existing save file! \n")
+        #check file validity
+    else
+        print("Writing column headers\n")
+        names = [string(param) for param in keys(blankParams)]
+        push!(names,"version")
+        push!(names,"dimension")
+        push!(names,"rep")
+        push!(names,"startTime")
+        push!(names,"step")
+        push!(names,"checksum")
+        push!(names,"putime")
+        push!(names,"samptime")
+
+        #test stuff
+        push!(names,"truthtp")
+        push!(names,"obstp")
+        push!(names,"truthpercent")
+        push!(names,"obspercent")
+        push!(names,"truthpercentstay")
+        push!(names,"obspercentluck")
+        push!(names,"truthpercentbadluck")
+        push!(names,"obspercentstay")
+
+
+        names = vcat(names,[("d"*lpad(i,2,"0")) for i in 1:d])
+        names = vcat(names,[("v"*lpad(i,2,"0")^2) for i in 1:d])
+        names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+1,2,"0")) for i in 1:(d-1)])
+        names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+2,2,"0")) for i in 1:(d-2)])
+
+        names = vcat(names,[("t"*lpad(i,2,"0")) for i in 1:d])
+        names = vcat(names,[("o"*lpad(i,2,"0")) for i in 1:d])
+        open( saveFileName,  "a") do outfile
+            myWritecsv( outfile, trsp(names))
+        end
+    end
+
+
+
+
+    for rep in 1:reps
+        debug("Rep:",rep, Dates.format(now(), dateformat"u d HH:MM:SS"))
+        debug()
+        debug()
+        debug()
+        for algo = algos
+            paramDict = deepcopy(blankParams)
+            putParams!(algo,paramDict)
+            basedatavec = [get(paramDict,k,"") for k in keys(paramDict)]
+            print("\n\nAlgo: ",basedatavec,"\n")
+            push!(basedatavec,REPEATABLE_VERSION) #version
+            push!(basedatavec,d) #dimension
+            push!(basedatavec,rep) #rep
+            push!(basedatavec,runstarttime) #time
+
+            state = init(algo, model)
+            for i = 2:length(truth)
+                print("Step ",i-1,":     ",basedatavec,Dates.format(now(), dateformat"u d HH:MM:SS"),"\n")
+
+                tps, percents = testAlgorithm(state, observations[i], truth[i], algo)
+                putime = (@timed state = predictUpdate(state, observations[i], algo))[2]
+                #measure something here? maybe TODO later
+
+                (μ2,Σ2) = musig(state)
+                μ = μ2 - truth[i].particles[:,1]
+                print("Meansqs: resampled:",mean(μ.^2),"\n")
+
+                datavec = copy(basedatavec)
+                push!(datavec,i-1) #step
+                push!(datavec,kfs[i].x.x[d]) #checksum
+                push!(datavec,putime) #putime
+                push!(datavec,0) #samptime
+
+                #
+                datavec = vcat(datavec, tps, vec(percents))
+
+
+                datavec = vcat(datavec,
+                                μ,
+                                [Σ2[l,l] for l in 1:d],
+                                [Σ2[l,l+1] for l in 1:(d-1)],
+                                [Σ2[l,l+2] for l in 1:(d-2)],
+                                [truth[i].particles[l,1] for l in 1:d],
+                                [observations[i].y[l] for l in 1:d]
+                              )
+
+                open( saveFileName,  "a") do outfile
+                    myWritecsv( outfile, trsp(datavec))
+                end
+            end
+        end
+    end
+end
+
+function testConvergence(model, algos, nIterVec, reps, saveFileName) #like runAlgos, but also do testAlgorithm, and no kl.
+    #debug(obs)
+    runstarttime = Dates.now()
+    d = length(model.x.x)
+    blankParams = OrderedDict()
+    for algo = algos
+        putParams!(algo,blankParams)
+    end
+    i = 1
+    for k in keys(blankParams)
+        blankParams[k] = ""
+    end
+
+    if isfile(saveFileName)
+        print("Appending to existing save file! \n")
+        #check file validity
+    else
+        print("Writing column headers\n")
+        names = [string(param) for param in keys(blankParams)]
+        push!(names,"version")
+        push!(names,"dimension")
+        push!(names,"rep")
+        push!(names,"startTime")
+        push!(names,"step")
+        push!(names,"checksum")
+        push!(names,"putime")
+        push!(names,"samptime")
+
+        #test stuff
+        push!(names,"nIterUsed")
+        push!(names,"truthtp")
+        push!(names,"obstp")
+        push!(names,"truthpercent")
+        push!(names,"obspercent")
+        push!(names,"truthpercentstay")
+        push!(names,"obspercentluck")
+        push!(names,"truthpercentbadluck")
+        push!(names,"obspercentstay")
+
+
+        names = vcat(names,[("d"*lpad(i,2,"0")) for i in 1:d])
+        names = vcat(names,[("v"*lpad(i,2,"0")^2) for i in 1:d])
+        names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+1,2,"0")) for i in 1:(d-1)])
+        names = vcat(names,[("v"*lpad(i,2,"0")*lpad(i+2,2,"0")) for i in 1:(d-2)])
+
+        names = vcat(names,[("t"*lpad(i,2,"0")) for i in 1:d])
+        names = vcat(names,[("o"*lpad(i,2,"0")) for i in 1:d])
+        open( saveFileName,  "a") do outfile
+            myWritecsv( outfile, trsp(names))
+        end
+    end
+
+
+
+
+    for rep in 1:reps
+
+        (truth, observations, kfs) = createObservations(model, 2)
+        debug("Rep:",rep, Dates.format(now(), dateformat"u d HH:MM:SS"))
+        debug()
+        debug()
+        debug()
+        for algo in algos
+            paramDict = deepcopy(blankParams)
+            putParams!(algo,paramDict)
+            basedatavec = [get(paramDict,k,"") for k in keys(paramDict)]
+            print("\n\nAlgo: ",basedatavec,"\n")
+            push!(basedatavec,REPEATABLE_VERSION) #version
+            push!(basedatavec,d) #dimension
+            push!(basedatavec,rep) #rep
+            push!(basedatavec,runstarttime) #time
+
+            state = init(algo, model)
+            for nIter in nIterVec
+                i = 2
+                print("Step ",nIter,":     ",basedatavec,Dates.format(now(), dateformat"u d HH:MM:SS"),"\n")
+
+                putime = (@timed tps, percents = testAlgorithm(state, observations[i], truth[i], nIter))[2]
+                #measure something here? maybe TODO later
+
+                datavec = copy(basedatavec)
+                push!(datavec,i-1) #step
+                push!(datavec,kfs[i].x.x[d]) #checksum
+                push!(datavec,putime) #putime
+                push!(datavec,0) #samptime
+                push!(datavec,nIter)
+
+                #
+                datavec = vcat(datavec, tps, vec(percents))
+
+
+                open( saveFileName,  "a") do outfile
+                    myWritecsv( outfile, trsp(datavec))
+                end
+            end
+        end
+    end
 end
