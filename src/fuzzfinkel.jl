@@ -61,6 +61,14 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
 
 
     fuzzes = getNextFuzzes(filt, prevParts, prev.params)
+    if false #extra error check #TODO: remove
+      for (i, fuzz) in enumerate(fuzzes)
+        if fuzz[2,2] < 0
+          debug(i, fuzz[1:5,1:5])
+          @assert "negative diagonal entry"==0
+        end
+      end
+    end
     base = copy(means)
 
     if myparams.rejuv != 0
@@ -121,7 +129,8 @@ function FuzzFinkelParticles(prev::AbstractFinkel,
                   lps[l,pf,ph] = logpdf(Normal(means[l,ph],Σ[l,l]),
                                   base[l,pf])
                 catch err
-                  debug("Normal failed", err, means[l,ph], Σ[l,l], base[l,pf])
+                  hoody = (max(1,l-1)):(min(d,l+1))
+                  debug("Normal failed2", err, means[l,ph], Σ[l,l], hoody, fuzzes[ph][hoody,hoody], base[l,pf])
                   lps[l,pf,ph] = -2000
                 end
               else
