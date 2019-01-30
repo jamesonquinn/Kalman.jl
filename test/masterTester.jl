@@ -1,28 +1,14 @@
 #outcome_lowlap_2_hard_250_nonrep.csv
 MEquiv = 250
 easy = false
-useRepeats = true
+hardMeansHard = false
+useRepeats = false
 clones = 1 #apparent dimensions = d*clones
-doTestConvergence = false  ;  convPart = doTestConvergence ? "converge_" : ""
+doTestConvergence = false
 basefname = "truth.csv"
-if easy
-  difficulty = "easy_"
-  timeSuperStep = 0.05
-else
-  difficulty = "hard_"
-  timeSuperStep = 0.4
-end
-fname = difficulty*basefname
 outprefix = "outcome_"
-outcomefile = outprefix*string(bkf.REPEATABLE_VERSION)*convPart*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
-d = div(full_d, clones)
-if useRepeats #clones>1
-  fname = "repeating_" * fname
-else
-  outcomefile = outprefix*difficulty*string(MEquiv)*"_nonrep.csv"
-end
 doAlgos = true
 neighborhood_r = 4
 overlap = exp(.5)*2
@@ -31,6 +17,7 @@ histPerLoc = 15
 nIter = 150
 nIterVec = [1,30,100,250,600,1300]
 
+#setup for imports
 function ppath(p)
   if LOAD_PATH[end] != p
     push!(LOAD_PATH,p)
@@ -48,7 +35,7 @@ if false #kalmandir == "/Users/chema/Dropbox/Kalman.jl"
 end
 
 
-
+#imports
 using Revise
 using Distributions, DataStructures
 using bkf
@@ -56,7 +43,34 @@ using DelimitedFiles
 using Random
 using LinearAlgebra
 
+#use global variables to set up file names
+if easy
+  difficulty = "easy_"
+  timeSuperStep = 0.05
+else
+  if hardMeansHard
+    difficulty = "nightmare_"
+    timeSuperStep = 0.6
+  else
+    difficulty = "hard_"
+    timeSuperStep = 0.4
+  end
+end
+convPart = doTestConvergence ? "converge_" : ""
+fname = difficulty*basefname
+outcomefile = outprefix*string(bkf.REPEATABLE_VERSION)*convPart*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 
+if useRepeats #clones>1
+  d = div(full_d, clones)
+  fname = "repeating_" * fname
+else
+  d = full_d
+  outcomefile = outcomefile*"_nonrep"
+end
+outcomefile = outcomefile*".csv"
+
+
+#setup model and algo variables
 mymodel = bkf.createLorenzModel(d, timeSuperStep)
 
 mydict = OrderedDict()
@@ -112,6 +126,7 @@ end
 
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
+#run!
 if doAlgos
   if doTestConvergence
     bkf.testConvergence(mymodel, [fa,faUni], nIterVec, 360, outcomefile)
