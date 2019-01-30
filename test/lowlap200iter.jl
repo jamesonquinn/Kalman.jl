@@ -12,7 +12,7 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outprefix = "outcome_200iter_"
+outprefix = "outcome_250iter_"
 outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
@@ -67,12 +67,12 @@ bkf.putParams!(ba, mydict)
 bkf.init(ba, mymodel)
 
 fa = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
-                    25, #histPerLoc
+                    15, #histPerLoc
                     200, #nIter
                     1., #useForward
-                    4, #overlap
+                    1.4, #overlap
                     bkf.FuzzFinkelParticles,
-                    .125, #rejuv
+                    .2, #rejuv
                     )
 #
 bkf.putParams!(fa, mydict)
