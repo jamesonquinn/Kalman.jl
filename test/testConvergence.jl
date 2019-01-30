@@ -13,7 +13,7 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outprefix = "outcome_converged_"
+outprefix = "outcome_converged2_"
 outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 20 #dimensions
 s = 2 #steps

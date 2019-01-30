@@ -78,7 +78,7 @@ function getCurFuzzes(filt, prevParts, params)
           debug("Cholesky 4")
         end
       end
-      logRelDens = logpdf(dist,diffs[hood,p]) - logpdf(dist,zeros(hoodd))
+      logRelDens = logpdf(dist,diffs[hood,p]) #- logpdf(dist,zeros(hoodd))
       localVariance[p,l] = 1/(n-hoodd)/(exp(logRelDens))
     end
   end
@@ -101,7 +101,7 @@ function getCurFuzzes(filt, prevParts, params)
       result[p] = Σ * params.overlap / (n-hoodd)
     end
   end
-  if true #extra error check #TODO: remove
+  if false #extra error check #TODO: remove
     for (i, fuzz) in enumerate(result)
       if fuzz[2,2] < 0
         debug(i, fuzz[1:5,1:5])
