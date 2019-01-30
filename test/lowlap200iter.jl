@@ -1,6 +1,6 @@
 #outcome_lowlap_2_hard_250_nonrep.csv
 MEquiv = 250
-easy = false
+easy = true
 useRepeats = true
 clones = 1 #apparent dimensions = d*clones
 basefname = "truth.csv"
