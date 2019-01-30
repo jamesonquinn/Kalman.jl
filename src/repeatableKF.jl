@@ -1,4 +1,4 @@
-REPEATABLE_VERSION = 1.9
+REPEATABLE_VERSION = 2.0
 
 ##############filtering algorithms
 

@@ -22,22 +22,22 @@ for (k in (1:20)*50) {
                  data=convergence))
   cat(k," ",s$coefficients[3,1]* (exp(-1/k)-exp(-1000/k))," ",exp(-1/k)-exp(-1000/k),"\n")
 }
-convergence[,mean(obspercent),by=list(nIterUsed,hpl,sampType,overlap)][order(V1),]
+avconv = convergence[,mean(obspercent),by=list(nIterUsed,hpl,sampType,overlap)][order(V1),]
+avconv
 convergence[,mean(truthpercent),by=list(nIterUsed,hpl,sampType,overlap)][order(V1),]
-
-
-
+cor(avconv[,overlap],avconv[,V1])
 summary(lm(obspercent ~ hpl + exp(-nIterUsed/k) * sampType + exp(-nIterUsed/k),
            data=convergence))
 
 
-cond = fread("outcome_lowlap_threaded_hard_250.csv")
+
+
+
 cond = fread("outcome_hard_250.csv")
 cond = cond[mod=="block"]
 dim(cond)
-cond = rbind(cond,fread("outcome_lowlap_threaded_hard_250.csv"))
-cond = rbind(cond,fread("outcome_lowlap_2_hard_250.csv"))
-cond = rbind(cond,fread("outcome_lowlap_hard_250.csv"))
+cond = rbind(cond,fread("outcome_250iter_hard_250_chema.csv"))
+cond = rbind(cond,fread("outcome_250iter_hard_250_ixchelquinn.csv"))
 condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
 condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
@@ -61,6 +61,8 @@ if (F) { #look at raw values
 savecols = c(match("step",names(condi)),
              match("nIter",names(condi)),
              match("sampType",names(condi)),
+             match("overlap",names(condi)),
+             match("rejuv",names(condi)),
              match("hpl",names(condi)))
 pre_d = match("d01",names(condi)) - 1 #number of the last col before the "b's" μ
 pre_v = match("v0101",names(condi)) - 1 #number of the last col before the "v's" Σ
@@ -83,7 +85,7 @@ for (l in 1:nblocks) {
                                         border=(j %in% c(1,2,blocksize)),
                                         doubleborder=(j == 1)
                                         ),
-                                  by=list(model,nIter,hpl,step,sampType)],
+                                  by=list(model,overlap,nIter,hpl,step,sampType)],
                     fill=T)
   }
 }
@@ -98,7 +100,7 @@ allbiases = biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
 biases[,list(msqbias=mean(bias^2,na.rm=T),
              mvar=mean(variance,na.rm=T),
              mestvar=mean(estvar,na.rm=T)
-),by=list(model,nIter,hpl,sampType) ]
+),by=list(model,nIter,hpl,sampType,overlap) ]
 biases[,list(msqbias=mean(bias^2,na.rm=T),
              mvar=mean(variance,na.rm=T),
              mestvar=mean(estvar,na.rm=T)

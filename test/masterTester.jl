@@ -3,6 +3,7 @@ MEquiv = 250
 easy = false
 useRepeats = true
 clones = 1 #apparent dimensions = d*clones
+doTestConvergence = false  ;  convPart = doTestConvergence ? "converge_" : ""
 basefname = "truth.csv"
 if easy
   difficulty = "easy_"
@@ -12,8 +13,8 @@ else
   timeSuperStep = 0.4
 end
 fname = difficulty*basefname
-outprefix = "outcome_250iter_"
-outcomefile = outprefix*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
+outprefix = "outcome_"
+outcomefile = outprefix*string(bkf.REPEATABLE_VERSION)*convPart*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
 full_d = 40 #dimensions
 s = 60 #steps
 d = div(full_d, clones)
@@ -27,9 +28,8 @@ neighborhood_r = 4
 overlap = exp(.5)*2
 rejuv = 1/overlap/4
 histPerLoc = 15
-nIters = 250
+nIter = 150
 nIterVec = [1,30,100,250,600,1300]
-doTestConvergence = true 
 
 function ppath(p)
   if LOAD_PATH[end] != p
@@ -75,8 +75,18 @@ bkf.init(ba, mymodel)
 
 fa = bkf.FinkelAlgo(MEquiv,neighborhood_r,
                     bkf.SampleLog,bkf.MhSampled,
-                    15, #histPerLoc
-                    200, #nIter
+                    histPerLoc, #histPerLoc
+                    nIter, #nIter
+                    1., #useForward
+                    overlap, #overlap
+                    bkf.FuzzFinkelParticles,
+                    rejuv, #rejuv
+                    )
+#
+faUni = bkf.FinkelAlgo(MEquiv,neighborhood_r,
+                    bkf.SampleUniform,bkf.MhSampled,
+                    histPerLoc, #histPerLoc
+                    nIter, #nIter
                     1., #useForward
                     overlap, #overlap
                     bkf.FuzzFinkelParticles,
@@ -103,5 +113,9 @@ end
 algos = vcat([ba],bkf.finkelAlgos(MEquiv))
 
 if doAlgos
-  bkf.runAlgos(mymodel, obs, [fa], 360, outcomefile)
+  if doTestConvergence
+    bkf.testConvergence(mymodel, [fa,faUni], nIterVec, 360, outcomefile)
+  else
+    bkf.runAlgos(mymodel, obs, [fa], 360, outcomefile)
+  end
 end
