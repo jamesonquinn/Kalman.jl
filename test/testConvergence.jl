@@ -1,9 +1,9 @@
 #.....csv
-MEquiv = 25
+MEquiv = 250
 easy = false
 clones = 1 #apparent dimensions = d*clones
 highcor, corgap, othervar, mainvar, vargap, μ = (.8,2,2.,.5,3,.25)
-nIterVec = [200,350,700]
+nIterVec = [1,300,600,1000]
 basefname = "convergetruth.csv"
 if easy
   difficulty = "easy_"
@@ -74,21 +74,21 @@ fa30u = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
                     )
 #
 fa10u = bkf.FinkelAlgo(MEquiv,1,bkf.SampleUniform,bkf.MhSampled,
-                    10, #histPerLoc
+                    80, #histPerLoc
                     100, #nIter
                     1., #useForward
-                    4, #overlap
+                    2, #overlap
                     bkf.FuzzFinkelParticles,
-                    .125, #rejuv
+                    .05, #rejuv
                     )
 #
 fa30l = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
-                    30, #histPerLoc
+                    3, #histPerLoc
                     100, #nIter
                     1., #useForward
-                    4, #overlap
+                    8, #overlap
                     bkf.FuzzFinkelParticles,
-                    .125, #rejuv
+                    .0625, #rejuv
                     )
 #
 fa10l = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,

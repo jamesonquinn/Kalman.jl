@@ -15,18 +15,20 @@ shifter = function(x, n = 1) {
 #equal measurement variance edition
 
 d = 15 #dimension
-convergence = fread("outcome_converged_hard_25_chema.csv")
+convergence = fread("outcome_converged2_hard_250_chema.csv")
 for (k in (1:20)*50) {
   #k = 150
-  s = summary(lm(obspercent ~ hpl + exp(-nIterUsed/k) * sampType,
-             data=convergence))
-  cat(k," ",s$coefficients[3,1]* exp(-30/k)-exp(-600/k)," ",exp(-30/k)-exp(-600/k),"\n")
+  s = summary(lm(obspercent ~ hpl + exp(-nIterUsed/k) * sampType + exp(-nIterUsed/k),
+                 data=convergence))
+  cat(k," ",s$coefficients[3,1]* (exp(-1/k)-exp(-1000/k))," ",exp(-1/k)-exp(-1000/k),"\n")
 }
+convergence[,mean(obspercent),by=list(nIterUsed,hpl,sampType,overlap)][order(V1),]
+convergence[,mean(truthpercent),by=list(nIterUsed,hpl,sampType,overlap)][order(V1),]
 
 
 
-
-
+summary(lm(obspercent ~ hpl + exp(-nIterUsed/k) * sampType + exp(-nIterUsed/k),
+           data=convergence))
 
 
 cond = fread("outcome_lowlap_threaded_hard_250.csv")

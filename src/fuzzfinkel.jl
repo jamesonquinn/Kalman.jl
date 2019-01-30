@@ -246,10 +246,10 @@ function probSum(fp::FuzzFinkelParticles,
     lp = 0.
     state = fp.tip.particles[neighborhood,i]
     state[neighborhoodCenter(fp)] = fp.base[l,lstem] #lstem
-    if (i == 1)
-      if (l == 3) && rand() < 0.001
-        debug("probsum denom",logpdf(fp.localDists[l,h],state),logpdf(fp.localDists[l,h],fp.tip.particles[neighborhood,i]))
-        debug("probsum      ",fp.tip.particles[neighborhood,i],fp.base[l,lstem],neighborhoodCenter(fp))
-    end end
+    # if (i == 1)
+    #   if (l == 3) && rand() < 0.001
+    #     debug("probsum denom",logpdf(fp.localDists[l,h],state),logpdf(fp.localDists[l,h],fp.tip.particles[neighborhood,i]))
+    #     debug("probsum      ",fp.tip.particles[neighborhood,i],fp.base[l,lstem],neighborhoodCenter(fp))
+    # end end
     pdf(fp.localDists[l,h],state)
 end
