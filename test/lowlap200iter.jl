@@ -67,7 +67,7 @@ bkf.putParams!(ba, mydict)
 bkf.init(ba, mymodel)
 
 fa = bkf.FinkelAlgo(MEquiv,1,bkf.SampleLog,bkf.MhSampled,
-                    25, #histPerLoc
+                    15, #histPerLoc
                     200, #nIter
                     1., #useForward
                     1.4, #overlap
