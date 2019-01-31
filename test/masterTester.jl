@@ -2,7 +2,7 @@
 MEquiv = 250
 easy = false
 hardMeansHard = false
-useRepeats = true
+useRepeats = false
 clones = 1 #apparent dimensions = d*clones
 doTestConvergence = false
 basefname = "truth.csv"
