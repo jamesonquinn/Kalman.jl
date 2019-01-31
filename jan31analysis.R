@@ -15,29 +15,33 @@ shifter = function(x, n = 1) {
 #equal measurement variance edition
 
 d = 40 #dimension
-convergence = fread("outcome_converged2_hard_250_chema.csv")
-for (k in (1:20)*50) {
-  #k = 150
-  s = summary(lm(obspercent ~ hpl + exp(-nIterUsed/k) * sampType + exp(-nIterUsed/k),
-                 data=convergence))
-  cat(k," ",s$coefficients[3,1]* (exp(-1/k)-exp(-1000/k))," ",exp(-1/k)-exp(-1000/k),"\n")
+
+readWithMetadata = function(fname) {
+  cond = fread(fname)
+  iseasy = grepl("easy",fname)
+  if (!iseasy & !grepl("hard",fname)) {
+    stop("uh oh")
+  }
+  isnonrep = grepl("nonrep",fname)
+  cond[,`:=`(easy=iseasy,acyc=isnonrep)]
+  print(tail(cond,1)[,list(mod,easy,acyc)])
+  cond
 }
-avconv = convergence[,mean(obspercent),by=list(nIterUsed,hpl,sampType,overlap)][order(V1),]
-avconv
-convergence[,mean(truthpercent),by=list(nIterUsed,hpl,sampType,overlap)][order(V1),]
-cor(avconv[,overlap],avconv[,V1])
-summary(lm(obspercent ~ hpl + exp(-nIterUsed/k) * sampType + exp(-nIterUsed/k),
-           data=convergence))
 
-
-
-
-
-cond = fread("outcome_hard_250.csv")
+cond = readWithMetadata("outcome_hard_250.csv")
+cond = rbind(cond,readWithMetadata("outcome_easy_250_jq.csv"))
+cond = rbind(cond,readWithMetadata("outcome_lowlap_hard_250_nonrep.csv"))
+cond = rbind(cond,readWithMetadata("outcome_lowlap_hard_250.csv"))
 cond = cond[mod=="block"]
 dim(cond)
-cond = rbind(cond,fread("outcome_2.0hard_250_chema.csv"))
-cond = rbind(cond,fread("outcome_2.0hard_250_ixchelquinn.csv"))
+cond = rbind(cond,readWithMetadata("outcome_2.0hard_250_chema.csv"))
+cond = rbind(cond,readWithMetadata("outcome_2.0hard_250_ixchelquinn.csv"))
+cond = rbind(cond,readWithMetadata("outcome_2.0easy_250_ixchelquinn.csv"))
+cond = rbind(cond,readWithMetadata("outcome_2.0hard_250_chema.csv_nonrep.csv"))
+cond = rbind(cond,readWithMetadata("outcome_2.1hard_250_mira.csv_nonrep.csv"))
+cond = rbind(cond,readWithMetadata("outcome_2.1easy_250_chema_nonrep.csv"))
+cond = rbind(cond,readWithMetadata("outcome_2.0hard_250_ixchelquinn.csv"))
+cond = rbind(cond,readWithMetadata("outcome_hard_250_nonrep.csv")) #CAREFUL! this is from ix's compu with old masterTester.jl but new everything else.
 condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
 condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
