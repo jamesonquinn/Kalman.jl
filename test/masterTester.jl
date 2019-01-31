@@ -1,8 +1,8 @@
 #outcome_lowlap_2_hard_250_nonrep.csv
 MEquiv = 250
-easy = true
+easy = false
 hardMeansHard = false
-useRepeats = false
+useRepeats = true
 clones = 1 #apparent dimensions = d*clones
 doTestConvergence = false
 basefname = "truth.csv"
@@ -131,6 +131,6 @@ if doAlgos
   if doTestConvergence
     bkf.testConvergence(mymodel, [fa,faUni], nIterVec, 360, outcomefile)
   else
-    bkf.runAlgos(mymodel, obs, [fa], 360, outcomefile)
+    bkf.runAlgos(mymodel, obs, [ba], 360, outcomefile)
   end
 end
