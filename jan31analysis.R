@@ -42,6 +42,7 @@ cond = rbind(cond,readWithMetadata("outcome_2.1hard_250_mira.csv_nonrep.csv"))
 cond = rbind(cond,readWithMetadata("outcome_2.1easy_250_chema_nonrep.csv"))
 cond = rbind(cond,readWithMetadata("outcome_2.0hard_250_ixchelquinn.csv"))
 cond = rbind(cond,readWithMetadata("outcome_hard_250_nonrep.csv")) #CAREFUL! this is from ix's compu with old masterTester.jl but new everything else.
+cond = rbind(cond,readWithMetadata("outcome_hard_250_nonrep_manual.csv"),fill=T) #CAREFUL! this is from ix's compu with old masterTester.jl but new everything else.
 condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
 condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
@@ -70,6 +71,8 @@ savecols = c(match("step",names(condi)),
              match("sampType",names(condi)),
              match("overlap",names(condi)),
              match("rejuv",names(condi)),
+             match("easy",names(condi)),
+             match("acyc",names(condi)),
              match("hpl",names(condi)))
 pre_d = match("d01",names(condi)) - 1 #number of the last col before the "b's" μ
 pre_v = match("v0101",names(condi)) - 1 #number of the last col before the "v's" Σ
@@ -92,7 +95,7 @@ for (l in 1:nblocks) {
                                         border=(j %in% c(1,2,blocksize)),
                                         doubleborder=(j == 1)
                                         ),
-                                  by=list(model,overlap,nIter,hpl,step,sampType)],
+                                  by=list(model,overlap,nIter,hpl,step,sampType,easy,acyc)],
                     fill=T)
   }
 }
