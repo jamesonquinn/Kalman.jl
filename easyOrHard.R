@@ -36,12 +36,15 @@ summary(lm(obspercent ~ hpl + exp(-nIterUsed/k) * sampType + exp(-nIterUsed/k),
 cond = fread("outcome_hard_250.csv")
 cond = cond[mod=="block"]
 dim(cond)
-cond = rbind(cond,fread("outcome_250iter_hard_250_chema.csv"))
-cond = rbind(cond,fread("outcome_250iter_hard_250_ixchelquinn.csv"))
+cond = rbind(cond,fread("outcome_2.0hard_250_chema.csv"))
+cond = rbind(cond,fread("outcome_2.0hard_250_ixchelquinn.csv"))
 condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
 condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
 
+for (col in 1:18) {
+  cat(names(condi)[col]," ",toString(unique(condi[mod=="finkel",col,with=F])),"\n")
+}
 blocksize = 4
 nblocks = floor(d/blocksize)
 
@@ -183,3 +186,9 @@ ggplot(data=toPlot2,
   facet_wrap(~position)+
   labs(x="Algorithm",y="Average squared error per locus\nof estimated filtering distribution mean")+
   theme_bw() + scale_fill_uchicago()
+
+
+
+
+
+for (i in 1:1000)
