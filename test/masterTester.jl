@@ -1,6 +1,6 @@
 #outcome_lowlap_2_hard_250_nonrep.csv
 MEquiv = 250
-easy = false
+easy = true
 hardMeansHard = false
 useRepeats = false
 clones = 1 #apparent dimensions = d*clones
@@ -58,7 +58,7 @@ else
 end
 convPart = doTestConvergence ? "converge_" : ""
 fname = difficulty*basefname
-outcomefile = outprefix*string(bkf.REPEATABLE_VERSION)*convPart*difficulty*string(MEquiv)*"_"*ENV["USER"]*".csv"
+outcomefile = outprefix*string(bkf.REPEATABLE_VERSION)*convPart*difficulty*string(MEquiv)*"_"*ENV["USER"]
 
 if useRepeats #clones>1
   d = div(full_d, clones)
