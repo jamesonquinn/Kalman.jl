@@ -1,4 +1,3 @@
-#outcome_lowlap_2_hard_250_nonrep.csv
 MEquiv = 250
 easy = false
 hardMeansHard = false

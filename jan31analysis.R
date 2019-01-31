@@ -23,14 +23,14 @@ readWithMetadata = function(fname) {
     stop("uh oh")
   }
   isnonrep = grepl("nonrep",fname)
-  cond[,`:=`(easy=iseasy,acyc=isnonrep)]
+  cond[,`:=`(easy=iseasy,acyc=isnonrep,fname=fname)]
   print(tail(cond,1)[,list(mod,easy,acyc)])
   cond
 }
 
 cond = readWithMetadata("outcome_hard_250.csv")
 cond = rbind(cond,readWithMetadata("outcome_easy_250_jq.csv"))
-cond = rbind(cond,readWithMetadata("outcome_lowlap_hard_250_nonrep.csv"))
+#cond = rbind(cond,readWithMetadata("outcome_lowlap_hard_250_nonrep.csv")) #BAD DATA
 cond = rbind(cond,readWithMetadata("outcome_lowlap_hard_250.csv"))
 cond = cond[mod=="block"]
 dim(cond)
@@ -41,8 +41,9 @@ cond = rbind(cond,readWithMetadata("outcome_2.0hard_250_chema.csv_nonrep.csv"))
 cond = rbind(cond,readWithMetadata("outcome_2.1hard_250_mira.csv_nonrep.csv"))
 cond = rbind(cond,readWithMetadata("outcome_2.1easy_250_chema_nonrep.csv"))
 cond = rbind(cond,readWithMetadata("outcome_2.0hard_250_ixchelquinn.csv"))
-cond = rbind(cond,readWithMetadata("outcome_hard_250_nonrep.csv")) #CAREFUL! this is from ix's compu with old masterTester.jl but new everything else.
+#cond = rbind(cond,readWithMetadata("outcome_hard_250_nonrep.csv")) #CAREFUL! this is from ix's compu with old masterTester.jl but new everything else.
 cond = rbind(cond,readWithMetadata("outcome_hard_250_nonrep_manual.csv"),fill=T) #CAREFUL! this is from ix's compu with old masterTester.jl but new everything else.
+cond = rbind(cond,readWithMetadata("outcome_2.1easy_250_mira_nonrep.csv"),fill=T) #CAREFUL! this is from ix's compu with old masterTester.jl but new everything else.
 condi = cond[,]#nIter %in% c(NA,60),]
 condi[,mean(kl),by=model ]
 condi[,sqrt(mean(d11^2, na.rm=T)),by=list(model,step) ]
@@ -93,12 +94,14 @@ for (l in 1:nblocks) {
                                                estvar=mean(estvar),
                                         block=l,position=j,
                                         border=(j %in% c(1,2,blocksize)),
-                                        doubleborder=(j == 1)
+                                        doubleborder=(j == 1),
+                                        nruns = .N
                                         ),
                                   by=list(model,overlap,nIter,hpl,step,sampType,easy,acyc)],
                     fill=T)
   }
 }
+biases[sampType=="<NA>",]
 #condi[,list(b01=mean(b01),k01=mean(k01),t01=mean(t01),o01=mean(o01),do=mean(do01)),by=list(model,step)]
 allbiases = biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
              mvar=sqrt(mean(variance,na.rm=T)),
@@ -109,8 +112,9 @@ allbiases = biases[,list(msqbias=sqrt(mean(bias^2,na.rm=T)),
                ),by=list(model,position,block,step,nIter,hpl) ]
 biases[,list(msqbias=mean(bias^2,na.rm=T),
              mvar=mean(variance,na.rm=T),
-             mestvar=mean(estvar,na.rm=T)
-),by=list(model,nIter,hpl,sampType,overlap) ]
+             mestvar=mean(estvar,na.rm=T),
+             mn = mean(nruns)
+),by=list(model,nIter,hpl,sampType,overlap, easy,acyc) ]
 biases[,list(msqbias=mean(bias^2,na.rm=T),
              mvar=mean(variance,na.rm=T),
              mestvar=mean(estvar,na.rm=T)
