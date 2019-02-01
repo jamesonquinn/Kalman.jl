@@ -1,12 +1,12 @@
-MEquiv = 250
-easy = false
+MEquiv = 4500
+easy = true
 hardMeansHard = false
 useRepeats = false
 clones = 1 #apparent dimensions = d*clones
 doTestConvergence = false
 basefname = "truth.csv"
 outprefix = "outcome_"
-full_d = 40 #dimensions
+full_d = 5 #dimensions
 s = 60 #steps
 doAlgos = true
 neighborhood_r = 4
@@ -67,6 +67,9 @@ else
   outcomefile = outcomefile*"_nonrep"
 end
 outcomefile = outcomefile*".csv"
+if MEquiv >= 3125
+  fname = "uncloned_repeating_easy_truth.csv"
+end
 
 
 #setup model and algo variables
@@ -130,6 +133,6 @@ if doAlgos
   if doTestConvergence
     bkf.testConvergence(mymodel, [fa,faUni], nIterVec, 360, outcomefile)
   else
-    bkf.runAlgos(mymodel, obs, [ba], 360, outcomefile)
+    bkf.runAlgos(mymodel, obs, [pfa], 360, outcomefile)
   end
 end

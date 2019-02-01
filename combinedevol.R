@@ -9,7 +9,10 @@ source("theme_publication.R")
 pd = position_dodge(20)
 
 
-runs = fread("lorenz.csv")
+runs = fread("output/lorenz_2.csv")
+runs[,step:=steps-1]
+ggplot(runs[,list(mn=mean(sqerr,na.rm=T)),by=list(step,model)],aes(x=step,y=mn,color=model)) +
+      geom_line()
 if (F) { #temporarily commenting out
       runs = rbind(runs,fread("fixedest10.csv"))
       runs = rbind(runs,fread("fixedest11.csv"))
