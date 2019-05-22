@@ -2,6 +2,7 @@
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 library(ggplot2)
+library(reshape2)
 library(data.table)
 library(gridExtra)
 library(ggsci)
@@ -177,14 +178,30 @@ allbiases = biases[,list(msqbias=sqrt(mean(fakebias^2,na.rm=T)),
              doubleborder=doubleborder[1],
              anyborder=border[1] | doubleborder[1]
                ),by=list(model,position,block,step,nIter,hpl) ]
-biases[,list(truesqbias=mean(truebias^2,na.rm=T),
-             msqbias=mean(fakebias^2,na.rm=T),
+biases[is.nan(truebias),truebias:=0]
+toplot = biases[,list(truesqbias=mean(truebias^2,na.rm=T),
+             extrasqbias=mean(fakebias^2-truebias^2,na.rm=T),
              mvar=mean(variance,na.rm=T),
              mse=mean(variance+truebias^2,na.rm=T),
+             fakemse=mean(variance+fakebias^2,na.rm=T),
              mestvar=mean(estvar,na.rm=T),
              mvarfac=exp(mean(log(estvarfac),na.rm=T)),
              mn = mean(nruns)
 ),by=list(model,nIter,hpl,sampType,overlap, easy,acyc) ][order(model,easy,acyc)]
+toplot[is.nan(truesqbias),]
+pmelt = melt(toplot,id.vars=c("model","easy","acyc"),measure.vars=c("truesqbias","extrasqbias","mvar"))
+pmelt[,`Time step`:=c("0.4","0.05")[easy + 1]]
+ggplot(data=pmelt,aes(x=model,y=value,fill=variable)) + 
+  geom_bar(position="stack",stat="identity") +
+  facet_grid(`Time step` ~ acyc)
+
+
+
+
+
+
+
+
 
 
 
