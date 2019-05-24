@@ -257,14 +257,19 @@ function EkfMove(pset::ParticleSet, y::Observation, pstep::EkfStep)
     Σinv = inv(Σshur)
     debug("no inverse but I fixed it")
   end
-  full_precision = 
-  return(Σinv * ((n-hoodd)/ params.overlap)^(1/hoodd) )
+  full_precision = Σinv + pstep.obsPrecision
+  fullΣ = inv(full_precision)
+  obsPart = obsPrecision * y
+  histPart = Σinv * pset.p
+  result = fullΣ * [histPart[i,j]+obsPart[i] for i=1:d,j=1:n]
+  return(ParticleSet(pset.filter, pset.n, result, pset.weights))
 end
 
 
-function EkfStep(pset::ParticleSet, )
+function EkfStep(pset::ParticleSet, factor::Float64=.9)
   o = Observation(Float64[])
-  EkfStep(pset, o)
+  obsPrecision = inv(pset.filter.z.r)
+  EkfStep(pset, o, factor, obsPrecision)
 end
 
 function EkfStep(pstep::EkfStep, y::Observation)#, rejuv=.5)
@@ -273,7 +278,7 @@ function EkfStep(pstep::EkfStep, y::Observation)#, rejuv=.5)
   # end
   p = ap(pset.p)
   p2 = EkfMove(p,y,pstep)
-  EkfStep(p2,y)
+  EkfStep(p2, y, pstep.factor, pstep.obsPrecision)
 end
 
 function predictUpdate(pstep::EkfStep, y::Observation)
@@ -281,10 +286,10 @@ function predictUpdate(pstep::EkfStep, y::Observation)
 end
 
 
-function EkfStep(kf::KalmanFilter, n::Int64)
-  EkfStep(ParticleSet(kf,n))
+function EkfStep(kf::KalmanFilter, n::Int64, factor::Float64=.9)
+  EkfStep(ParticleSet(kf,n),factor)
 end
 
 function particles(p::EkfStep)
-    p.p
+  p.p
 end

@@ -91,6 +91,28 @@ function testAlgorithm(prev::AbstractFinkel, y::Observation,
 end
 
 function getM(algo::FinkelAlgo)
+    div(algo.MEquiv^2, 5)
+end
+
+mutable struct EnsAlgo <: Algo
+    MEquiv::Int64
+    factor::Float64
+end
+
+function init(algo::EnsAlgo, model::KalmanFilter)
+    EkfStep(model,getM(algo),algo.factor)
+end
+
+function predictUpdate(state, obs, algo::EnsAlgo) #need to pass in extra params - ie, nIter
+    predictUpdate(state, obs)
+end
+
+function testAlgorithm(prev::AbstractFinkel, y::Observation,
+        truth::ParticleSet, algo::FinkelAlgo) #pass in nIter
+  testAlgorithm(prev,y,truth,algo.nIter)
+end
+
+function getM(algo::FinkelAlgo)
     algo.MEquiv
 end
 

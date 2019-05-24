@@ -13,4 +13,4 @@ Pkg.add("Revise")
 #Pkg.add("Plotly")
 #Pkg.add("Gadfly")
 Pkg.add("NaNMath")
-Pkg.add("Arrays") #SharedArray
+#Pkg.add("Arrays") #SharedArray
